@@ -4,11 +4,443 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+// Prisma schema for IERM (Intelligent Exam Room Management)
+// - Auth/Role/User
+// - Identity verification (CCCD + Face)
+// - Exam scheduling + check-in/out
+// - Tickets/notifications/devices
+
+
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
+
+/// Stores system roles (Admin, ExamOfficer, Proctor, Student, ...)
+model Role {
+  id         Int     @id @default(autoincrement())
+  roleName   String  @unique
+  users      User[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+/// Stores user accounts for all actors in the system (Admin/ExamOfficer/Proctor/Student)
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  password         String
+  fullName         String?
+  username         String?  @unique
+  code             String?  // MSSV or teacher's code
+  avatarUrl        String?
+  isActive         Boolean  @default(true)
+  isEmailVerified  Boolean  @default(false)
+  status           UserStatus @default(ACTIVE)
+
+  roleId           Int?
+  role             Role?    @relation(fields: [roleId], references: [id])
+
+  examCode         ExamCode[] @relation("examCodeUsedBy")
+
+  /// 1-1 identity profile (CCCD + face enrollment summary)
+  identities       Identity?
+
+  /// Student's exam registrations/attendance
+  studentExams     StudentExam[]
+
+  /// Ticketing
+  reportedTickets  IssueTicket[] @relation("reporter")
+  assignedTickets  IssueTicket[] @relation("assignee")
+
+  /// Proctor application (teacher registers preferred shifts)
+  proctorApplications ProctorApplication[] @relation("teacherApplications")
+
+  /// Proctor được phân công coi thi
+  proctorAssignments ProctorAssignment[] @relation("proctorAssignments")
+
+  /// Notifications
+  notificationsSent Notification[] @relation("from")
+  notificationsReceived Notification[] @relation("to")
+
+  /// Exam session assignments (back-relations for named relations)
+  proctorSessions  ExamSession[] @relation("proctor")
+  hallInvigilatorSessions ExamSession[] @relation("hallInvigilator")
+
+  /// Device registration (admin who registered device)
+  registeredDevices Device[] @relation("deviceRegisteredBy")
+
+  /// Exam code audit (who generated codes)
+  createdExamCodes ExamCode[] @relation("examCodeCreator")
+
+  /// Who created attachments
+  uploadedAttachments Attachment[] @relation("attachmentUploader")
+
+  /// Assignment history audit
+  proctorAssignmentsMade ProctorAssignment[] @relation("assignmentCreator")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+/// Stores identity verification info (CCCD images + extracted OCR + face embedding)
+/// Used mainly during enrollment / re-enrollment; in exams, face scan compares to activeVector
+model Identity {
+  id            Int     @id @default(autoincrement())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id])
+
+  /// Optional raw images (can be stored in Cloudinary/S3 URL)
+  faceImage     String?
+  frontCCCD     String?
+  backCCCD      String?
+
+  /// OCR / extracted fields from CCCD (JSON for flexibility)
+  extractedData Json?
+
+  /// Is identity verified by exam officer/admin
+  isValid       Boolean @default(false)
+
+  /// Active face embedding used for recognition
+  activeVector    Json?
+
+  /// Enrollment history (multi-enroll support)
+  enrollments   FaceEnrollment[]
+
+  /// Student exams using this identity snapshot
+  studentExams  StudentExam[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+/// Stores exam room information (room number, capacity, etc.)
+model ExamRoom {
+  id          Int     @id @default(autoincrement())
+  roomNumber  Int
+  floorArea   Int?
+  capacity    Int?
+  examSessions ExamSession[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Stores exam subjects (each subject may have rules/notes)
+// model ExamSubject {
+//   id          Int     @id @default(autoincrement())
+//   subjectCode String
+//   subjectName String
+//   major       String?
+//   rules       Json?
+//   notes       String?
+
+//   examSessions ExamSession[]
+
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
+// }
+
+/// Represents a concrete exam session for a subject in a room at a given time
+/// (room + subject + open/close time + assigned staff)
+model ExamSession {
+  id                Int     @id @default(autoincrement())
+
+  examRoomId        Int?
+  examRoom          ExamRoom? @relation(fields: [examRoomId], references: [id])
+
+  /// Assigned staff
+  proctorId         String?
+  proctor           User?   @relation("proctor", fields: [proctorId], references: [id])
+
+  hallInvigilatorId String?
+  hallInvigilator   User?   @relation("hallInvigilator", fields: [hallInvigilatorId], references: [id])
+
+  semesterCode      String?
+
+  // examSubjectId     Int?
+  // examSubject       ExamSubject? @relation(fields: [examSubjectId], references: [id])
+
+  examOpenTime      DateTime?
+  examCloseTime     DateTime?
+
+  /// Attendance/registration list for this session
+  studentExams       StudentExam[]
+
+  /// Codes generated for this session (subject code, open code, rotate/revoke)
+  examCode          ExamCode[]
+
+  /// Related tickets/issues during this session
+  tickets            IssueTicket[]
+
+  /// Assignment history/audit
+  assignments        ProctorAssignment[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([examRoomId])
+  @@index([proctorId])
+  @@index([hallInvigilatorId])
+  // @@index([examSubjectId])
+}
+
+enum StudentExamStatus {
+  REGISTERED
+  CHECKEDIN
+  CHECKEDOUT
+  MOVED
+  REMOVED
+}
+
+/// Junction table: which student belongs to which exam session (+ seat + attendance status)
+model StudentExam {
+  id           Int     @id @default(autoincrement())
+
+  examId       Int
+  exam         ExamSession @relation(fields: [examId], references: [id])
+
+  studentId    String
+  student      User   @relation(fields: [studentId], references: [id])
+
+  seatNumber   Int?
+  status       StudentExamStatus @default(CHECKEDIN)
+
+  /// Optional link to identity snapshot used during check-in (if you want)
+  identityId   Int?
+  identity     Identity? @relation(fields: [identityId], references: [id])
+
+  isMatched    Boolean @default(false)
+  checkinTime  DateTime?
+  checkoutTime DateTime?
+
+  /// Admin/proctor can invalidate a record if fraud is detected
+  isValid      Boolean @default(true)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([examId, studentId])
+  @@index([studentId])
+  @@index([examId])
+}
+
+enum IssueStatus {
+  PENDING
+  CLOSED
+  IN_PROGRESS
+  SOLVED
+  OPEN
+}
+
+/// Ticket/issue reports raised during exam operations (cheating, device issues, etc.)
+model IssueTicket {
+  id          Int     @id @default(autoincrement())
+  issueName   String
+
+  reporterId  String
+  reporter    User    @relation("reporter", fields: [reporterId], references: [id])
+
+  assigneeId  String?
+  assignee    User?   @relation("assignee", fields: [assigneeId], references: [id])
+
+  issueType   String?
+  description String?
+
+  sessionId   Int?
+  session     ExamSession? @relation(fields: [sessionId], references: [id])
+  
+  status      IssueStatus @default(PENDING)
+
+  /// Attachments/evidence for the ticket
+  attachments Attachment[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([reporterId])
+  @@index([assigneeId])
+  @@index([sessionId])
+}
+
+enum PreferredShift {
+  MORNING
+  AFTERNOON
+}
+
+enum PreferredType {
+  ROOM
+  HALL
+}
+
+enum ProctorApplicationStatus {
+  APPROVED
+  PENDING
+  REJECTED
+  CANCELED
+}
+
+/// Teachers apply for invigilation shifts (preferred date/type/shift)
+model ProctorApplication {
+  id             Int     @id @default(autoincrement())
+  teacherId      String
+  teacher        User    @relation("teacherApplications", fields: [teacherId], references: [id])
+
+  preferredShift PreferredShift
+  preferredType  PreferredType
+  preferredDate  DateTime?
+  notes          String?
+
+  status         ProctorApplicationStatus @default(PENDING)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([teacherId])
+}
+
+/// Notification messages between users (in-app/email/sms as channels)
+model Notification {
+  id        Int     @id @default(autoincrement())
+
+  toId      String
+  to        User    @relation("to", fields: [toId], references: [id])
+
+  fromId    String?
+  from      User?   @relation("from", fields: [fromId], references: [id])
+  
+  title     String
+  message   String
+
+  channel   String? // e.g., "in-app", "email", "sms"
+  meta      Json?
+  isRead    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([toId])
+  @@index([fromId])
+}
+
+/// Stores registered devices (camera/check-in tablet/etc.) used in exam rooms
+model Device {
+  id         Int      @id @default(autoincrement())
+  name       String
+  serial     String   @unique
+  location   String?
+
+  registeredBy String  // admin userId
+  admin        User     @relation("deviceRegisteredBy", fields: [registeredBy], references: [id])
+
+  metadata   Json?
+  isActive   Boolean  @default(true)
+
+  enrollments  FaceEnrollment[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([registeredBy])
+}
+
+/// Face enrollment history records (supports re-enroll, device tracking, audit)
+model FaceEnrollment {
+  id         Int      @id @default(autoincrement())
+
+  identityId Int
+  identity   Identity @relation(fields: [identityId], references: [id])
+
+  deviceId   Int?
+  device     Device?  @relation(fields: [deviceId], references: [id])
+
+  vector     Json     // or bytea via string base64
+  quality     Float?
+  model       String?
+  isActive    Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identityId])
+  @@index([deviceId])
+}
+
+/// Stores per-session exam codes (subject codes/open codes) with expiry and audit
+model ExamCode {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique
+
+  examSessionId Int
+  examSession  ExamSession @relation(fields: [examSessionId], references: [id])
+
+  createdById   String
+  createdBy     User       @relation("examCodeCreator", fields: [createdById], references: [id])
+
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime?
+
+  usedById      String?
+  usedBy        User?      @relation("examCodeUsedBy", fields: [usedById], references: [id])
+
+  usedAt       DateTime?
+
+  @@index([examSessionId])
+  @@index([createdById])
+  @@index([usedById])
+}
+
+/// File attachments (evidence for tickets, etc.)
+model Attachment {
+  id        Int     @id @default(autoincrement())
+  url       String
+  type      String?
+
+  ticketId  Int?
+  ticket    IssueTicket? @relation(fields: [ticketId], references: [id])
+
+  uploadedById String?
+  uploadedBy   User?      @relation("attachmentUploader", fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([uploadedById])
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  CANCELLED
+}
+
+/// Assignment history/audit for proctor allocations to sessions
+model ProctorAssignment {
+  id         Int @id @default(autoincrement())
+  
+  proctorId  String
+  proctor       User @relation("proctorAssignments", fields: [proctorId], references: [id])
+
+  examSessionId Int
+  examSession ExamSession @relation(fields: [examSessionId], references: [id])
+
+  assignedById  String
+  assignedByUser User      @relation("assignmentCreator", fields: [assignedById], references: [id])
+
+  status     String  // e.g., ASSIGNED, CANCELLED
+
+  createdAt  DateTime @default(now())
+
+  @@unique([proctorId, examSessionId])
+  @@index([assignedById])
+  @@index([examSessionId])
+}
+
+
+
+
