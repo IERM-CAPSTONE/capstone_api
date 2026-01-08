@@ -1,0 +1,21 @@
+// Prisma ProctorApplication Model
+
+/// Teachers apply for invigilation shifts (preferred date/type/shift)
+model ProctorApplication {
+    id String @id @default(uuid())
+
+    teacherId String
+    teacher   User   @relation("teacherApplications", fields: [teacherId], references: [id])
+
+    preferredShift PreferredShift
+    preferredType  PreferredType
+    preferredDate  DateTime?
+    notes          String?
+
+    status ProctorApplicationStatus @default(PENDING)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([teacherId])
+}

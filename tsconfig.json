@@ -25,6 +25,12 @@
             ],
             "@app/queue/*": [
                 "libs/queue/src/*"
+            ],
+            "@app/prisma": [
+                "libs/prisma"
+            ],
+            "@app/prisma/*": [
+                "libs/prisma/*"
             ]
         }
     },

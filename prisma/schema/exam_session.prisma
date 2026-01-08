@@ -1,0 +1,36 @@
+// Prisma ExamSession Model
+
+/// Represents a concrete exam session for a subject in a room at a given time
+model ExamSession {
+    id String @id @default(uuid())
+
+    examRoomId String?
+    examRoom   ExamRoom? @relation(fields: [examRoomId], references: [id])
+
+    /// Assigned staff
+    proctorId String?
+    proctor   User?   @relation("proctor", fields: [proctorId], references: [id])
+
+    hallInvigilatorId String?
+    hallInvigilator   User?   @relation("hallInvigilator", fields: [hallInvigilatorId], references: [id])
+
+    semesterCode  String?
+    examOpenTime  DateTime?
+    examCloseTime DateTime?
+
+    /// Attendance/registration list for this session
+    studentExams StudentExam[]
+
+    /// Related tickets/issues during this session
+    tickets IssueTicket[]
+
+    /// Assignment history/audit
+    assignments ProctorAssignment[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([examRoomId])
+    @@index([proctorId])
+    @@index([hallInvigilatorId])
+}

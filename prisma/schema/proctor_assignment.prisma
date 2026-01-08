@@ -1,0 +1,22 @@
+// Prisma ProctorAssignment Model
+
+/// Assignment history/audit for proctor allocations to sessions
+model ProctorAssignment {
+    id String @id @default(uuid())
+
+    proctorId String
+    proctor   User   @relation("proctorAssignments", fields: [proctorId], references: [id])
+
+    examSessionId String
+    examSession   ExamSession @relation(fields: [examSessionId], references: [id])
+
+    assignedById   String
+    assignedByUser User   @relation("assignmentCreator", fields: [assignedById], references: [id])
+
+    status    String // e.g., ASSIGNED, CANCELLED
+    createdAt DateTime @default(now())
+
+    @@unique([proctorId, examSessionId])
+    @@index([assignedById])
+    @@index([examSessionId])
+}

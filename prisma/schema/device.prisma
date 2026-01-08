@@ -1,0 +1,23 @@
+// Prisma Device Models
+// Registered devices for exam rooms
+
+/// Stores registered devices (camera/check-in tablet/etc.) used in exam rooms
+model Device {
+  id       String  @id @default(uuid())
+  name     String
+  serial   String  @unique
+  location String?
+
+  registeredBy String // admin userId
+  admin        User   @relation("deviceRegisteredBy", fields: [registeredBy], references: [id])
+
+  metadata Json?
+  isActive Boolean @default(true)
+
+  enrollments FaceEnrollment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([registeredBy])
+}

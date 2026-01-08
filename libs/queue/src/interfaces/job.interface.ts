@@ -60,3 +60,20 @@ export interface BaseJobResult {
     /** Thời gian hoàn thành */
     completedAt: Date;
 }
+
+/**
+ * RabbitMQ Message Wrapper
+ */
+export interface RabbitMQMessage<T = unknown> {
+    /** Message pattern */
+    pattern: string;
+
+    /** Message data */
+    data: T;
+
+    /** Correlation ID for tracking */
+    correlationId?: string;
+
+    /** Timestamp */
+    timestamp: Date;
+}

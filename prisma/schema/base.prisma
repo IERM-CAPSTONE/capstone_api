@@ -1,0 +1,11 @@
+// Prisma Base Configuration
+// Generator and Datasource settings
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+}

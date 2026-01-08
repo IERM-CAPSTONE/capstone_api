@@ -1,0 +1,54 @@
+// Prisma Enums
+// All enum definitions for the IERM system
+
+/// User roles in the system
+enum Role {
+  ADMIN
+  EXAM_OFFICER
+  PROCTOR
+  STUDENT
+}
+
+/// Student exam attendance status
+enum StudentExamStatus {
+  REGISTERED
+  CHECKEDIN
+  CHECKEDOUT
+  MOVED
+  REMOVED
+}
+
+/// Issue ticket status
+enum IssueStatus {
+  PENDING
+  CLOSED
+  IN_PROGRESS
+  SOLVED
+  OPEN
+}
+
+/// Preferred shift for proctor applications
+enum PreferredShift {
+  MORNING
+  AFTERNOON
+}
+
+/// Preferred type for proctor applications
+enum PreferredType {
+  ROOM
+  HALL
+}
+
+/// Proctor application status
+enum ProctorApplicationStatus {
+  APPROVED
+  PENDING
+  REJECTED
+  CANCELED
+}
+
+/// Assignment status for proctor assignments
+enum AssignmentStatus {
+  ASSIGNED
+  CANCELLED
+}
