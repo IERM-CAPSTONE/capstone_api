@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { User, RoleType } from '../domain';
+import { User, RoleType } from '@app/users';
 
 /**
  * User Response DTO

@@ -1,9 +1,11 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load environment variables before anything else
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
-dotenv.config({ path: path.join(process.cwd(), envFile) });
+// Load environment variables only if not already provided by the environment (e.g., Docker)
+if (!process.env.DATABASE_URL) {
+  const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+  dotenv.config({ path: path.join(process.cwd(), envFile) });
+}
 
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
@@ -15,55 +17,44 @@ import { QUEUE_NAMES, QUEUE_OPTIONS } from '@app/queue';
 async function bootstrap() {
   const logger = new Logger('BackgroundWorker');
 
-  // Tạo app context để lấy ConfigService
-  const appContext = await NestFactory.createApplicationContext(AppBackgroundModule);
-  const configService = appContext.get(ConfigService);
+  // 1. Create a single application instance
+  // We use create() instead of createMicroservice() to allow multiple microservice connections (Hybrid App pattern)
+  const app = await NestFactory.create(AppBackgroundModule);
 
+  const configService = app.get(ConfigService);
   const rabbitmqUrl = configService.get<string>('RABBITMQ_URL', 'amqp://admin:admin123@localhost:5672');
 
-  // Tạo microservice cho Notification Queue
-  const notificationApp = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AppBackgroundModule,
-    {
+  // 2. Define the queues we want to listen to
+  const queues = [
+    QUEUE_NAMES.USER
+  ];
+
+  // 3. Connect each queue as a microservice to the same app instance
+  for (const queueName of queues) {
+    app.connectMicroservice<MicroserviceOptions>({
       transport: Transport.RMQ,
       options: {
         urls: [rabbitmqUrl],
-        queue: QUEUE_NAMES.NOTIFICATION,
+        queue: queueName,
         queueOptions: {
           durable: QUEUE_OPTIONS.DURABLE,
         },
         prefetchCount: QUEUE_OPTIONS.PREFETCH_COUNT,
         noAck: false,
       },
-    },
-  );
+    });
+    logger.log(`󱗚 Registered listener for queue: ${queueName}`);
+  }
 
-  // Tạo microservice cho Email Queue
-  const emailApp = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AppBackgroundModule,
-    {
-      transport: Transport.RMQ,
-      options: {
-        urls: [rabbitmqUrl],
-        queue: QUEUE_NAMES.EMAIL,
-        queueOptions: {
-          durable: QUEUE_OPTIONS.DURABLE,
-        },
-        prefetchCount: QUEUE_OPTIONS.PREFETCH_COUNT,
-        noAck: false,
-      },
-    },
-  );
+  // 4. Start all connected microservices
+  await app.startAllMicroservices();
 
-  // Start all microservices
-  await notificationApp.listen();
-  await emailApp.listen();
+  // 5. Start the main app (can be used for health checks on a different port)
+  const port = process.env.BACKGROUND_PORT || 3001;
+  await app.listen(port);
 
-  // Close the app context
-  await appContext.close();
-
-  logger.log(`🐰 Background worker connected to RabbitMQ`);
-  logger.log(`📋 Listening on queues: ${QUEUE_NAMES.NOTIFICATION}, ${QUEUE_NAMES.EMAIL}`);
+  logger.log(`󱗚 Background worker is running on port ${port}`);
+  logger.log(`󰄬 Monitoring queues: ${queues.join(', ')}`);
 }
 
 bootstrap();

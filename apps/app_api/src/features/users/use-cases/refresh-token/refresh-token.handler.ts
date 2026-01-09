@@ -1,6 +1,6 @@
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
-import { TokenService } from '../../infrastructure/token.service';
-import { IUserRepository, USER_REPOSITORY } from '../../domain';
+import { TokenService } from '@app/users';
+import { IUserRepository, USER_REPOSITORY } from '@app/users';
 
 @Injectable()
 export class RefreshTokenHandler {

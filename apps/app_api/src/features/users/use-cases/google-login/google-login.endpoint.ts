@@ -2,7 +2,7 @@ import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
-import { TokenService } from '../../infrastructure/token.service';
+import { TokenService } from '@app/users';
 import { GoogleLoginHandler } from './google-login.handler';
 
 @ApiTags('Auth')

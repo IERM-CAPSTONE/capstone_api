@@ -42,6 +42,30 @@ export interface EmailJobData {
 }
 
 /**
+ * Interface cho User Import Job Data
+ */
+export interface UserImportJobData {
+    /** Tên file */
+    fileName: string;
+
+    /** Nội dung file dưới dạng base64 */
+    fileContent: string;
+
+    /** Mime type */
+    mimeType: string;
+}
+
+/**
+ * Interface cho kết quả import hoàn tất
+ */
+export interface UserImportFinishedData {
+    fileName: string;
+    successCount: number;
+    errorCount: number;
+    timestamp: Date;
+}
+
+/**
  * Base interface cho tất cả job results
  */
 export interface BaseJobResult {

@@ -2,31 +2,23 @@
  * Queue Names - Định nghĩa tên các queue
  */
 export const QUEUE_NAMES = {
-    /** Queue gửi notifications */
-    NOTIFICATION: 'notification_queue',
+    /** Queue xử lý user */
+    USER: 'user_queue',
 
-    /** Queue xử lý email */
-    EMAIL: 'email_queue',
+    /** Queue nhận các event cho API */
+    API_EVENT: 'api_event_queue',
 } as const;
 
 /**
  * Message Patterns - Định nghĩa các message patterns cho RabbitMQ
  */
 export const MESSAGE_PATTERNS = {
-    // Notification Patterns
-    NOTIFICATION: {
-        /** Gửi push notification */
-        SEND_PUSH: 'notification.send.push',
-        /** Gửi in-app notification */
-        SEND_IN_APP: 'notification.send.in-app',
-    },
-
-    // Email Patterns
-    EMAIL: {
-        /** Gửi email xác nhận */
-        SEND_CONFIRMATION: 'email.send.confirmation',
-        /** Gửi email thông báo */
-        SEND_ALERT: 'email.send.alert',
+    // User Patterns
+    USER: {
+        /** Import danh sách sinh viên */
+        IMPORT_STUDENTS: 'user.import.students',
+        /** Thông báo import hoàn tất */
+        IMPORT_FINISHED: 'user.import.finished',
     },
 } as const;
 
@@ -57,6 +49,6 @@ export const QUEUE_OPTIONS = {
  * RabbitMQ Client Names - Tên các client inject
  */
 export const RABBITMQ_CLIENTS = {
-    NOTIFICATION_SERVICE: 'NOTIFICATION_SERVICE',
-    EMAIL_SERVICE: 'EMAIL_SERVICE',
+    USER_SERVICE: 'USER_SERVICE',
+    API_EVENT_SERVICE: 'API_EVENT_SERVICE',
 } as const;

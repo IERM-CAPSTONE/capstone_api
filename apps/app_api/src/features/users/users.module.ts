@@ -1,14 +1,10 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '@app/prisma';
-import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
+import { UsersCoreModule } from '@app/users';
 
-// Domain
-import { USER_REPOSITORY } from './domain';
-
-// Infrastructure
-import { PrismaUserRepository } from './infrastructure';
-import { TokenService } from './infrastructure/token.service';
+// Infrastructure (Auth strategies stay in app_api as they are API-specific)
+// Although some might argue they belong to infrastructure, strategies often depend on controllers/endpoints context
 import { GoogleStrategy } from './infrastructure/google.strategy';
 import { JwtStrategy } from './infrastructure/jwt.strategy';
 import { JwtRefreshStrategy } from './infrastructure/jwt-refresh.strategy';
@@ -26,9 +22,13 @@ import { GoogleLoginHandler, GoogleLoginEndpoint } from './use-cases/google-logi
 import { RefreshTokenHandler, RefreshTokenEndpoint } from './use-cases/refresh-token';
 import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
 
+// Use Cases - Import
+import { ImportStudentHandler, ImportStudentEndpoint, ImportFinishedProcessor } from './use-cases/import-student';
+import { NotificationGateway } from '../../common/gateways/notification.gateway';
+
 @Module({
     imports: [
-        PrismaModule,
+        UsersCoreModule, // Contain Repository, TokenService, Prisma
         PassportModule,
         JwtModule.register({}),
     ],
@@ -44,12 +44,11 @@ import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
         GoogleLoginEndpoint,
         RefreshTokenEndpoint,
         LogoutEndpoint,
+        ImportStudentEndpoint,
+        ImportFinishedProcessor,
     ],
     providers: [
-        // Repository
-        { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
         // Infrastructure - Auth
-        TokenService,
         GoogleStrategy,
         JwtStrategy,
         JwtRefreshStrategy,
@@ -64,7 +63,8 @@ import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
         GoogleLoginHandler,
         RefreshTokenHandler,
         LogoutHandler,
+        ImportStudentHandler,
+        NotificationGateway,
     ],
-    exports: [USER_REPOSITORY, TokenService],
 })
 export class UsersModule { }

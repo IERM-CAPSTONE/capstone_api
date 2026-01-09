@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
-import { TokenService } from '../../infrastructure/token.service';
+import { TokenService } from '@app/users';
 
 @Injectable()
 export class LogoutHandler {

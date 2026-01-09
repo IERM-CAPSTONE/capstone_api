@@ -25,6 +25,10 @@ export class Email {
             throw new Error(`Invalid email format: ${email}`);
         }
 
+        if (!normalized.endsWith('@fpt.edu.vn')) {
+            throw new Error('Email must end with @fpt.edu.vn');
+        }
+
         return new Email(normalized);
     }
 

@@ -84,31 +84,66 @@ cp .env.example .env.production
 
 ### 3. Khởi động Tài nguyên (Docker)
 
-```bash
-docker-compose up -d
-```
+| Lệnh | Mô tả |
+|------|-------|
+| `docker-compose up db rabbitmq -d` | Khởi động Database và RabbitMQ (cho development local) |
+| `docker-compose --env-file .env.development up --build` | Khởi động toàn bộ hệ thống (API + Background + DB + RabbitMQ) |
+| `docker-compose --env-file .env.production up -d` | Khởi động production mode |
+| `docker-compose down` | Dừng và xóa tất cả containers |
 
-- **RabbitMQ Management**: [http://localhost:15672](http://localhost:15672) (User/Pass: `admin`/`admin123`)
+**Các dịch vụ và cổng:**
+
+| Dịch vụ | URL (Local) | URL (Docker) | Mô tả |
+| ------- | ----------- | ------------ | ----- |
+| **PostgreSQL** | `localhost:5432` | `db:5432` | Database chính |
+| **RabbitMQ** | `localhost:5672` | `rabbitmq:5672` | Message Broker |
+| **RabbitMQ UI** | `localhost:15672` | `rabbitmq:15672` | Giao diện quản lý (admin/admin123) |
+| **API** | `localhost:3000` | `app-api:3000` | REST API Server |
+| **Background** | `localhost:3001` | `app-background:3001` | Worker Service |
 
 ### 4. Thiết lập Database (Prisma)
 
-Dự án sử dụng kiến trúc multi-file schema. Để cập nhật Database:
-
-```bash
-# Đồng bộ schema với database
-npx prisma db push
-
-# Hoặc chạy migration (nếu dùng trong Production)
-npx prisma migrate dev
-```
+| Lệnh | Mô tả |
+|------|-------|
+| `npx prisma db push` | Đồng bộ schema với database (Development) |
+| `npx prisma migrate dev` | Tạo migration mới (Production) |
+| `npx prisma studio` | Mở giao diện quản lý database |
+| `npx prisma generate` | Generate Prisma Client |
 
 ## 🏃 Chạy ứng dụng
 
+### Development (Local - Khuyến nghị)
+
 | Lệnh | Mô tả |
 |------|-------|
-| `npm run start:dev:api` | Chạy API Server (Watch mode) |
-| `npm run start:dev:background` | Chạy Background Worker (Watch mode) |
+| `npm run start:dev:all` | **Chạy cả API và Background cùng lúc** (Hot reload) |
+| `npm run start:dev:api` | Chỉ chạy API Server |
+| `npm run start:dev:background` | Chỉ chạy Background Worker |
+
+### Debug Mode
+
+| Lệnh | Mô tả |
+|------|-------|
+| `npm run start:debug:api` | Debug API (hỗ trợ breakpoint) |
+| `npm run start:debug:background` | Debug Background Worker |
+
+### Production Build
+
+| Lệnh | Mô tả |
+|------|-------|
 | `npm run build` | Build toàn bộ dự án |
+| `npm run start:prod:all` | Chạy cả API và Background (production mode) |
+| `npm run start:prod:api` | Chỉ chạy API Server (production) |
+| `npm run start:prod:background` | Chỉ chạy Background Worker (production) |
+
+### Các lệnh khác
+
+| Lệnh | Mô tả |
+|------|-------|
+| `npm run lint` | Kiểm tra và sửa lỗi code style |
+| `npm run format` | Format code theo chuẩn Prettier |
+| `npm run test` | Chạy unit tests |
+| `npm run test:e2e` | Chạy end-to-end tests |
 
 ## 🏗 Kiến trúc tính năng (Vertical Slice + DDD)
 

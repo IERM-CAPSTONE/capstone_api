@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { TokenService } from '../../infrastructure/token.service';
-import { IUserRepository, USER_REPOSITORY, User } from '../../domain';
-import { RoleType } from '../../domain/value-objects/role.vo';
+import { TokenService } from '@app/users';
+import { IUserRepository, USER_REPOSITORY, User } from '@app/users';
+import { RoleType } from '@app/users';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()

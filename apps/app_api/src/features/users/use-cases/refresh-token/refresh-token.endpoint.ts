@@ -2,7 +2,7 @@ import { Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
-import { TokenService } from '../../infrastructure/token.service';
+import { TokenService } from '@app/users';
 import { RefreshTokenHandler } from './refresh-token.handler';
 
 @ApiTags('Auth')
