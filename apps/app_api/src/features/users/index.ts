@@ -10,4 +10,5 @@ export * from './use-cases/google-login';
 export * from './use-cases/refresh-token';
 export * from './use-cases/logout';
 export * from './use-cases/import-student';
+export * from './use-cases/test-token';
 export * from './users.module';

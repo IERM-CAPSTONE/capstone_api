@@ -8,6 +8,7 @@ import { UsersCoreModule } from '@app/users';
 import { GoogleStrategy } from './infrastructure/google.strategy';
 import { JwtStrategy } from './infrastructure/jwt.strategy';
 import { JwtRefreshStrategy } from './infrastructure/jwt-refresh.strategy';
+import { RolesGuard, JwtAuthGuard } from '../../common/guards';
 
 // Use Cases - User Management
 import { CreateUserHandler, CreateUserEndpoint } from './use-cases/create-user';
@@ -24,6 +25,7 @@ import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
 
 // Use Cases - Import
 import { ImportStudentHandler, ImportStudentEndpoint, ImportFinishedProcessor } from './use-cases/import-student';
+import { TestTokenHandler, TestTokenEndpoint } from './use-cases/test-token';
 import { NotificationGateway } from '../../common/gateways/notification.gateway';
 
 @Module({
@@ -46,12 +48,15 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         LogoutEndpoint,
         ImportStudentEndpoint,
         ImportFinishedProcessor,
+        TestTokenEndpoint,
     ],
     providers: [
         // Infrastructure - Auth
         GoogleStrategy,
         JwtStrategy,
         JwtRefreshStrategy,
+        RolesGuard,
+        JwtAuthGuard,
         // Handlers - User Management
         CreateUserHandler,
         UpdateUserHandler,
@@ -64,6 +69,7 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         RefreshTokenHandler,
         LogoutHandler,
         ImportStudentHandler,
+        TestTokenHandler,
         NotificationGateway,
     ],
 })
