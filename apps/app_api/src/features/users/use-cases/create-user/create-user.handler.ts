@@ -1,14 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { User, IUserRepository, USER_REPOSITORY } from '@app/users';
+import { User, IUserRepository, USER_REPOSITORY, UserActivity } from '@app/users';
 import { UserResponse, toUserResponse } from '../../shared/user.response';
 import { CreateUserDto } from './create-user.dto';
+
+import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
 
 @Injectable()
 export class CreateUserHandler {
     constructor(
         @Inject(USER_REPOSITORY)
         private readonly userRepository: IUserRepository,
+        private readonly notificationGateway: NotificationGateway,
     ) { }
 
     async execute(dto: CreateUserDto): Promise<UserResponse> {
@@ -30,10 +33,32 @@ export class CreateUserHandler {
             code: dto.code,
             avatarUrl: dto.avatarUrl,
             role: dto.role,
+            isActive: dto.isActive,
         });
 
         // Persist
         const savedUser = await this.userRepository.save(user);
+
+        // Create activity log
+        const activity = UserActivity.create({
+            id: uuidv4(),
+            userId: savedUser.id,
+            type: 'ACCOUNT_CREATED',
+            details: `Account created for ${savedUser.fullName} (${savedUser.code?.value || 'N/A'})`,
+            performer: 'Admin',
+        });
+        await this.userRepository.saveActivity(activity);
+
+        // Notify
+        this.notificationGateway.sendToAll('ACCOUNT_ACTIVITY', {
+            id: activity.id,
+            type: 'ACCOUNT_CREATED',
+            userId: savedUser.id,
+            userName: savedUser.fullName || savedUser.email,
+            userCode: savedUser.code?.value,
+            performer: 'Admin', // In reality, this should be the current user from the token
+            timestamp: activity.timestamp.toISOString(),
+        });
 
         return toUserResponse(savedUser);
     }

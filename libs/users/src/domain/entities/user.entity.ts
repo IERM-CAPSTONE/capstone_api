@@ -69,6 +69,7 @@ export class User {
         code?: string;
         avatarUrl?: string;
         role?: RoleType;
+        isActive?: boolean;
     }): User {
         const email = Email.create(props.email);
         const code = props.code ? UserCode.create(props.code) : null;
@@ -80,7 +81,7 @@ export class User {
             props.fullName ?? null,
             code,
             props.avatarUrl ?? null,
-            true, // New users are active by default
+            props.isActive ?? true,
             role,
             new Date(),
             new Date(),
@@ -135,6 +136,14 @@ export class User {
         if (props.avatarUrl !== undefined) {
             this._avatarUrl = props.avatarUrl || null;
         }
+        this._updatedAt = new Date();
+    }
+
+    /**
+     * Update user email
+     */
+    updateEmail(email: string): void {
+        this._email = Email.create(email);
         this._updatedAt = new Date();
     }
 

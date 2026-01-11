@@ -1,7 +1,7 @@
 import { Controller, Logger, Inject } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext, ClientProxy } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS, UserImportJobData, BaseJobResult, RABBITMQ_CLIENTS, UserImportFinishedData } from '@app/queue';
-import { IUserRepository, USER_REPOSITORY, User, RoleType } from '@app/users';
+import { IUserRepository, USER_REPOSITORY, User, RoleType, UserActivity } from '@app/users';
 import * as xlsx from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -78,6 +78,28 @@ export class StudentImportProcessor {
                     });
 
                     await this.userRepository.save(user);
+
+                    // Create activity log for the new user
+                    const activity = UserActivity.create({
+                        id: uuidv4(),
+                        userId: user.id,
+                        type: 'ACCOUNT_CREATED',
+                        details: `Account created via Excel import: ${user.fullName} (${user.code?.value || 'N/A'})`,
+                        performer: 'System (Import)',
+                    });
+                    await this.userRepository.saveActivity(activity);
+
+                    // Emit event for real-time notification
+                    this.apiEventClient.emit(MESSAGE_PATTERNS.USER.ACTIVITY_LOGGED, {
+                        id: activity.id,
+                        type: activity.type,
+                        userId: activity.userId,
+                        userName: user.fullName || user.email,
+                        userCode: user.code?.value,
+                        performer: activity.performer,
+                        timestamp: activity.timestamp.toISOString(),
+                    });
+
                     successCount++;
                     this.logger.debug(`Imported: ${Email}`);
                 } catch (err) {

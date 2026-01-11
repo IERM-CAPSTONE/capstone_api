@@ -1,4 +1,4 @@
-import { Controller, Get, Param, NotFoundException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { RoleType } from '@app/users';
 import { Roles } from '../../../../common/decorators';
@@ -12,6 +12,16 @@ import { GetUserHandler } from './get-user.handler';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class GetUserEndpoint {
     constructor(private readonly handler: GetUserHandler) { }
+
+    @Get('me')
+    @ApiOperation({ summary: 'Get current user profile' })
+    @ApiResponse({ status: 200, description: 'Current user profile', type: UserResponse })
+    async getProfile(@Req() req: any): Promise<UserResponse> {
+        const userId = req.user.userId;
+        const user = await this.handler.byId(userId);
+        if (!user) throw new NotFoundException(`User not found`);
+        return user;
+    }
 
     @Get(':id')
     @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)

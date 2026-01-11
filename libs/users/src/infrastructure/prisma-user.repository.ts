@@ -3,6 +3,7 @@ import { PrismaService } from '@app/prisma';
 import { Prisma, Role as PrismaRole } from '@prisma/client';
 import {
     User,
+    UserActivity,
     RoleType,
     IUserRepository,
     FindPaginatedOptions,
@@ -73,7 +74,7 @@ export class PrismaUserRepository implements IUserRepository {
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' },
+                orderBy: { createdAt: 'asc' },
             }),
             this.prisma.user.count({ where }),
         ]);
@@ -112,6 +113,55 @@ export class PrismaUserRepository implements IUserRepository {
 
     async countAll(): Promise<number> {
         return this.prisma.user.count();
+    }
+
+    async saveActivity(activity: UserActivity): Promise<void> {
+        await this.prisma.userActivity.create({
+            data: {
+                id: activity.id,
+                userId: activity.userId,
+                type: activity.type,
+                details: activity.details,
+                performer: activity.performer,
+                timestamp: activity.timestamp,
+            },
+        });
+    }
+
+    async findActivitiesByUserId(userId: string): Promise<UserActivity[]> {
+        const results = await this.prisma.userActivity.findMany({
+            where: { userId },
+            orderBy: { timestamp: 'desc' },
+        });
+
+        return results.map((r) =>
+            UserActivity.create({
+                id: r.id,
+                userId: r.userId,
+                type: r.type,
+                details: r.details ?? undefined,
+                performer: r.performer,
+                timestamp: r.timestamp,
+            }),
+        );
+    }
+
+    async findGlobalActivities(limit: number): Promise<UserActivity[]> {
+        const results = await this.prisma.userActivity.findMany({
+            take: limit,
+            orderBy: { timestamp: 'desc' },
+        });
+
+        return results.map((r) =>
+            UserActivity.create({
+                id: r.id,
+                userId: r.userId,
+                type: r.type,
+                details: r.details ?? undefined,
+                performer: r.performer,
+                timestamp: r.timestamp,
+            }),
+        );
     }
 
     // ==================== PRIVATE ====================

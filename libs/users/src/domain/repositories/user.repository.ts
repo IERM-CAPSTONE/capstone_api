@@ -1,4 +1,4 @@
-import { User } from '../entities/user.entity';
+import { User, UserActivity } from '../entities';
 import { RoleType } from '../value-objects/role.vo';
 
 /**
@@ -26,6 +26,11 @@ export interface IUserRepository {
     // Counts
     countByRole(role: RoleType): Promise<number>;
     countAll(): Promise<number>;
+
+    // Activity Logs
+    saveActivity(activity: UserActivity): Promise<void>;
+    findActivitiesByUserId(userId: string): Promise<UserActivity[]>;
+    findGlobalActivities(limit: number): Promise<UserActivity[]>;
 }
 
 export interface FindPaginatedOptions {
