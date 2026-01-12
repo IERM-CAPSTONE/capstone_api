@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Redirect } from '@nestjs/common';
 import { TokenService } from '../../infrastructure/token.service';
 import { IUserRepository, USER_REPOSITORY, User } from '../../domain';
 import { RoleType } from '../../domain/value-objects/role.vo';
@@ -31,6 +31,8 @@ export class GoogleLoginHandler {
         const accessToken = await this.tokenService.generateAccessToken(user.id, user.role?.value);
         const refreshToken = await this.tokenService.generateRefreshToken(user.id);
 
+        Redirect('http://localhost:3000/admin-dashboard');
         return { user, accessToken, refreshToken };
+       
     }
 }

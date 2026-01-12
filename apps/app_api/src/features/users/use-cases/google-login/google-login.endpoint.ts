@@ -1,4 +1,5 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, Res, UseGuards, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -8,10 +9,35 @@ import { GoogleLoginHandler } from './google-login.handler';
 @ApiTags('Auth')
 @Controller('auth/google')
 export class GoogleLoginEndpoint {
+    private readonly allowedRedirectOrigins: string[];
+
     constructor(
         private readonly handler: GoogleLoginHandler,
         private readonly tokenService: TokenService,
-    ) { }
+        private readonly configService: ConfigService,
+    ) {
+        // Initialize allowed redirect URLs from environment
+        const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+        this.allowedRedirectOrigins = [
+            frontendUrl,
+            'http://localhost:3000',
+            'http://localhost:3002',
+        ].filter((url) => url); // Remove falsy values
+    }
+
+    /**
+     * Validates redirect URL to prevent open redirect vulnerabilities
+     */
+    private isValidRedirectUrl(url: string): boolean {
+        try {
+            const parsedUrl = new URL(url);
+            return this.allowedRedirectOrigins.some(
+                (origin) => new URL(origin).origin === parsedUrl.origin,
+            );
+        } catch {
+            return false;
+        }
+    }
 
     @Get()
     @UseGuards(AuthGuard('google'))
@@ -33,15 +59,16 @@ export class GoogleLoginEndpoint {
         // Set cookies
         this.tokenService.setCookies(res, accessToken, refreshToken);
 
-        // Send response
-        res.json({
-            message: 'Successfully logged in with Google',
-            user: {
-                id: user.id,
-                email: user.email.value,
-                fullName: user.fullName,
-                role: user.role?.value,
-            },
-        });
+        // Validate and redirect to frontend admin dashboard
+        const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+        const redirectUrl = `${frontendUrl}/admin-dashboard`;
+
+        if (!this.isValidRedirectUrl(redirectUrl)) {
+            throw new BadRequestException(
+                'Invalid redirect URL. Possible security threat detected.',
+            );
+        }
+
+        return res.redirect(redirectUrl);
     }
 }

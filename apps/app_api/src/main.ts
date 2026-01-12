@@ -35,8 +35,11 @@ async function bootstrap() {
     }),
   );
 
-  // Enable CORS
-  app.enableCors();
+  // Enable CORS with credentials support
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  });
 
   // Set global prefix for all routes (exclude Swagger docs)
   app.setGlobalPrefix('api', {

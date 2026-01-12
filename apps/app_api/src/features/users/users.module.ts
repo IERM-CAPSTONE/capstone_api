@@ -25,6 +25,7 @@ import { ListUsersHandler, ListUsersEndpoint } from './use-cases/list-users';
 import { GoogleLoginHandler, GoogleLoginEndpoint } from './use-cases/google-login';
 import { RefreshTokenHandler, RefreshTokenEndpoint } from './use-cases/refresh-token';
 import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
+import { MeEndpoint } from './use-cases/me';
 
 @Module({
     imports: [
@@ -44,6 +45,7 @@ import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
         GoogleLoginEndpoint,
         RefreshTokenEndpoint,
         LogoutEndpoint,
+        MeEndpoint,
     ],
     providers: [
         // Repository

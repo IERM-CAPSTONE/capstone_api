@@ -11,4 +11,5 @@ export * from './use-cases/list-users';
 export * from './use-cases/google-login';
 export * from './use-cases/refresh-token';
 export * from './use-cases/logout';
+export * from './use-cases/me';
 export * from './users.module';
