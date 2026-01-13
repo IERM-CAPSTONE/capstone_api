@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { IUserRepository, USER_REPOSITORY, UserActivity } from '@app/users';
+import { IUserRepository, USER_REPOSITORY } from '@app/users';
 import { v4 as uuidv4 } from 'uuid';
 import { UserResponse, toUserResponse } from '../../shared/user.response';
 import { UpdateUserDto } from './update-user.dto';
@@ -20,7 +20,7 @@ export class UpdateUserHandler {
             throw new Error(`User '${id}' not found`);
         }
 
-        if (dto.code && (await this.userRepository.exists({ code: dto.code }, id))) {
+        if (dto.code && (await this.userRepository.codeExists(dto.code, id))) {
             throw new Error(`Code '${dto.code}' already exists`);
         }
 
@@ -52,25 +52,12 @@ export class UpdateUserHandler {
 
         const savedUser = await this.userRepository.save(user);
 
-        // Create activity log
-        const activity = UserActivity.create({
-            id: uuidv4(),
-            userId: savedUser.id,
-            type: 'ACCOUNT_UPDATED',
-            details: `Account updated for ${savedUser.fullName} (${savedUser.code?.value || 'N/A'})`,
-            performer: 'Admin',
-        });
-        await this.userRepository.saveActivity(activity);
-
         // Notify
-        this.notificationGateway.sendToAll('ACCOUNT_ACTIVITY', {
-            id: activity.id,
-            type: 'ACCOUNT_UPDATED',
+        this.notificationGateway.sendToAll('USER_UPDATED', {
             userId: savedUser.id,
             userName: savedUser.fullName || savedUser.email,
             userCode: savedUser.code?.value,
-            performer: 'Admin',
-            timestamp: activity.timestamp.toISOString(),
+            timestamp: new Date().toISOString(),
         });
 
         return toUserResponse(savedUser);

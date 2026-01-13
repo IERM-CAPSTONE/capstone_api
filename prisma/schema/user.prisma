@@ -39,9 +39,6 @@ model User {
   /// Assignment history audit
   proctorAssignmentsMade ProctorAssignment[] @relation("assignmentCreator")
 
-  /// Audit logs for account activities
-  userActivities UserActivity[] @relation("userActivities")
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

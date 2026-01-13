@@ -5,7 +5,6 @@ import { Response } from 'express';
 import { TokenService } from '@app/users';
 import { ConfigService } from '@nestjs/config';
 import { GoogleLoginHandler } from './google-login.handler';
-import { ConfigService } from '@nestjs/config/dist/config.service';
 
 @ApiTags('Auth')
 @Controller('auth/google')

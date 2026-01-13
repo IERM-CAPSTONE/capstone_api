@@ -3,7 +3,6 @@ import { PrismaService } from '@app/prisma';
 import { Prisma, Role as PrismaRole } from '@prisma/client';
 import {
     User,
-    UserActivity,
     RoleType,
     IUserRepository,
     FindPaginatedOptions,
@@ -103,58 +102,34 @@ export class PrismaUserRepository implements IUserRepository {
         return count > 0;
     }
 
-    async count(query?: { role?: RoleType; isActive?: boolean; search?: string }): Promise<number> {
-        const where = query ? this.buildWhere(query) : {};
-        return this.prisma.user.count({ where });
-    }
-
-    async saveActivity(activity: UserActivity): Promise<void> {
-        await this.prisma.userActivity.create({
-            data: {
-                id: activity.id,
-                userId: activity.userId,
-                type: activity.type,
-                details: activity.details,
-                performer: activity.performer,
-                timestamp: activity.timestamp,
+    async emailExists(email: string, excludeId?: string): Promise<boolean> {
+        const count = await this.prisma.user.count({
+            where: {
+                email,
+                ...(excludeId && { id: { not: excludeId } }),
             },
         });
+        return count > 0;
     }
 
-    async findActivitiesByUserId(userId: string): Promise<UserActivity[]> {
-        const results = await this.prisma.userActivity.findMany({
-            where: { userId },
-            orderBy: { timestamp: 'desc' },
+    async codeExists(code: string, excludeId?: string): Promise<boolean> {
+        const count = await this.prisma.user.count({
+            where: {
+                code,
+                ...(excludeId && { id: { not: excludeId } }),
+            },
         });
-
-        return results.map((r) =>
-            UserActivity.create({
-                id: r.id,
-                userId: r.userId,
-                type: r.type,
-                details: r.details ?? undefined,
-                performer: r.performer,
-                timestamp: r.timestamp,
-            }),
-        );
+        return count > 0;
     }
 
-    async findGlobalActivities(limit: number): Promise<UserActivity[]> {
-        const results = await this.prisma.userActivity.findMany({
-            take: limit,
-            orderBy: { timestamp: 'desc' },
+    async countByRole(role: RoleType): Promise<number> {
+        return this.prisma.user.count({
+            where: { role: role as PrismaRole },
         });
+    }
 
-        return results.map((r) =>
-            UserActivity.create({
-                id: r.id,
-                userId: r.userId,
-                type: r.type,
-                details: r.details ?? undefined,
-                performer: r.performer,
-                timestamp: r.timestamp,
-            }),
-        );
+    async countAll(): Promise<number> {
+        return this.prisma.user.count();
     }
 
     // ==================== PRIVATE ====================

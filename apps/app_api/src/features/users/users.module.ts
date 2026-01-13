@@ -15,10 +15,8 @@ import { CreateUserHandler, CreateUserEndpoint } from './use-cases/create-user';
 import { UpdateUserHandler, UpdateUserEndpoint } from './use-cases/update-user';
 import { DeleteUserHandler, DeleteUserEndpoint } from './use-cases/delete-user';
 import { ChangeRoleHandler, ChangeRoleEndpoint } from './use-cases/change-role';
-import { ToggleStatusHandler, ToggleStatusEndpoint } from './use-cases/toggle-status';
 import { GetUserHandler, GetUserEndpoint } from './use-cases/get-user';
 import { ListUsersHandler, ListUsersEndpoint } from './use-cases/list-users';
-import { GetUserActivitiesHandler, GetUserActivitiesEndpoint } from './use-cases/get-user-activities';
 
 // Use Cases - Authentication
 import { GoogleLoginHandler, GoogleLoginEndpoint } from './use-cases/google-login';
@@ -42,10 +40,8 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         UpdateUserEndpoint,
         DeleteUserEndpoint,
         ChangeRoleEndpoint,
-        ToggleStatusEndpoint,
         GetUserEndpoint,
         ListUsersEndpoint,
-        GetUserActivitiesEndpoint,
         // Authentication
         GoogleLoginEndpoint,
         RefreshTokenEndpoint,
@@ -66,10 +62,8 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         UpdateUserHandler,
         DeleteUserHandler,
         ChangeRoleHandler,
-        ToggleStatusHandler,
         GetUserHandler,
         ListUsersHandler,
-        GetUserActivitiesHandler,
         // Handlers - Authentication
         GoogleLoginHandler,
         RefreshTokenHandler,

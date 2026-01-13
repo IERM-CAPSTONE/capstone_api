@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { User, IUserRepository, USER_REPOSITORY, UserActivity } from '@app/users';
+import { User, IUserRepository, USER_REPOSITORY } from '@app/users';
 import { UserResponse, toUserResponse } from '../../shared/user.response';
 import { CreateUserDto } from './create-user.dto';
 
@@ -25,12 +25,12 @@ export class CreateUserHandler {
         }
 
         // Check email uniqueness
-        if (await this.userRepository.exists({ email: dto.email })) {
+        if (await this.userRepository.emailExists(dto.email)) {
             throw new Error(`Email '${dto.email}' already exists`);
         }
 
         // Check code uniqueness
-        if (dto.code && (await this.userRepository.exists({ code: dto.code }))) {
+        if (dto.code && (await this.userRepository.codeExists(dto.code))) {
             throw new Error(`Code '${dto.code}' already exists`);
         }
 
@@ -48,25 +48,12 @@ export class CreateUserHandler {
         // Persist
         const savedUser = await this.userRepository.save(user);
 
-        // Create activity log
-        const activity = UserActivity.create({
-            id: uuidv4(),
-            userId: savedUser.id,
-            type: 'ACCOUNT_CREATED',
-            details: `Account created for ${savedUser.fullName} (${savedUser.code?.value || 'N/A'})`,
-            performer: 'Admin',
-        });
-        await this.userRepository.saveActivity(activity);
-
         // Notify
-        this.notificationGateway.sendToAll('ACCOUNT_ACTIVITY', {
-            id: activity.id,
-            type: 'ACCOUNT_CREATED',
+        this.notificationGateway.sendToAll('USER_CREATED', {
             userId: savedUser.id,
             userName: savedUser.fullName || savedUser.email,
             userCode: savedUser.code?.value,
-            performer: 'Admin', // In reality, this should be the current user from the token
-            timestamp: activity.timestamp.toISOString(),
+            timestamp: new Date().toISOString(),
         });
 
         return toUserResponse(savedUser);
