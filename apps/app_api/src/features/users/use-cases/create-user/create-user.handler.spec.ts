@@ -16,7 +16,7 @@ describe('CreateUserHandler', () => {
 
     beforeEach(async () => {
         const mockRepo = {
-            exists: jest.fn(),
+            findOne: jest.fn(),
             save: jest.fn(),
         };
 
@@ -34,14 +34,14 @@ describe('CreateUserHandler', () => {
     describe('execute', () => {
         it('should create a user successfully', async () => {
             // Arrange
-            userRepository.exists.mockResolvedValue(false);
+            userRepository.findOne.mockResolvedValue(null);
             userRepository.save.mockImplementation(async (u) => u);
 
             // Act
             const result = await handler.execute(createDto);
 
             // Assert
-            expect(userRepository.exists).toHaveBeenCalledTimes(2); // email, code
+            expect(userRepository.findOne).toHaveBeenCalledTimes(2); // email, code
             expect(userRepository.save).toHaveBeenCalled();
             expect(result.email).toBe(createDto.email);
             expect(result.fullName).toBe(createDto.fullName);
@@ -61,7 +61,7 @@ describe('CreateUserHandler', () => {
 
         it('should throw error if email already exists', async () => {
             // Arrange
-            userRepository.exists.mockResolvedValueOnce(true);
+            userRepository.findOne.mockResolvedValueOnce({ id: 'existing-id' } as User);
 
             // Act & Assert
             await expect(handler.execute(createDto)).rejects.toThrow(`Email '${createDto.email}' already exists`);
@@ -70,9 +70,9 @@ describe('CreateUserHandler', () => {
 
         it('should throw error if code already exists', async () => {
             // Arrange
-            userRepository.exists
-                .mockResolvedValueOnce(false) // email check
-                .mockResolvedValueOnce(true); // code check
+            userRepository.findOne
+                .mockResolvedValueOnce(null) // email check
+                .mockResolvedValueOnce({ id: 'existing-id' } as User); // code check
 
             // Act & Assert
             await expect(handler.execute(createDto)).rejects.toThrow(`Code '${createDto.code}' already exists`);
@@ -81,7 +81,7 @@ describe('CreateUserHandler', () => {
 
         it('should propagate errors from repository save', async () => {
             // Arrange
-            userRepository.exists.mockResolvedValue(false);
+            userRepository.findOne.mockResolvedValue(null);
             userRepository.save.mockRejectedValue(new Error('DB Error'));
 
             // Act & Assert

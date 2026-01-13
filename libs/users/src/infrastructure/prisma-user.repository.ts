@@ -40,14 +40,19 @@ export class PrismaUserRepository implements IUserRepository {
         await this.prisma.user.delete({ where: { id } });
     }
 
-    async findOne(query: { id?: string; email?: string; code?: string }): Promise<User | null> {
+    async findOne(query: { id?: string; email?: string; code?: string }, excludeId?: string): Promise<User | null> {
         const { id, email, code } = query;
         const result = await this.prisma.user.findFirst({
             where: {
-                OR: [
-                    ...(id ? [{ id }] : []),
-                    ...(email ? [{ email }] : []),
-                    ...(code ? [{ code }] : []),
+                AND: [
+                    {
+                        OR: [
+                            ...(id ? [{ id }] : []),
+                            ...(email ? [{ email }] : []),
+                            ...(code ? [{ code }] : []),
+                        ],
+                    },
+                    ...(excludeId ? [{ id: { not: excludeId } }] : []),
                 ],
             },
         });
@@ -85,41 +90,6 @@ export class PrismaUserRepository implements IUserRepository {
             limit,
             totalPages: Math.ceil(total / limit),
         };
-    }
-
-    async exists(query: { id?: string; email?: string; code?: string }, excludeId?: string): Promise<boolean> {
-        const { id, email, code } = query;
-        const count = await this.prisma.user.count({
-            where: {
-                OR: [
-                    ...(id ? [{ id }] : []),
-                    ...(email ? [{ email }] : []),
-                    ...(code ? [{ code }] : []),
-                ],
-                ...(excludeId && { id: { not: excludeId } }),
-            },
-        });
-        return count > 0;
-    }
-
-    async emailExists(email: string, excludeId?: string): Promise<boolean> {
-        const count = await this.prisma.user.count({
-            where: {
-                email,
-                ...(excludeId && { id: { not: excludeId } }),
-            },
-        });
-        return count > 0;
-    }
-
-    async codeExists(code: string, excludeId?: string): Promise<boolean> {
-        const count = await this.prisma.user.count({
-            where: {
-                code,
-                ...(excludeId && { id: { not: excludeId } }),
-            },
-        });
-        return count > 0;
     }
 
     async countByRole(role: RoleType): Promise<number> {

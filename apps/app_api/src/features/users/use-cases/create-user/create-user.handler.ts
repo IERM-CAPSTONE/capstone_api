@@ -25,12 +25,12 @@ export class CreateUserHandler {
         }
 
         // Check email uniqueness
-        if (await this.userRepository.emailExists(dto.email)) {
+        if (await this.userRepository.findOne({ email: dto.email })) {
             throw new Error(`Email '${dto.email}' already exists`);
         }
 
         // Check code uniqueness
-        if (dto.code && (await this.userRepository.codeExists(dto.code))) {
+        if (dto.code && (await this.userRepository.findOne({ code: dto.code }))) {
             throw new Error(`Code '${dto.code}' already exists`);
         }
 

@@ -12,13 +12,9 @@ export interface IUserRepository {
     delete(id: string): Promise<void>;
 
     // Queries
-    findOne(query: { id?: string; email?: string; code?: string }): Promise<User | null>;
+    findOne(query: { id?: string; email?: string; code?: string }, excludeId?: string): Promise<User | null>;
     findMany(query: { role?: RoleType; isActive?: boolean; search?: string }): Promise<User[]>;
     findPaginated(options: FindPaginatedOptions): Promise<PaginatedResult<User>>;
-    // Existence checks
-    exists(query: { id?: string; email?: string; code?: string }, excludeId?: string): Promise<boolean>;
-    emailExists(email: string, excludeId?: string): Promise<boolean>;
-    codeExists(code: string, excludeId?: string): Promise<boolean>;
 
     // Counts
     countByRole(role: RoleType): Promise<number>;

@@ -10,7 +10,7 @@ describe('DeleteUserHandler', () => {
 
     beforeEach(async () => {
         const mockRepo = {
-            exists: jest.fn(),
+            findOne: jest.fn(),
             delete: jest.fn(),
         };
 
@@ -28,20 +28,20 @@ describe('DeleteUserHandler', () => {
     describe('execute', () => {
         it('should delete user successfully', async () => {
             // Arrange
-            userRepository.exists.mockResolvedValue(true);
+            userRepository.findOne.mockResolvedValue({ id: userId } as any);
             userRepository.delete.mockResolvedValue();
 
             // Act
             await handler.execute(userId);
 
             // Assert
-            expect(userRepository.exists).toHaveBeenCalledWith({ id: userId });
+            expect(userRepository.findOne).toHaveBeenCalledWith({ id: userId });
             expect(userRepository.delete).toHaveBeenCalledWith(userId);
         });
 
         it('should throw error if user not found', async () => {
             // Arrange
-            userRepository.exists.mockResolvedValue(false);
+            userRepository.findOne.mockResolvedValue(null);
 
             // Act & Assert
             await expect(handler.execute(userId)).rejects.toThrow(`User '${userId}' not found`);
@@ -50,7 +50,7 @@ describe('DeleteUserHandler', () => {
 
         it('should propagate errors from repository delete', async () => {
             // Arrange
-            userRepository.exists.mockResolvedValue(true);
+            userRepository.findOne.mockResolvedValue({ id: userId } as any);
             userRepository.delete.mockRejectedValue(new Error('Delete failed'));
 
             // Act & Assert

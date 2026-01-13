@@ -20,11 +20,11 @@ export class UpdateUserHandler {
             throw new Error(`User '${id}' not found`);
         }
 
-        if (dto.code && (await this.userRepository.codeExists(dto.code, id))) {
+        if (dto.code && (await this.userRepository.findOne({ code: dto.code }, id))) {
             throw new Error(`Code '${dto.code}' already exists`);
         }
 
-        if (dto.email && (await this.userRepository.emailExists(dto.email, id))) {
+        if (dto.email && (await this.userRepository.findOne({ email: dto.email }, id))) {
             throw new Error(`Email '${dto.email}' already exists`);
         }
 

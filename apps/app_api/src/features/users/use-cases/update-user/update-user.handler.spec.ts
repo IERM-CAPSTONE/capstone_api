@@ -24,7 +24,6 @@ describe('UpdateUserHandler', () => {
     beforeEach(async () => {
         const mockRepo = {
             findOne: jest.fn(),
-            exists: jest.fn(),
             save: jest.fn(),
         };
 
@@ -42,8 +41,8 @@ describe('UpdateUserHandler', () => {
     describe('execute', () => {
         it('should update user successfully', async () => {
             // Arrange
-            userRepository.findOne.mockResolvedValue(mockUser);
-            userRepository.exists.mockResolvedValue(false);
+            userRepository.findOne.mockResolvedValueOnce(mockUser); // first call for user retrieval
+            userRepository.findOne.mockResolvedValueOnce(null); // second call for code check
             userRepository.save.mockImplementation(async (u) => u);
 
             // Act
@@ -51,7 +50,7 @@ describe('UpdateUserHandler', () => {
 
             // Assert
             expect(userRepository.findOne).toHaveBeenCalledWith({ id: userId });
-            expect(userRepository.exists).toHaveBeenCalledWith({ code: updateDto.code }, userId);
+            expect(userRepository.findOne).toHaveBeenCalledWith({ code: updateDto.code }, userId);
             expect(result.fullName).toBe(updateDto.fullName);
             expect(result.code).toBe(updateDto.code);
         });
@@ -66,8 +65,8 @@ describe('UpdateUserHandler', () => {
 
         it('should throw error if code already taken by someone else', async () => {
             // Arrange
-            userRepository.findOne.mockResolvedValue(mockUser);
-            userRepository.exists.mockResolvedValue(true);
+            userRepository.findOne.mockResolvedValueOnce(mockUser);
+            userRepository.findOne.mockResolvedValueOnce({ id: 'other-id' } as User);
 
             // Act & Assert
             await expect(handler.execute(userId, updateDto)).rejects.toThrow(`Code '${updateDto.code}' already exists`);
@@ -82,7 +81,7 @@ describe('UpdateUserHandler', () => {
             await handler.execute(userId, { fullName: 'Just Name' });
 
             // Assert
-            expect(userRepository.exists).not.toHaveBeenCalled();
+            expect(userRepository.findOne).toHaveBeenCalledTimes(1);
         });
     });
 });

@@ -9,7 +9,7 @@ export class DeleteUserHandler {
     ) { }
 
     async execute(id: string): Promise<void> {
-        if (!(await this.userRepository.exists({ id }))) {
+        if (!(await this.userRepository.findOne({ id }))) {
             throw new Error(`User '${id}' not found`);
         }
         await this.userRepository.delete(id);
