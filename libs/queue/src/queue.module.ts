@@ -25,13 +25,13 @@ export class QueueModule {
                 // Đăng ký RabbitMQ clients
                 ClientsModule.registerAsync([
                     {
-                        name: RABBITMQ_CLIENTS.NOTIFICATION_SERVICE,
+                        name: RABBITMQ_CLIENTS.USER_SERVICE,
                         imports: [ConfigModule],
                         useFactory: (configService: ConfigService) => ({
                             transport: Transport.RMQ,
                             options: {
                                 urls: [configService.get<string>('RABBITMQ_URL', 'amqp://admin:admin123@localhost:5672')],
-                                queue: QUEUE_NAMES.NOTIFICATION,
+                                queue: QUEUE_NAMES.USER,
                                 queueOptions: {
                                     durable: QUEUE_OPTIONS.DURABLE,
                                 },
@@ -41,13 +41,13 @@ export class QueueModule {
                         inject: [ConfigService],
                     },
                     {
-                        name: RABBITMQ_CLIENTS.EMAIL_SERVICE,
+                        name: RABBITMQ_CLIENTS.API_EVENT_SERVICE,
                         imports: [ConfigModule],
                         useFactory: (configService: ConfigService) => ({
                             transport: Transport.RMQ,
                             options: {
                                 urls: [configService.get<string>('RABBITMQ_URL', 'amqp://admin:admin123@localhost:5672')],
-                                queue: QUEUE_NAMES.EMAIL,
+                                queue: QUEUE_NAMES.API_EVENT,
                                 queueOptions: {
                                     durable: QUEUE_OPTIONS.DURABLE,
                                 },

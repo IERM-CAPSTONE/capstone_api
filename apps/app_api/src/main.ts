@@ -1,9 +1,11 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load environment variables before anything else
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
-dotenv.config({ path: path.join(process.cwd(), envFile) });
+// Load environment variables only if not already provided by the environment (e.g., Docker)
+if (!process.env.DATABASE_URL) {
+  const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+  dotenv.config({ path: path.join(process.cwd(), envFile) });
+}
 
 import { NestFactory, HttpAdapterHost } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -12,6 +14,9 @@ import cookieParser from 'cookie-parser';
 import { AppApiModule } from './app_api.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { ConfigService } from '@nestjs/config';
+import { QUEUE_NAMES, QUEUE_OPTIONS } from '@app/queue';
 
 async function bootstrap() {
   const logger = new Logger('API');
@@ -73,6 +78,24 @@ async function bootstrap() {
     customCss: '.swagger-ui .topbar { display: none }',
   });
 
+  // RabbitMQ Connection (Hybrid App)
+  const configService = app.get(ConfigService);
+  const rabbitmqUrl = configService.get<string>('RABBITMQ_URL', 'amqp://admin:admin123@localhost:5672');
+
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [rabbitmqUrl],
+      queue: QUEUE_NAMES.API_EVENT,
+      queueOptions: {
+        durable: QUEUE_OPTIONS.DURABLE,
+      },
+      prefetchCount: QUEUE_OPTIONS.PREFETCH_COUNT,
+      noAck: false,
+    },
+  });
+
+  await app.startAllMicroservices();
   const port = process.env.API_PORT ?? 3000;
   await app.listen(port);
 

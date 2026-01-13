@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { User, IUserRepository, USER_REPOSITORY } from '../../domain';
+import { User, IUserRepository, USER_REPOSITORY } from '@app/users';
 import { UserResponse, toUserResponse } from '../../shared/user.response';
 import { CreateUserDto } from './create-user.dto';
 

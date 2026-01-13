@@ -1,4 +1,4 @@
-import { RoleType } from '../../domain';
+import { RoleType } from '@app/users';
 
 export class ListUsersDto {
     page?: number;

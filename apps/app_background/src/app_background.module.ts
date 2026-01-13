@@ -1,22 +1,25 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { NotificationProcessor } from './common/processors/notification.processor';
-import { EmailProcessor } from './common/processors/email.processor';
+import { StudentImportProcessor } from './features/users/processors/student-import.processor';
+import { UsersCoreModule } from '@app/users';
+import { QueueModule } from '@app/queue';
 
 @Module({
   imports: [
     // Load environment variables
     ConfigModule.forRoot({
       isGlobal: true,
+      ignoreEnvFile: !!process.env.DATABASE_URL,
       envFilePath: process.env.NODE_ENV === 'production'
         ? '.env.production'
         : '.env.development',
     }),
+    UsersCoreModule,
+    QueueModule.forRoot(),
   ],
   controllers: [
     // RabbitMQ message handlers are controllers in microservices
-    NotificationProcessor,
-    EmailProcessor,
+    StudentImportProcessor,
   ],
 })
 export class AppBackgroundModule { }

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { IUserRepository, USER_REPOSITORY } from '../../domain';
+import { IUserRepository, USER_REPOSITORY } from '@app/users';
 import { PaginatedUserResponse, toUserResponse } from '../../shared/user.response';
 import { ListUsersDto } from './list-users.dto';
 
