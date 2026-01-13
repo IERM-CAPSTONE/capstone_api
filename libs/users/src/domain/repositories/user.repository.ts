@@ -12,20 +12,13 @@ export interface IUserRepository {
     delete(id: string): Promise<void>;
 
     // Queries
-    findById(id: string): Promise<User | null>;
-    findByEmail(email: string): Promise<User | null>;
-    findByCode(code: string): Promise<User | null>;
-    findByRole(role: RoleType): Promise<User[]>;
+    findOne(query: { id?: string; email?: string; code?: string }): Promise<User | null>;
+    findMany(query: { role?: RoleType; isActive?: boolean; search?: string }): Promise<User[]>;
     findPaginated(options: FindPaginatedOptions): Promise<PaginatedResult<User>>;
 
-    // Existence checks
-    exists(id: string): Promise<boolean>;
-    emailExists(email: string, excludeId?: string): Promise<boolean>;
-    codeExists(code: string, excludeId?: string): Promise<boolean>;
-
-    // Counts
-    countByRole(role: RoleType): Promise<number>;
-    countAll(): Promise<number>;
+    // Existence and Counts
+    exists(query: { id?: string; email?: string; code?: string }, excludeId?: string): Promise<boolean>;
+    count(query?: { role?: RoleType; isActive?: boolean; search?: string }): Promise<number>;
 }
 
 export interface FindPaginatedOptions {

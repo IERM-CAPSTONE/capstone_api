@@ -56,6 +56,22 @@ export class QueueModule {
                         }),
                         inject: [ConfigService],
                     },
+                    {
+                        name: RABBITMQ_CLIENTS.EXAM_SERVICE,
+                        imports: [ConfigModule],
+                        useFactory: (configService: ConfigService) => ({
+                            transport: Transport.RMQ,
+                            options: {
+                                urls: [configService.get<string>('RABBITMQ_URL', 'amqp://admin:admin123@localhost:5672')],
+                                queue: QUEUE_NAMES.EXAM,
+                                queueOptions: {
+                                    durable: QUEUE_OPTIONS.DURABLE,
+                                },
+                                persistent: QUEUE_OPTIONS.PERSISTENT,
+                            },
+                        }),
+                        inject: [ConfigService],
+                    },
                 ]),
             ],
             exports: [ClientsModule],

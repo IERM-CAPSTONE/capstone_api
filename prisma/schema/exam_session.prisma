@@ -33,4 +33,5 @@ model ExamSession {
     @@index([examRoomId])
     @@index([proctorId])
     @@index([hallInvigilatorId])
+    @@index([examOpenTime, examCloseTime])
 }

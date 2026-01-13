@@ -66,6 +66,31 @@ export interface UserImportFinishedData {
 }
 
 /**
+ * Interface cho Exam Import Job Data
+ */
+export interface ExamImportJobData {
+    /** Tên file */
+    fileName: string;
+
+    /** Nội dung file dưới dạng base64 */
+    fileContent: string;
+
+    /** Mime type */
+    mimeType: string;
+}
+
+/**
+ * Interface cho kết quả import exam hoàn tất
+ */
+export interface ExamImportFinishedData {
+    action: 'rooms' | 'sessions';
+    fileName: string;
+    successCount: number;
+    errorCount: number;
+    timestamp: Date;
+}
+
+/**
  * Base interface cho tất cả job results
  */
 export interface BaseJobResult {

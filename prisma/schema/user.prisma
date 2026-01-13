@@ -5,7 +5,7 @@ model User {
   id        String  @id @default(uuid())
   email     String  @unique
   fullName  String?
-  code      String? // MSSV or teacher's code
+  code      String? @unique // MSSV or teacher's code
   avatarUrl String?
   isActive  Boolean @default(true)
   role      Role?
@@ -39,6 +39,6 @@ model User {
   /// Assignment history audit
   proctorAssignmentsMade ProctorAssignment[] @relation("assignmentCreator")
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

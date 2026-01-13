@@ -11,7 +11,7 @@ export class RefreshTokenHandler {
 
     async handleRefresh(userId: string): Promise<{ accessToken: string; refreshToken: string }> {
         // Find user to get the role
-        const user = await this.userRepository.findById(userId);
+        const user = await this.userRepository.findOne({ id: userId });
         if (!user) {
             throw new UnauthorizedException('User not found');
         }

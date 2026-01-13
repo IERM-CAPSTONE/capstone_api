@@ -40,24 +40,24 @@ export class PrismaUserRepository implements IUserRepository {
         await this.prisma.user.delete({ where: { id } });
     }
 
-    async findById(id: string): Promise<User | null> {
-        const result = await this.prisma.user.findUnique({ where: { id } });
+    async findOne(query: { id?: string; email?: string; code?: string }): Promise<User | null> {
+        const { id, email, code } = query;
+        const result = await this.prisma.user.findFirst({
+            where: {
+                OR: [
+                    ...(id ? [{ id }] : []),
+                    ...(email ? [{ email }] : []),
+                    ...(code ? [{ code }] : []),
+                ],
+            },
+        });
         return result ? this.toDomain(result) : null;
     }
 
-    async findByEmail(email: string): Promise<User | null> {
-        const result = await this.prisma.user.findUnique({ where: { email } });
-        return result ? this.toDomain(result) : null;
-    }
-
-    async findByCode(code: string): Promise<User | null> {
-        const result = await this.prisma.user.findFirst({ where: { code } });
-        return result ? this.toDomain(result) : null;
-    }
-
-    async findByRole(role: RoleType): Promise<User[]> {
+    async findMany(query: { role?: RoleType; isActive?: boolean; search?: string }): Promise<User[]> {
+        const where = this.buildWhere(query);
         const results = await this.prisma.user.findMany({
-            where: { role: role as PrismaRole },
+            where,
             orderBy: { createdAt: 'desc' },
         });
         return results.map((r) => this.toDomain(r));
@@ -87,36 +87,29 @@ export class PrismaUserRepository implements IUserRepository {
         };
     }
 
-    async exists(id: string): Promise<boolean> {
-        const count = await this.prisma.user.count({ where: { id } });
-        return count > 0;
-    }
-
-    async emailExists(email: string, excludeId?: string): Promise<boolean> {
+    async exists(query: { id?: string; email?: string; code?: string }, excludeId?: string): Promise<boolean> {
+        const { id, email, code } = query;
         const count = await this.prisma.user.count({
-            where: { email, ...(excludeId && { id: { not: excludeId } }) },
+            where: {
+                OR: [
+                    ...(id ? [{ id }] : []),
+                    ...(email ? [{ email }] : []),
+                    ...(code ? [{ code }] : []),
+                ],
+                ...(excludeId && { id: { not: excludeId } }),
+            },
         });
         return count > 0;
     }
 
-    async codeExists(code: string, excludeId?: string): Promise<boolean> {
-        const count = await this.prisma.user.count({
-            where: { code, ...(excludeId && { id: { not: excludeId } }) },
-        });
-        return count > 0;
-    }
-
-    async countByRole(role: RoleType): Promise<number> {
-        return this.prisma.user.count({ where: { role: role as PrismaRole } });
-    }
-
-    async countAll(): Promise<number> {
-        return this.prisma.user.count();
+    async count(query?: { role?: RoleType; isActive?: boolean; search?: string }): Promise<number> {
+        const where = query ? this.buildWhere(query) : {};
+        return this.prisma.user.count({ where });
     }
 
     // ==================== PRIVATE ====================
 
-    private buildWhere(options: FindPaginatedOptions): Prisma.UserWhereInput {
+    private buildWhere(options: { role?: RoleType; isActive?: boolean; search?: string }): Prisma.UserWhereInput {
         const where: Prisma.UserWhereInput = {};
         if (options.role) where.role = options.role as PrismaRole;
         if (options.isActive !== undefined) where.isActive = options.isActive;

@@ -6,6 +6,9 @@ import { HttpLoggerMiddleware } from './common/middleware';
 
 // Feature Modules (Vertical Slice)
 import { UsersModule } from './features/users';
+import { ExamRoomsModule } from './features/exam-rooms';
+import { ExamSessionsModule } from './features/exam-sessions';
+import { AppCacheModule } from '@app/cache';
 
 @Module({
   imports: [
@@ -21,8 +24,12 @@ import { UsersModule } from './features/users';
     PrismaModule,
     // Queue module (Producer - for sending messages)
     QueueModule.forRoot(),
+    // Cache module
+    AppCacheModule,
     // Feature Modules
     UsersModule,
+    ExamRoomsModule,
+    ExamSessionsModule,
   ],
   providers: [],
   exports: [],
