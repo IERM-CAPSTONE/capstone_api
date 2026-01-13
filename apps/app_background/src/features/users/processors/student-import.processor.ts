@@ -57,7 +57,7 @@ export class StudentImportProcessor {
                     }
 
                     // Check if user exists
-                    const existingUser = await this.userRepository.findByEmail(Email);
+                    const existingUser = await this.userRepository.findOne({ email: Email });
                     if (existingUser) {
                         this.logger.debug(`Student already exists: ${Email}`);
                         successCount++;

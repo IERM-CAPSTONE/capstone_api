@@ -13,7 +13,7 @@ export class GoogleLoginHandler {
 
     async handleCallback(googleUser: any): Promise<{ user: User; accessToken: string; refreshToken: string }> {
         // 1. Find or create user
-        let user = await this.userRepository.findByEmail(googleUser.email);
+        let user = await this.userRepository.findOne({ email: googleUser.email });
 
         if (!user) {
             // Create a new user if not exists

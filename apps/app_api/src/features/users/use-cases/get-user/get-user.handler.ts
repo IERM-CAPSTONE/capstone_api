@@ -9,18 +9,8 @@ export class GetUserHandler {
         private readonly userRepository: IUserRepository,
     ) { }
 
-    async byId(id: string): Promise<UserResponse | null> {
-        const user = await this.userRepository.findById(id);
-        return user ? toUserResponse(user) : null;
-    }
-
-    async byEmail(email: string): Promise<UserResponse | null> {
-        const user = await this.userRepository.findByEmail(email);
-        return user ? toUserResponse(user) : null;
-    }
-
-    async byCode(code: string): Promise<UserResponse | null> {
-        const user = await this.userRepository.findByCode(code);
+    async execute(query: { id?: string; email?: string; code?: string }): Promise<UserResponse | null> {
+        const user = await this.userRepository.findOne(query);
         return user ? toUserResponse(user) : null;
     }
 }

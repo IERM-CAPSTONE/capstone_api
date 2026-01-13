@@ -15,13 +15,22 @@ export class CreateUserHandler {
     ) { }
 
     async execute(dto: CreateUserDto): Promise<UserResponse> {
+        // Manual Validation (Way 1)
+        if (!dto.email || !dto.email.includes('@')) {
+            throw new Error(`Invalid email format: '${dto.email}'`);
+        }
+
+        if (!dto.fullName || dto.fullName.trim().length === 0) {
+            throw new Error('Full name is required');
+        }
+
         // Check email uniqueness
-        if (await this.userRepository.emailExists(dto.email)) {
+        if (await this.userRepository.exists({ email: dto.email })) {
             throw new Error(`Email '${dto.email}' already exists`);
         }
 
         // Check code uniqueness
-        if (dto.code && (await this.userRepository.codeExists(dto.code))) {
+        if (dto.code && (await this.userRepository.exists({ code: dto.code }))) {
             throw new Error(`Code '${dto.code}' already exists`);
         }
 

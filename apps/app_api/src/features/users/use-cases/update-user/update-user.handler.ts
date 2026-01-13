@@ -15,12 +15,12 @@ export class UpdateUserHandler {
     ) { }
 
     async execute(id: string, dto: UpdateUserDto): Promise<UserResponse> {
-        const user = await this.userRepository.findById(id);
+        const user = await this.userRepository.findOne({ id });
         if (!user) {
             throw new Error(`User '${id}' not found`);
         }
 
-        if (dto.code && (await this.userRepository.codeExists(dto.code, id))) {
+        if (dto.code && (await this.userRepository.exists({ code: dto.code }, id))) {
             throw new Error(`Code '${dto.code}' already exists`);
         }
 

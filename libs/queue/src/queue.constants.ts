@@ -7,6 +7,9 @@ export const QUEUE_NAMES = {
 
     /** Queue nhận các event cho API */
     API_EVENT: 'api_event_queue',
+
+    /** Queue xử lý exam */
+    EXAM: 'exam_queue',
 } as const;
 
 /**
@@ -21,6 +24,15 @@ export const MESSAGE_PATTERNS = {
         IMPORT_FINISHED: 'user.import.finished',
         /** Thông báo có một activity mới giúp đồng bộ real-time */
         ACTIVITY_LOGGED: 'user.activity.logged',
+    },
+    // Exam Patterns
+    EXAM: {
+        /** Import danh sách phòng thi */
+        IMPORT_ROOMS: 'exam.import.rooms',
+        /** Import lịch thi */
+        IMPORT_SESSION: 'exam.import.session',
+        /** Thông báo import hoàn tất */
+        IMPORT_FINISHED: 'exam.import.finished',
     },
 } as const;
 
@@ -53,4 +65,5 @@ export const QUEUE_OPTIONS = {
 export const RABBITMQ_CLIENTS = {
     USER_SERVICE: 'USER_SERVICE',
     API_EVENT_SERVICE: 'API_EVENT_SERVICE',
+    EXAM_SERVICE: 'EXAM_SERVICE',
 } as const;

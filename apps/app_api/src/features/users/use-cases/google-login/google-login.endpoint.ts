@@ -5,6 +5,7 @@ import { Response } from 'express';
 import { TokenService } from '@app/users';
 import { ConfigService } from '@nestjs/config';
 import { GoogleLoginHandler } from './google-login.handler';
+import { ConfigService } from '@nestjs/config/dist/config.service';
 
 @ApiTags('Auth')
 @Controller('auth/google')
@@ -14,7 +15,7 @@ export class GoogleLoginEndpoint {
         private readonly tokenService: TokenService,
         private readonly configService: ConfigService,
     ) { }
-
+    
     @Get()
     @UseGuards(AuthGuard('google'))
     @ApiOperation({ summary: 'Initiate Google OAuth login' })
