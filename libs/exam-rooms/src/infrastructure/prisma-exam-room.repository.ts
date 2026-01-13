@@ -82,7 +82,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
     }
 
     async findOne(query: { roomNumber: string }): Promise<ExamRoom | null> {
-        const found = await this.prisma.examRoom.findUnique({
+        const found = await this.prisma.examRoom.findFirst({
             where: { roomNumber: query.roomNumber },
         });
 

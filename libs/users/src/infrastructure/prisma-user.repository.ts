@@ -73,7 +73,7 @@ export class PrismaUserRepository implements IUserRepository {
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' },
+                orderBy: { createdAt: 'asc' },
             }),
             this.prisma.user.count({ where }),
         ]);
@@ -102,9 +102,34 @@ export class PrismaUserRepository implements IUserRepository {
         return count > 0;
     }
 
-    async count(query?: { role?: RoleType; isActive?: boolean; search?: string }): Promise<number> {
-        const where = query ? this.buildWhere(query) : {};
-        return this.prisma.user.count({ where });
+    async emailExists(email: string, excludeId?: string): Promise<boolean> {
+        const count = await this.prisma.user.count({
+            where: {
+                email,
+                ...(excludeId && { id: { not: excludeId } }),
+            },
+        });
+        return count > 0;
+    }
+
+    async codeExists(code: string, excludeId?: string): Promise<boolean> {
+        const count = await this.prisma.user.count({
+            where: {
+                code,
+                ...(excludeId && { id: { not: excludeId } }),
+            },
+        });
+        return count > 0;
+    }
+
+    async countByRole(role: RoleType): Promise<number> {
+        return this.prisma.user.count({
+            where: { role: role as PrismaRole },
+        });
+    }
+
+    async countAll(): Promise<number> {
+        return this.prisma.user.count();
     }
 
     // ==================== PRIVATE ====================

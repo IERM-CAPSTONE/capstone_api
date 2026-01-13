@@ -37,8 +37,7 @@ CREATE TABLE "Device" (
 -- CreateTable
 CREATE TABLE "ExamRoom" (
     "id" TEXT NOT NULL,
-    "roomNumber" INTEGER NOT NULL,
-    "floorArea" INTEGER,
+    "roomNumber" TEXT NOT NULL,
     "capacity" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -52,7 +51,7 @@ CREATE TABLE "ExamSession" (
     "examRoomId" TEXT,
     "proctorId" TEXT,
     "hallInvigilatorId" TEXT,
-    "semesterCode" TEXT,
+    "subjectCode" TEXT,
     "examOpenTime" TIMESTAMP(3),
     "examCloseTime" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -184,11 +183,26 @@ CREATE TABLE "User" (
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "UserActivity" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "details" TEXT,
+    "performer" TEXT NOT NULL,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "UserActivity_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Device_serial_key" ON "Device"("serial");
 
 -- CreateIndex
 CREATE INDEX "Device_registeredBy_idx" ON "Device"("registeredBy");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ExamRoom_roomNumber_key" ON "ExamRoom"("roomNumber");
 
 -- CreateIndex
 CREATE INDEX "ExamSession_examRoomId_idx" ON "ExamSession"("examRoomId");
@@ -198,6 +212,12 @@ CREATE INDEX "ExamSession_proctorId_idx" ON "ExamSession"("proctorId");
 
 -- CreateIndex
 CREATE INDEX "ExamSession_hallInvigilatorId_idx" ON "ExamSession"("hallInvigilatorId");
+
+-- CreateIndex
+CREATE INDEX "ExamSession_subjectCode_idx" ON "ExamSession"("subjectCode");
+
+-- CreateIndex
+CREATE INDEX "ExamSession_examOpenTime_examCloseTime_idx" ON "ExamSession"("examOpenTime", "examCloseTime");
 
 -- CreateIndex
 CREATE INDEX "FaceEnrollment_identityId_idx" ON "FaceEnrollment"("identityId");
@@ -246,6 +266,12 @@ CREATE UNIQUE INDEX "StudentExam_examId_studentId_key" ON "StudentExam"("examId"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_code_key" ON "User"("code");
+
+-- CreateIndex
+CREATE INDEX "UserActivity_userId_idx" ON "UserActivity"("userId");
 
 -- AddForeignKey
 ALTER TABLE "Device" ADD CONSTRAINT "Device_registeredBy_fkey" FOREIGN KEY ("registeredBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -303,3 +329,6 @@ ALTER TABLE "StudentExam" ADD CONSTRAINT "StudentExam_studentId_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "StudentExam" ADD CONSTRAINT "StudentExam_identityId_fkey" FOREIGN KEY ("identityId") REFERENCES "Identity"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UserActivity" ADD CONSTRAINT "UserActivity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

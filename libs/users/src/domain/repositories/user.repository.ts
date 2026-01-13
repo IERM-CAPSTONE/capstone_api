@@ -1,4 +1,4 @@
-import { User } from '../entities/user.entity';
+import { User } from '../entities';
 import { RoleType } from '../value-objects/role.vo';
 
 /**
@@ -15,10 +15,14 @@ export interface IUserRepository {
     findOne(query: { id?: string; email?: string; code?: string }): Promise<User | null>;
     findMany(query: { role?: RoleType; isActive?: boolean; search?: string }): Promise<User[]>;
     findPaginated(options: FindPaginatedOptions): Promise<PaginatedResult<User>>;
-
-    // Existence and Counts
+    // Existence checks
     exists(query: { id?: string; email?: string; code?: string }, excludeId?: string): Promise<boolean>;
-    count(query?: { role?: RoleType; isActive?: boolean; search?: string }): Promise<number>;
+    emailExists(email: string, excludeId?: string): Promise<boolean>;
+    codeExists(code: string, excludeId?: string): Promise<boolean>;
+
+    // Counts
+    countByRole(role: RoleType): Promise<number>;
+    countAll(): Promise<number>;
 }
 
 export interface FindPaginatedOptions {

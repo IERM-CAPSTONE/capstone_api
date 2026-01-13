@@ -4,11 +4,14 @@ import { User, IUserRepository, USER_REPOSITORY } from '@app/users';
 import { UserResponse, toUserResponse } from '../../shared/user.response';
 import { CreateUserDto } from './create-user.dto';
 
+import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
+
 @Injectable()
 export class CreateUserHandler {
     constructor(
         @Inject(USER_REPOSITORY)
         private readonly userRepository: IUserRepository,
+        private readonly notificationGateway: NotificationGateway,
     ) { }
 
     async execute(dto: CreateUserDto): Promise<UserResponse> {
@@ -22,12 +25,12 @@ export class CreateUserHandler {
         }
 
         // Check email uniqueness
-        if (await this.userRepository.exists({ email: dto.email })) {
+        if (await this.userRepository.emailExists(dto.email)) {
             throw new Error(`Email '${dto.email}' already exists`);
         }
 
         // Check code uniqueness
-        if (dto.code && (await this.userRepository.exists({ code: dto.code }))) {
+        if (dto.code && (await this.userRepository.codeExists(dto.code))) {
             throw new Error(`Code '${dto.code}' already exists`);
         }
 
@@ -39,10 +42,19 @@ export class CreateUserHandler {
             code: dto.code,
             avatarUrl: dto.avatarUrl,
             role: dto.role,
+            isActive: dto.isActive,
         });
 
         // Persist
         const savedUser = await this.userRepository.save(user);
+
+        // Notify
+        this.notificationGateway.sendToAll('USER_CREATED', {
+            userId: savedUser.id,
+            userName: savedUser.fullName || savedUser.email,
+            userCode: savedUser.code?.value,
+            timestamp: new Date().toISOString(),
+        });
 
         return toUserResponse(savedUser);
     }

@@ -22,6 +22,8 @@ export const MESSAGE_PATTERNS = {
         IMPORT_STUDENTS: 'user.import.students',
         /** Thông báo import hoàn tất */
         IMPORT_FINISHED: 'user.import.finished',
+        /** Thông báo có một activity mới giúp đồng bộ real-time */
+        ACTIVITY_LOGGED: 'user.activity.logged',
     },
     // Exam Patterns
     EXAM: {
