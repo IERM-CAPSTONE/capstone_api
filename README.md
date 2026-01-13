@@ -82,7 +82,7 @@ cp .env.example .env.production
 
 *Lưu ý: Hệ thống sẽ tự động nạp file tương ứng dựa trên biến môi trường `NODE_ENV`. Nếu không đặt `NODE_ENV`, mặc định sẽ nạp `.env.development`.*
 
-### 3. Khởi động Tài nguyên (Docker)
+### 3. Khởi động Tài nguyên (Docker) - Chỉ dành cho production
 
 | Lệnh | Mô tả |
 |------|-------|
@@ -119,6 +119,7 @@ cp .env.example .env.production
 | `npm run start:dev:all` | **Chạy cả API và Background cùng lúc** (Hot reload) |
 | `npm run start:dev:api` | Chỉ chạy API Server |
 | `npm run start:dev:background` | Chỉ chạy Background Worker |
+| `docker-compose up db rabbitmq -d` | Khởi động Database và RabbitMQ (cho development local) |
 
 ### Debug Mode
 
