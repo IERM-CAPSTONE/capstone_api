@@ -4,6 +4,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { TokenService } from '@app/users';
 import { GoogleLoginHandler } from './google-login.handler';
+import { ConfigService } from '@nestjs/config/dist/config.service';
 
 @ApiTags('Auth')
 @Controller('auth/google')
@@ -11,8 +12,9 @@ export class GoogleLoginEndpoint {
     constructor(
         private readonly handler: GoogleLoginHandler,
         private readonly tokenService: TokenService,
+        private readonly configService: ConfigService,
     ) { }
-
+    
     @Get()
     @UseGuards(AuthGuard('google'))
     @ApiOperation({ summary: 'Initiate Google OAuth login' })
@@ -24,24 +26,19 @@ export class GoogleLoginEndpoint {
     @Get('callback')
     @UseGuards(AuthGuard('google'))
     @ApiOperation({ summary: 'Google OAuth callback' })
-    @ApiResponse({ status: 200, description: 'Successfully logged in with Google' })
+    @ApiResponse({ status: 302, description: 'Redirects to frontend with auth' })
     async googleAuthRedirect(@Req() req: any, @Res() res: Response) {
         const googleUser = req.user;
 
+        // Handle callback and get user with tokens
         const { user, accessToken, refreshToken } = await this.handler.handleCallback(googleUser);
 
-        // Set cookies
+        // Set authentication cookies (tokens are stored in httpOnly cookies)
         this.tokenService.setCookies(res, accessToken, refreshToken);
 
-        // Send response
-        res.json({
-            message: 'Successfully logged in with Google',
-            user: {
-                id: user.id,
-                email: user.email.value,
-                fullName: user.fullName,
-                role: user.role?.value,
-            },
-        });
+        // Redirect to frontend callback page
+        // Frontend will fetch user info, check role, and redirect to dashboard if admin
+        const clientUrl = this.configService.get<string>('CLIENT_URL', 'http://localhost:3000');
+        return res.redirect(`${clientUrl}/auth/callback`);
     }
 }

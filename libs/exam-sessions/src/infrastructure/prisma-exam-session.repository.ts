@@ -9,10 +9,10 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
     async save(session: ExamSession): Promise<ExamSession> {
         const data = {
+            subjectCode: session.subjectCode?.value,
             examRoomId: session.examRoomId,
             proctorId: session.proctorId,
             hallInvigilatorId: session.hallInvigilatorId,
-            subjectCode: session.subjectCode?.value ?? null,
             examOpenTime: session.examTime.openTime,
             examCloseTime: session.examTime.closeTime,
             updatedAt: session.updatedAt,
@@ -30,10 +30,10 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
         return ExamSession.reconstitute({
             id: saved.id,
+            subjectCode: saved.subjectCode,
             examRoomId: saved.examRoomId,
             proctorId: saved.proctorId,
             hallInvigilatorId: saved.hallInvigilatorId,
-            subjectCode: saved.subjectCode,
             examOpenTime: saved.examOpenTime,
             examCloseTime: saved.examCloseTime,
             createdAt: saved.createdAt,
@@ -49,10 +49,10 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
         return ExamSession.reconstitute({
             id: found.id,
+            subjectCode: found.subjectCode,
             examRoomId: found.examRoomId,
             proctorId: found.proctorId,
             hallInvigilatorId: found.hallInvigilatorId,
-            subjectCode: found.subjectCode,
             examOpenTime: found.examOpenTime,
             examCloseTime: found.examCloseTime,
             createdAt: found.createdAt,
@@ -81,10 +81,10 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
         return found.map(item => ExamSession.reconstitute({
             id: item.id,
+            subjectCode: item.subjectCode,
             examRoomId: item.examRoomId,
             proctorId: item.proctorId,
             hallInvigilatorId: item.hallInvigilatorId,
-            subjectCode: item.subjectCode,
             examOpenTime: item.examOpenTime,
             examCloseTime: item.examCloseTime,
             createdAt: item.createdAt,
@@ -94,13 +94,11 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
     async findOne(query: {
         id?: string;
-        subjectCode?: string;
         examRoomId?: string;
         proctorId?: string;
     }): Promise<ExamSession | null> {
         const where: any = {};
         if (query.id) where.id = query.id;
-        if (query.subjectCode) where.subjectCode = query.subjectCode;
         if (query.examRoomId) where.examRoomId = query.examRoomId;
         if (query.proctorId) where.proctorId = query.proctorId;
 
@@ -112,10 +110,10 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
         return ExamSession.reconstitute({
             id: found.id,
+            subjectCode: found.subjectCode,
             examRoomId: found.examRoomId,
             proctorId: found.proctorId,
             hallInvigilatorId: found.hallInvigilatorId,
-            subjectCode: found.subjectCode,
             examOpenTime: found.examOpenTime,
             examCloseTime: found.examCloseTime,
             createdAt: found.createdAt,
@@ -129,12 +127,10 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
     }
 
     async count(query?: {
-        subjectCode?: string;
         examRoomId?: string;
         proctorId?: string;
     }): Promise<number> {
         const where: any = {};
-        if (query?.subjectCode) where.subjectCode = query.subjectCode;
         if (query?.examRoomId) where.examRoomId = query.examRoomId;
         if (query?.proctorId) where.proctorId = query.proctorId;
 
@@ -176,10 +172,10 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
         return overlapping.map(item => ExamSession.reconstitute({
             id: item.id,
+            subjectCode: item.subjectCode,
             examRoomId: item.examRoomId,
             proctorId: item.proctorId,
             hallInvigilatorId: item.hallInvigilatorId,
-            subjectCode: item.subjectCode,
             examOpenTime: item.examOpenTime,
             examCloseTime: item.examCloseTime,
             createdAt: item.createdAt,
