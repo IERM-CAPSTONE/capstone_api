@@ -11,7 +11,7 @@ export class UpdateExamSessionDto {
     hallInvigilatorId?: string | null;
 
     @ApiProperty({ required: false, nullable: true })
-    semesterCode?: string | null;
+    subjectCode?: string | null;
 
     @ApiProperty({ required: false, nullable: true })
     examOpenTime?: Date | null;

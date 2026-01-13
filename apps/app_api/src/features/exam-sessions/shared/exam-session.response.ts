@@ -15,7 +15,7 @@ export class ExamSessionResponse {
     hallInvigilatorId: string | null;
 
     @ApiProperty({ nullable: true })
-    semesterCode: string | null;
+    subjectCode: string | null;
 
     @ApiProperty({ nullable: true })
     examOpenTime: Date | null;
@@ -36,7 +36,7 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         examRoomId: session.examRoomId,
         proctorId: session.proctorId,
         hallInvigilatorId: session.hallInvigilatorId,
-        semesterCode: session.semesterCode?.value ?? null,
+        subjectCode: session.subjectCode?.value ?? null,
         examOpenTime: session.examTime.openTime,
         examCloseTime: session.examTime.closeTime,
         createdAt: session.createdAt,

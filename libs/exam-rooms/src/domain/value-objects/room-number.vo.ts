@@ -3,20 +3,21 @@
  * Encapsulates room number validation logic
  */
 export class RoomNumber {
-    private readonly _value: number;
+    private readonly _value: string;
 
-    private constructor(value: number) {
+    private constructor(value: string) {
         this._value = value;
     }
 
-    static create(value: number): RoomNumber {
-        if (value <= 0) {
-            throw new Error('Room number must be a positive number');
+    static create(value: string | number): RoomNumber {
+        const stringValue = value.toString().trim();
+        if (!stringValue) {
+            throw new Error('Room number cannot be empty');
         }
-        return new RoomNumber(value);
+        return new RoomNumber(stringValue);
     }
 
-    get value(): number {
+    get value(): string {
         return this._value;
     }
 

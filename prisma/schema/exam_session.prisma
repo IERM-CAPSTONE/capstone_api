@@ -14,7 +14,7 @@ model ExamSession {
     hallInvigilatorId String?
     hallInvigilator   User?   @relation("hallInvigilator", fields: [hallInvigilatorId], references: [id])
 
-    semesterCode  String?
+    subjectCode   String?
     examOpenTime  DateTime?
     examCloseTime DateTime?
 
@@ -33,5 +33,6 @@ model ExamSession {
     @@index([examRoomId])
     @@index([proctorId])
     @@index([hallInvigilatorId])
+    @@index([subjectCode])
     @@index([examOpenTime, examCloseTime])
 }

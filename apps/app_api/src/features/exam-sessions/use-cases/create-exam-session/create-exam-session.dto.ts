@@ -20,7 +20,7 @@ export class CreateExamSessionDto {
     @ApiProperty({ required: false, nullable: true })
     @IsOptional()
     @IsString()
-    semesterCode?: string | null;
+    subjectCode?: string | null;
 
     @ApiProperty({ required: false, nullable: true })
     @IsOptional()

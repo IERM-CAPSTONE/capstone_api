@@ -19,7 +19,7 @@ export class ExamRoom {
      */
     static create(props: {
         id: string;
-        roomNumber: number;
+        roomNumber: string | number;
         capacity?: number | null;
     }): ExamRoom {
         const roomNumber = RoomNumber.create(props.roomNumber);
@@ -39,7 +39,7 @@ export class ExamRoom {
      */
     static reconstitute(props: {
         id: string;
-        roomNumber: number;
+        roomNumber: string | number;
         capacity: number | null;
         createdAt: Date;
         updatedAt: Date;
@@ -60,7 +60,7 @@ export class ExamRoom {
      * Update exam room details
      */
     update(props: {
-        roomNumber?: number;
+        roomNumber?: string | number;
         capacity?: number | null;
     }): ExamRoom {
         const roomNumber = props.roomNumber !== undefined

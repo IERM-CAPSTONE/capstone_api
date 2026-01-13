@@ -12,7 +12,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examRoomId: session.examRoomId,
             proctorId: session.proctorId,
             hallInvigilatorId: session.hallInvigilatorId,
-            semesterCode: session.semesterCode?.value ?? null,
+            subjectCode: session.subjectCode?.value ?? null,
             examOpenTime: session.examTime.openTime,
             examCloseTime: session.examTime.closeTime,
             updatedAt: session.updatedAt,
@@ -33,7 +33,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examRoomId: saved.examRoomId,
             proctorId: saved.proctorId,
             hallInvigilatorId: saved.hallInvigilatorId,
-            semesterCode: saved.semesterCode,
+            subjectCode: saved.subjectCode,
             examOpenTime: saved.examOpenTime,
             examCloseTime: saved.examCloseTime,
             createdAt: saved.createdAt,
@@ -52,7 +52,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examRoomId: found.examRoomId,
             proctorId: found.proctorId,
             hallInvigilatorId: found.hallInvigilatorId,
-            semesterCode: found.semesterCode,
+            subjectCode: found.subjectCode,
             examOpenTime: found.examOpenTime,
             examCloseTime: found.examCloseTime,
             createdAt: found.createdAt,
@@ -61,14 +61,14 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
     }
 
     async findMany(query?: {
-        semesterCode?: string;
+        subjectCode?: string;
         examRoomId?: string;
         proctorId?: string;
         skip?: number;
         take?: number;
     }): Promise<ExamSession[]> {
         const where: any = {};
-        if (query?.semesterCode) where.semesterCode = query.semesterCode;
+        if (query?.subjectCode) where.subjectCode = query.subjectCode;
         if (query?.examRoomId) where.examRoomId = query.examRoomId;
         if (query?.proctorId) where.proctorId = query.proctorId;
 
@@ -84,12 +84,43 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examRoomId: item.examRoomId,
             proctorId: item.proctorId,
             hallInvigilatorId: item.hallInvigilatorId,
-            semesterCode: item.semesterCode,
+            subjectCode: item.subjectCode,
             examOpenTime: item.examOpenTime,
             examCloseTime: item.examCloseTime,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
         }));
+    }
+
+    async findOne(query: {
+        id?: string;
+        subjectCode?: string;
+        examRoomId?: string;
+        proctorId?: string;
+    }): Promise<ExamSession | null> {
+        const where: any = {};
+        if (query.id) where.id = query.id;
+        if (query.subjectCode) where.subjectCode = query.subjectCode;
+        if (query.examRoomId) where.examRoomId = query.examRoomId;
+        if (query.proctorId) where.proctorId = query.proctorId;
+
+        const found = await this.prisma.examSession.findFirst({
+            where,
+        });
+
+        if (!found) return null;
+
+        return ExamSession.reconstitute({
+            id: found.id,
+            examRoomId: found.examRoomId,
+            proctorId: found.proctorId,
+            hallInvigilatorId: found.hallInvigilatorId,
+            subjectCode: found.subjectCode,
+            examOpenTime: found.examOpenTime,
+            examCloseTime: found.examCloseTime,
+            createdAt: found.createdAt,
+            updatedAt: found.updatedAt,
+        });
     }
 
     async exists(id: string): Promise<boolean> {
@@ -98,12 +129,12 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
     }
 
     async count(query?: {
-        semesterCode?: string;
+        subjectCode?: string;
         examRoomId?: string;
         proctorId?: string;
     }): Promise<number> {
         const where: any = {};
-        if (query?.semesterCode) where.semesterCode = query.semesterCode;
+        if (query?.subjectCode) where.subjectCode = query.subjectCode;
         if (query?.examRoomId) where.examRoomId = query.examRoomId;
         if (query?.proctorId) where.proctorId = query.proctorId;
 
@@ -135,7 +166,6 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         const overlapping = await this.prisma.examSession.findMany({
             where: {
                 id: excludeId ? { not: excludeId } : undefined,
-                // Time overlap logic: (Start1 < End2) AND (End1 > Start2)
                 AND: [
                     { examOpenTime: { lt: endTime } },
                     { examCloseTime: { gt: startTime } },
@@ -149,7 +179,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examRoomId: item.examRoomId,
             proctorId: item.proctorId,
             hallInvigilatorId: item.hallInvigilatorId,
-            semesterCode: item.semesterCode,
+            subjectCode: item.subjectCode,
             examOpenTime: item.examOpenTime,
             examCloseTime: item.examCloseTime,
             createdAt: item.createdAt,

@@ -8,8 +8,8 @@ export class ExamRoomResponse {
     @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000', description: 'ExamRoom UUID' })
     id: string;
 
-    @ApiProperty({ example: 101, description: 'Room number' })
-    roomNumber: number;
+    @ApiProperty({ example: '101', description: 'Room number' })
+    roomNumber: string;
 
     @ApiProperty({ example: 30, description: 'Room capacity', nullable: true })
     capacity: number | null;

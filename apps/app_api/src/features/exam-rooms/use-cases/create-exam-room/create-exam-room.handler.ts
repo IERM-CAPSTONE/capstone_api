@@ -16,8 +16,8 @@ export class CreateExamRoomHandler {
 
     async execute(dto: CreateExamRoomDto): Promise<ExamRoomResponse> {
         // Validation
-        if (!dto.roomNumber || dto.roomNumber <= 0) {
-            throw new Error('Room number must be a positive number');
+        if (!dto.roomNumber || dto.roomNumber.trim() === '') {
+            throw new Error('Room number must not be empty');
         }
 
         // Check room number uniqueness

@@ -59,18 +59,15 @@ export class ExamImportProcessor {
                     }
 
                     // Check if exists
-                    const exists = await this.examRoomRepository.exists({ roomNumber: Number(RoomNumber) });
-                    if (exists) {
+                    const existing = await this.examRoomRepository.findOne({ roomNumber: String(RoomNumber) });
+                    if (existing) {
                         this.logger.debug(`Room ${RoomNumber} already exists, updating...`);
-                        // In DDD, we usually find and update.
-                        const rooms = await this.examRoomRepository.findMany({ roomNumber: Number(RoomNumber) });
-                        const existing = rooms[0];
                         const updated = existing.update({ capacity: Capacity ? Number(Capacity) : undefined });
                         await this.examRoomRepository.save(updated);
                     } else {
                         const room = ExamRoom.create({
                             id: uuidv4(),
-                            roomNumber: Number(RoomNumber),
+                            roomNumber: String(RoomNumber),
                             capacity: Capacity ? Number(Capacity) : undefined,
                         });
                         await this.examRoomRepository.save(room);
@@ -128,14 +125,14 @@ export class ExamImportProcessor {
 
             for (const item of items) {
                 try {
-                    // RoomNumber, ProctorEmail, HallInvigilatorEmail, SemesterCode, OpenTime, CloseTime
-                    const { RoomNumber, ProctorEmail, HallInvigilatorEmail, SemesterCode, OpenTime, CloseTime } = item;
+                    // RoomNumber, ProctorEmail, HallInvigilatorEmail, SubjectCode (or SemesterCode), OpenTime, CloseTime
+                    const { RoomNumber, ProctorEmail, HallInvigilatorEmail, SubjectCode, SemesterCode, OpenTime, CloseTime } = item;
 
                     let roomId: string | null = null;
                     if (RoomNumber) {
-                        const rooms = await this.examRoomRepository.findMany({ roomNumber: Number(RoomNumber) });
-                        if (rooms.length > 0) {
-                            roomId = rooms[0].id;
+                        const room = await this.examRoomRepository.findOne({ roomNumber: String(RoomNumber) });
+                        if (room) {
+                            roomId = room.id;
                         } else {
                             this.logger.warn(`Room ${RoomNumber} not found, skipping or setting to null`);
                         }
@@ -158,7 +155,7 @@ export class ExamImportProcessor {
                         examRoomId: roomId,
                         proctorId: proctorId,
                         hallInvigilatorId: invigilatorId,
-                        semesterCode: SemesterCode?.toString(),
+                        subjectCode: (SubjectCode || SemesterCode)?.toString(),
                         examOpenTime: OpenTime ? new Date(OpenTime) : null,
                         examCloseTime: CloseTime ? new Date(CloseTime) : null,
                     });

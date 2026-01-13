@@ -3,7 +3,7 @@
 /// Stores exam room information (room number, capacity, etc.)
 model ExamRoom {
     id         String @id @default(uuid())
-    roomNumber Int    @unique
+    roomNumber String @unique
     capacity   Int?
 
     examSessions  ExamSession[]

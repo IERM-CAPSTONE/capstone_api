@@ -8,7 +8,7 @@ export class ListExamSessionsDto {
     limit?: number;
 
     @ApiProperty({ required: false })
-    semesterCode?: string;
+    subjectCode?: string;
 
     @ApiProperty({ required: false })
     examRoomId?: string;

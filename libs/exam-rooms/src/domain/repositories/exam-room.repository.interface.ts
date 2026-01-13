@@ -19,20 +19,25 @@ export interface IExamRoomRepository {
      * Find exam rooms matching criteria
      */
     findMany(query?: {
-        roomNumber?: number;
+        roomNumber?: string;
         skip?: number;
         take?: number;
     }): Promise<ExamRoom[]>;
 
     /**
+     * Find a single exam room by criteria
+     */
+    findOne(query: { roomNumber: string }): Promise<ExamRoom | null>;
+
+    /**
      * Check if an exam room exists
      */
-    exists(query: { id?: string; roomNumber?: number }): Promise<boolean>;
+    exists(query: { id?: string; roomNumber?: string }): Promise<boolean>;
 
     /**
      * Count exam rooms
      */
-    count(query?: { roomNumber?: number }): Promise<number>;
+    count(query?: { roomNumber?: string }): Promise<number>;
 
     /**
      * Delete an exam room by ID

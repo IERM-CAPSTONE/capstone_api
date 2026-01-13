@@ -53,7 +53,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
     }
 
     async findMany(query?: {
-        roomNumber?: number;
+        roomNumber?: string;
         skip?: number;
         take?: number;
     }): Promise<ExamRoom[]> {
@@ -81,7 +81,23 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
         );
     }
 
-    async exists(query: { id?: string; roomNumber?: number }): Promise<boolean> {
+    async findOne(query: { roomNumber: string }): Promise<ExamRoom | null> {
+        const found = await this.prisma.examRoom.findUnique({
+            where: { roomNumber: query.roomNumber },
+        });
+
+        if (!found) return null;
+
+        return ExamRoom.reconstitute({
+            id: found.id,
+            roomNumber: found.roomNumber,
+            capacity: found.capacity,
+            createdAt: found.createdAt,
+            updatedAt: found.updatedAt,
+        });
+    }
+
+    async exists(query: { id?: string; roomNumber?: string }): Promise<boolean> {
         const where: any = {};
 
         if (query.id) where.id = query.id;
@@ -91,7 +107,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
         return count > 0;
     }
 
-    async count(query?: { roomNumber?: number }): Promise<number> {
+    async count(query?: { roomNumber?: string }): Promise<number> {
         const where: any = {};
 
         if (query?.roomNumber !== undefined) {

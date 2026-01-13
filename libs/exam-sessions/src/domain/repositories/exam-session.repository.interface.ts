@@ -4,15 +4,21 @@ export interface IExamSessionRepository {
     save(session: ExamSession): Promise<ExamSession>;
     findById(id: string): Promise<ExamSession | null>;
     findMany(query?: {
-        semesterCode?: string;
+        subjectCode?: string;
         examRoomId?: string;
         proctorId?: string;
         skip?: number;
         take?: number;
     }): Promise<ExamSession[]>;
+    findOne(query: {
+        id?: string;
+        subjectCode?: string;
+        examRoomId?: string;
+        proctorId?: string;
+    }): Promise<ExamSession | null>;
     exists(id: string): Promise<boolean>;
     count(query?: {
-        semesterCode?: string;
+        subjectCode?: string;
         examRoomId?: string;
         proctorId?: string;
     }): Promise<number>;

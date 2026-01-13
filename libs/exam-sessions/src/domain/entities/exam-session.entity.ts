@@ -1,4 +1,4 @@
-import { SemesterCode } from '../value-objects/semester-code.vo';
+import { SubjectCode } from '../value-objects/subject-code.vo';
 import { ExamTime } from '../value-objects/exam-time.vo';
 
 export class ExamSession {
@@ -7,7 +7,7 @@ export class ExamSession {
         public readonly examRoomId: string | null,
         public readonly proctorId: string | null,
         public readonly hallInvigilatorId: string | null,
-        public readonly semesterCode: SemesterCode | null,
+        public readonly subjectCode: SubjectCode | null,
         public readonly examTime: ExamTime,
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
@@ -18,7 +18,7 @@ export class ExamSession {
         examRoomId?: string | null;
         proctorId?: string | null;
         hallInvigilatorId?: string | null;
-        semesterCode?: string | null;
+        subjectCode?: string | null;
         examOpenTime?: Date | null;
         examCloseTime?: Date | null;
     }): ExamSession {
@@ -27,7 +27,7 @@ export class ExamSession {
             props.examRoomId ?? null,
             props.proctorId ?? null,
             props.hallInvigilatorId ?? null,
-            SemesterCode.create(props.semesterCode),
+            SubjectCode.create(props.subjectCode),
             ExamTime.create(props.examOpenTime, props.examCloseTime),
             new Date(),
             new Date(),
@@ -39,7 +39,7 @@ export class ExamSession {
         examRoomId: string | null;
         proctorId: string | null;
         hallInvigilatorId: string | null;
-        semesterCode: string | null;
+        subjectCode: string | null;
         examOpenTime: Date | null;
         examCloseTime: Date | null;
         createdAt: Date;
@@ -50,7 +50,7 @@ export class ExamSession {
             props.examRoomId,
             props.proctorId,
             props.hallInvigilatorId,
-            SemesterCode.create(props.semesterCode),
+            SubjectCode.create(props.subjectCode),
             ExamTime.create(props.examOpenTime, props.examCloseTime),
             props.createdAt,
             props.updatedAt,
@@ -61,7 +61,7 @@ export class ExamSession {
         examRoomId?: string | null;
         proctorId?: string | null;
         hallInvigilatorId?: string | null;
-        semesterCode?: string | null;
+        subjectCode?: string | null;
         examOpenTime?: Date | null;
         examCloseTime?: Date | null;
     }): ExamSession {
@@ -70,7 +70,7 @@ export class ExamSession {
             props.examRoomId !== undefined ? props.examRoomId : this.examRoomId,
             props.proctorId !== undefined ? props.proctorId : this.proctorId,
             props.hallInvigilatorId !== undefined ? props.hallInvigilatorId : this.hallInvigilatorId,
-            props.semesterCode !== undefined ? SemesterCode.create(props.semesterCode) : this.semesterCode,
+            props.subjectCode !== undefined ? SubjectCode.create(props.subjectCode) : this.subjectCode,
             ExamTime.create(
                 props.examOpenTime !== undefined ? props.examOpenTime : this.examTime.openTime,
                 props.examCloseTime !== undefined ? props.examCloseTime : this.examTime.closeTime
