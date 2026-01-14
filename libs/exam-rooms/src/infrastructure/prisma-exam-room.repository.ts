@@ -14,6 +14,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
         const data = {
             roomNumber: examRoom.roomNumber.value,
             capacity: examRoom.capacity?.value ?? null,
+            status: examRoom.status as any,
             updatedAt: examRoom.updatedAt,
         };
 
@@ -31,6 +32,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             id: saved.id,
             roomNumber: saved.roomNumber,
             capacity: saved.capacity,
+            status: saved.status,
             createdAt: saved.createdAt,
             updatedAt: saved.updatedAt,
         });
@@ -47,6 +49,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             id: found.id,
             roomNumber: found.roomNumber,
             capacity: found.capacity,
+            status: found.status,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
         });
@@ -75,6 +78,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
                 id: item.id,
                 roomNumber: item.roomNumber,
                 capacity: item.capacity,
+                status: item.status,
                 createdAt: item.createdAt,
                 updatedAt: item.updatedAt,
             }),
@@ -92,6 +96,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             id: found.id,
             roomNumber: found.roomNumber,
             capacity: found.capacity,
+            status: found.status,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
         });

@@ -9,6 +9,7 @@ export class ExamSession {
         public readonly hallInvigilatorId: string | null,
         public readonly subjectCode: SubjectCode | null,
         public readonly examTime: ExamTime,
+        public readonly status: string,
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
     ) { }
@@ -21,6 +22,7 @@ export class ExamSession {
         subjectCode?: string | null;
         examOpenTime?: Date | null;
         examCloseTime?: Date | null;
+        status?: string;
     }): ExamSession {
         return new ExamSession(
             props.id,
@@ -29,6 +31,7 @@ export class ExamSession {
             props.hallInvigilatorId ?? null,
             SubjectCode.create(props.subjectCode),
             ExamTime.create(props.examOpenTime, props.examCloseTime),
+            props.status ?? 'Scheduled',
             new Date(),
             new Date(),
         );
@@ -42,6 +45,7 @@ export class ExamSession {
         subjectCode: string | null;
         examOpenTime: Date | null;
         examCloseTime: Date | null;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
     }): ExamSession {
@@ -52,6 +56,7 @@ export class ExamSession {
             props.hallInvigilatorId,
             SubjectCode.create(props.subjectCode),
             ExamTime.create(props.examOpenTime, props.examCloseTime),
+            props.status,
             props.createdAt,
             props.updatedAt,
         );
@@ -64,6 +69,7 @@ export class ExamSession {
         subjectCode?: string | null;
         examOpenTime?: Date | null;
         examCloseTime?: Date | null;
+        status?: string;
     }): ExamSession {
         return new ExamSession(
             this.id,
@@ -75,6 +81,7 @@ export class ExamSession {
                 props.examOpenTime !== undefined ? props.examOpenTime : this.examTime.openTime,
                 props.examCloseTime !== undefined ? props.examCloseTime : this.examTime.closeTime
             ),
+            props.status !== undefined ? props.status : this.status,
             this.createdAt,
             new Date(),
         );

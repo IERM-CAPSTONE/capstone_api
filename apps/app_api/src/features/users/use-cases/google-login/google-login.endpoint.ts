@@ -4,7 +4,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { TokenService } from '@app/users';
-import { ConfigService } from '@nestjs/config';
 import { GoogleLoginHandler } from './google-login.handler';
 
 @ApiTags('Auth')

@@ -5,6 +5,7 @@ model ExamRoom {
     id         String @id @default(uuid())
     roomNumber String @unique
     capacity   Int?
+    status     ExamRoomStatus @default(Available)
 
     examSessions  ExamSession[]
     notifications Notification[]

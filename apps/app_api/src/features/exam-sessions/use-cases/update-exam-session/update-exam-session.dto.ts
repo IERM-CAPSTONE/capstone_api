@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsOptional } from 'class-validator';
 
 export class UpdateExamSessionDto {
     @ApiProperty({ required: false, nullable: true })
@@ -18,4 +19,9 @@ export class UpdateExamSessionDto {
 
     @ApiProperty({ required: false, nullable: true })
     examCloseTime?: Date | null;
+
+    @ApiProperty({ example: 'Scheduled', enum: ['Ongoing', 'Ended', 'Scheduled'], description: 'Session status', required: false })
+    @IsOptional()
+    @IsEnum(['Ongoing', 'Ended', 'Scheduled'])
+    status?: string;
 }

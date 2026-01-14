@@ -4,14 +4,17 @@
 model StudentExam {
     id String @id @default(uuid())
 
-    examId String
-    exam   ExamSession @relation(fields: [examId], references: [id])
+    examSessionId String
+    examSession   ExamSession @relation(fields: [examSessionId], references: [id])
 
     studentId String
     student   User   @relation(fields: [studentId], references: [id])
 
     seatNumber Int?
     status     StudentExamStatus @default(CHECKEDIN)
+
+    /// Current location of student (e.g., "Room A1", "IT Helpdesk")
+    currentLocation String?
 
     /// Optional link to identity snapshot used during check-in
     identityId String?
@@ -27,7 +30,7 @@ model StudentExam {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@unique([examId, studentId])
+    @@unique([examSessionId, studentId])
     @@index([studentId])
-    @@index([examId])
+    @@index([examSessionId])
 }

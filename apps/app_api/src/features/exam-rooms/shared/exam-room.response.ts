@@ -14,6 +14,9 @@ export class ExamRoomResponse {
     @ApiProperty({ example: 30, description: 'Room capacity', nullable: true })
     capacity: number | null;
 
+    @ApiProperty({ example: 'Available', enum: ['Available', 'Occupied', 'Maintenance', 'Exam_Ongoing', 'For_Exam'], description: 'Room status' })
+    status: string;
+
     @ApiProperty({ example: '2024-01-01T00:00:00.000Z', description: 'Creation timestamp' })
     createdAt: Date;
 
@@ -29,6 +32,7 @@ export function toExamRoomResponse(examRoom: ExamRoom): ExamRoomResponse {
         id: examRoom.id,
         roomNumber: examRoom.roomNumber.value,
         capacity: examRoom.capacity?.value ?? null,
+        status: examRoom.status,
         createdAt: examRoom.createdAt,
         updatedAt: examRoom.updatedAt,
     };

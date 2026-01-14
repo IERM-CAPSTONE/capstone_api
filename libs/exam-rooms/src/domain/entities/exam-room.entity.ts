@@ -10,6 +10,7 @@ export class ExamRoom {
         public readonly id: string,
         public readonly roomNumber: RoomNumber,
         public readonly capacity: Capacity | null,
+        public readonly status: string,
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
     ) { }
@@ -21,6 +22,7 @@ export class ExamRoom {
         id: string;
         roomNumber: string | number;
         capacity?: number | null;
+        status?: string;
     }): ExamRoom {
         const roomNumber = RoomNumber.create(props.roomNumber);
         const capacity = props.capacity ? Capacity.create(props.capacity) : null;
@@ -29,6 +31,7 @@ export class ExamRoom {
             props.id,
             roomNumber,
             capacity,
+            props.status ?? 'Available',
             new Date(),
             new Date(),
         );
@@ -41,6 +44,7 @@ export class ExamRoom {
         id: string;
         roomNumber: string | number;
         capacity: number | null;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
     }): ExamRoom {
@@ -51,6 +55,7 @@ export class ExamRoom {
             props.id,
             roomNumber,
             capacity,
+            props.status,
             props.createdAt,
             props.updatedAt,
         );
@@ -62,6 +67,7 @@ export class ExamRoom {
     update(props: {
         roomNumber?: string | number;
         capacity?: number | null;
+        status?: string;
     }): ExamRoom {
         const roomNumber = props.roomNumber !== undefined
             ? RoomNumber.create(props.roomNumber)
@@ -71,10 +77,13 @@ export class ExamRoom {
             ? (props.capacity ? Capacity.create(props.capacity) : null)
             : this.capacity;
 
+        const status = props.status !== undefined ? props.status : this.status;
+
         return new ExamRoom(
             this.id,
             roomNumber,
             capacity,
+            status,
             this.createdAt,
             new Date(),
         );

@@ -10,12 +10,16 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
     async save(session: ExamSession): Promise<ExamSession> {
         const data = {
             subjectCode: session.subjectCode?.value,
-            examRoomId: session.examRoomId,
-            proctorId: session.proctorId,
-            hallInvigilatorId: session.hallInvigilatorId,
             examOpenTime: session.examTime.openTime,
             examCloseTime: session.examTime.closeTime,
+            status: session.status as any,
             updatedAt: session.updatedAt,
+        };
+
+        const relationData = {
+            examRoom: session.examRoomId ? { connect: { id: session.examRoomId } } : { disconnect: true },
+            proctor: session.proctorId ? { connect: { id: session.proctorId } } : { disconnect: true },
+            hallInvigilator: session.hallInvigilatorId ? { connect: { id: session.hallInvigilatorId } } : { disconnect: true },
         };
 
         const saved = await this.prisma.examSession.upsert({
@@ -23,9 +27,13 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             create: {
                 id: session.id,
                 ...data,
+                ...relationData,
                 createdAt: session.createdAt,
             },
-            update: data,
+            update: {
+                ...data,
+                ...relationData,
+            },
         });
 
         return ExamSession.reconstitute({
@@ -36,6 +44,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             hallInvigilatorId: saved.hallInvigilatorId,
             examOpenTime: saved.examOpenTime,
             examCloseTime: saved.examCloseTime,
+            status: saved.status,
             createdAt: saved.createdAt,
             updatedAt: saved.updatedAt,
         });
@@ -55,6 +64,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             hallInvigilatorId: found.hallInvigilatorId,
             examOpenTime: found.examOpenTime,
             examCloseTime: found.examCloseTime,
+            status: found.status,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
         });
@@ -87,6 +97,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             hallInvigilatorId: item.hallInvigilatorId,
             examOpenTime: item.examOpenTime,
             examCloseTime: item.examCloseTime,
+            status: item.status,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
         }));
@@ -116,6 +127,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             hallInvigilatorId: found.hallInvigilatorId,
             examOpenTime: found.examOpenTime,
             examCloseTime: found.examCloseTime,
+            status: found.status,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
         });
@@ -178,6 +190,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             hallInvigilatorId: item.hallInvigilatorId,
             examOpenTime: item.examOpenTime,
             examCloseTime: item.examCloseTime,
+            status: item.status,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
         }));

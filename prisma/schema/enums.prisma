@@ -7,6 +7,7 @@ enum Role {
   EXAM_OFFICER
   PROCTOR
   STUDENT
+  IT_SUPPORT
 }
 
 /// Student exam attendance status
@@ -51,4 +52,20 @@ enum ProctorApplicationStatus {
 enum AssignmentStatus {
   ASSIGNED
   CANCELLED
+}
+
+/// Exam room status
+enum ExamRoomStatus {
+  Available
+  Occupied
+  Maintenance
+  Exam_Ongoing
+  For_Exam
+}
+
+/// Exam session status
+enum ExamSessionStatus {
+  Ongoing
+  Ended
+  Scheduled
 }

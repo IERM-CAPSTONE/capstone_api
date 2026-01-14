@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsDateString, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsDateString, IsUUID, IsEnum } from 'class-validator';
 
 export class CreateExamSessionDto {
     @ApiProperty({ required: false, nullable: true })
@@ -31,4 +31,9 @@ export class CreateExamSessionDto {
     @IsOptional()
     @IsDateString()
     examCloseTime?: Date | null;
+
+    @ApiProperty({ example: 'Scheduled', enum: ['Ongoing', 'Ended', 'Scheduled'], description: 'Session status', required: false })
+    @IsOptional()
+    @IsEnum(['Ongoing', 'Ended', 'Scheduled'])
+    status?: string;
 }
