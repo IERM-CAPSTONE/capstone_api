@@ -75,29 +75,40 @@ async function bootstrap() {
     customCss: '.swagger-ui .topbar { display: none }',
   });
 
-  // RabbitMQ Connection (Hybrid App)
-  const configService = app.get(ConfigService);
-  const rabbitmqUrl = configService.get<string>('RABBITMQ_URL', 'amqp://admin:admin123@localhost:5672');
+  // Start HTTP server first (non-blocking)
+  // Listen on 0.0.0.0 to allow connections from emulator (10.0.2.2)
+  const port = process.env.API_PORT ?? 3002;
+  await app.listen(port, '0.0.0.0');
 
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.RMQ,
-    options: {
-      urls: [rabbitmqUrl],
-      queue: QUEUE_NAMES.API_EVENT,
-      queueOptions: {
-        durable: QUEUE_OPTIONS.DURABLE,
-      },
-      prefetchCount: QUEUE_OPTIONS.PREFETCH_COUNT,
-      noAck: false,
-    },
-  });
-
-  await app.startAllMicroservices();
-  const port = process.env.API_PORT ?? 3000;
-  await app.listen(port);
-
-  logger.log(`API server is running on http://localhost:${port}`);
+  logger.log(`API server is running on http://0.0.0.0:${port}`);
+  logger.log(`API server is accessible from http://localhost:${port} and http://10.0.2.2:${port} (emulator)`);
   logger.log(`Swagger documentation is available at http://localhost:${port}/docs`);
+
+  // RabbitMQ Connection (Hybrid App) - Optional, non-blocking
+  try {
+    const configService = app.get(ConfigService);
+    const rabbitmqUrl = configService.get<string>('RABBITMQ_URL', 'amqp://admin:admin123@localhost:5672');
+
+    app.connectMicroservice<MicroserviceOptions>({
+      transport: Transport.RMQ,
+      options: {
+        urls: [rabbitmqUrl],
+        queue: QUEUE_NAMES.API_EVENT,
+        queueOptions: {
+          durable: QUEUE_OPTIONS.DURABLE,
+        },
+        prefetchCount: QUEUE_OPTIONS.PREFETCH_COUNT,
+        noAck: false,
+      },
+    });
+
+    await app.startAllMicroservices();
+    logger.log('RabbitMQ microservice connected successfully');
+  } catch (error) {
+    logger.warn(`RabbitMQ connection failed: ${error.message}`);
+    logger.warn('API server is running without RabbitMQ microservice');
+    logger.warn('Background worker features will not be available');
+  }
 }
 
 bootstrap();
