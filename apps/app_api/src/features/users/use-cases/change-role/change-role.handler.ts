@@ -11,7 +11,7 @@ export class ChangeRoleHandler {
     ) { }
 
     async execute(id: string, dto: ChangeRoleDto): Promise<UserResponse> {
-        const user = await this.userRepository.findById(id);
+        const user = await this.userRepository.findOne({ id });
         if (!user) {
             throw new Error(`User '${id}' not found`);
         }

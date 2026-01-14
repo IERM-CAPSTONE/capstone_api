@@ -4,6 +4,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { TokenService } from '@app/users';
+import { ConfigService } from '@nestjs/config';
 import { GoogleLoginHandler } from './google-login.handler';
 
 @ApiTags('Auth')
@@ -15,30 +16,8 @@ export class GoogleLoginEndpoint {
         private readonly handler: GoogleLoginHandler,
         private readonly tokenService: TokenService,
         private readonly configService: ConfigService,
-    ) {
-        // Initialize allowed redirect URLs from environment
-        const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
-        this.allowedRedirectOrigins = [
-            frontendUrl,
-            'http://localhost:3000',
-            'http://localhost:3002',
-        ].filter((url) => url); // Remove falsy values
-    }
-
-    /**
-     * Validates redirect URL to prevent open redirect vulnerabilities
-     */
-    private isValidRedirectUrl(url: string): boolean {
-        try {
-            const parsedUrl = new URL(url);
-            return this.allowedRedirectOrigins.some(
-                (origin) => new URL(origin).origin === parsedUrl.origin,
-            );
-        } catch {
-            return false;
-        }
-    }
-
+    ) { }
+    
     @Get()
     @UseGuards(AuthGuard('google'))
     @ApiOperation({ summary: 'Initiate Google OAuth login' })
@@ -50,25 +29,19 @@ export class GoogleLoginEndpoint {
     @Get('callback')
     @UseGuards(AuthGuard('google'))
     @ApiOperation({ summary: 'Google OAuth callback' })
-    @ApiResponse({ status: 200, description: 'Successfully logged in with Google' })
+    @ApiResponse({ status: 302, description: 'Redirects to frontend callback page' })
     async googleAuthRedirect(@Req() req: any, @Res() res: Response) {
         const googleUser = req.user;
 
+        // Handle callback and get user with tokens
         const { user, accessToken, refreshToken } = await this.handler.handleCallback(googleUser);
 
-        // Set cookies
+        // Set authentication cookies (tokens are stored in httpOnly cookies)
         this.tokenService.setCookies(res, accessToken, refreshToken);
 
-        // Validate and redirect to frontend admin dashboard
-        const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
-        const redirectUrl = `${frontendUrl}/admin-dashboard`;
-
-        if (!this.isValidRedirectUrl(redirectUrl)) {
-            throw new BadRequestException(
-                'Invalid redirect URL. Possible security threat detected.',
-            );
-        }
-
-        return res.redirect(redirectUrl);
+        // Redirect to frontend callback page
+        // Frontend will fetch user info, check role, and redirect to dashboard if admin
+        const clientUrl = this.configService.get<string>('CLIENT_URL', 'http://localhost:3000');
+        return res.redirect(`${clientUrl}/auth/callback`);
     }
 }

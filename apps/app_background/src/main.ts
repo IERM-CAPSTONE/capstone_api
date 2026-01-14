@@ -26,7 +26,8 @@ async function bootstrap() {
 
   // 2. Define the queues we want to listen to
   const queues = [
-    QUEUE_NAMES.USER
+    QUEUE_NAMES.USER,
+    QUEUE_NAMES.EXAM,
   ];
 
   // 3. Connect each queue as a microservice to the same app instance

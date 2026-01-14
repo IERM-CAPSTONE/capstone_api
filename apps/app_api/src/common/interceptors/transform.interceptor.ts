@@ -10,8 +10,9 @@ import { map } from 'rxjs/operators';
 export interface Response<T> {
     success: boolean;
     statusCode: number;
-    message: string;
+    message?: string;
     data: T;
+    meta?: any;
 }
 
 @Injectable()
@@ -26,7 +27,6 @@ export class TransformInterceptor<T>
 
         return next.handle().pipe(
             map((data) => {
-                const message = data?.message || 'Operation successful';
                 let responseData = data;
                 let meta = undefined;
 
@@ -37,15 +37,10 @@ export class TransformInterceptor<T>
                     meta = paginationMeta;
                 }
 
-                // Cleanup message from data if it exists
-                if (responseData && typeof responseData === 'object' && 'message' in responseData) {
-                    delete responseData.message;
-                }
 
                 return {
                     success: true,
                     statusCode,
-                    message,
                     data: responseData,
                     ...(meta ? { meta } : {}),
                 };

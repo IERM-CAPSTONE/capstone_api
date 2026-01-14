@@ -37,6 +37,24 @@
       ],
       "@app/users/*": [
         "libs/users/src/*"
+      ],
+      "@app/exam-rooms": [
+        "libs/exam-rooms/src"
+      ],
+      "@app/exam-rooms/*": [
+        "libs/exam-rooms/src/*"
+      ],
+      "@app/exam-sessions": [
+        "libs/exam-sessions/src"
+      ],
+      "@app/exam-sessions/*": [
+        "libs/exam-sessions/src/*"
+      ],
+      "@app/cache": [
+        "libs/cache/src"
+      ],
+      "@app/cache/*": [
+        "libs/cache/src/*"
       ]
     }
   },

@@ -57,7 +57,7 @@ export class StudentImportProcessor {
                     }
 
                     // Check if user exists
-                    const existingUser = await this.userRepository.findByEmail(Email);
+                    const existingUser = await this.userRepository.findOne({ email: Email });
                     if (existingUser) {
                         this.logger.debug(`Student already exists: ${Email}`);
                         successCount++;
@@ -78,6 +78,15 @@ export class StudentImportProcessor {
                     });
 
                     await this.userRepository.save(user);
+
+                    // Emit event for real-time notification
+                    this.apiEventClient.emit(MESSAGE_PATTERNS.USER.ACTIVITY_LOGGED, {
+                        userId: user.id,
+                        userName: user.fullName || user.email,
+                        userCode: user.code?.value,
+                        timestamp: new Date().toISOString(),
+                    });
+
                     successCount++;
                     this.logger.debug(`Imported: ${Email}`);
                 } catch (err) {

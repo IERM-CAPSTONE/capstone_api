@@ -42,6 +42,24 @@
       "compilerOptions": {
         "tsConfigPath": "libs/users/tsconfig.lib.json"
       }
+    },
+    "exam-rooms": {
+      "type": "library",
+      "root": "libs/exam-rooms",
+      "entryFile": "index",
+      "sourceRoot": "libs/exam-rooms/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/exam-rooms/tsconfig.lib.json"
+      }
+    },
+    "exam-sessions": {
+      "type": "library",
+      "root": "libs/exam-sessions",
+      "entryFile": "index",
+      "sourceRoot": "libs/exam-sessions/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/exam-sessions/tsconfig.lib.json"
+      }
     }
   }
 }

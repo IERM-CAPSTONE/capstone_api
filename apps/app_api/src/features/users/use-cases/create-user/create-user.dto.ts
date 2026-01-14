@@ -1,12 +1,30 @@
 import { RoleType } from '@app/users';
+import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString } from 'class-validator';
 
 /**
  * Create User - Request DTO
  */
 export class CreateUserDto {
+    @IsEmail()
     email: string;
+
+    @IsOptional()
+    @IsString()
     fullName?: string;
+
+    @IsOptional()
+    @IsString()
     code?: string;
+
+    @IsOptional()
+    @IsString()
     avatarUrl?: string;
+
+    @IsOptional()
+    @IsEnum(RoleType)
     role?: RoleType;
+
+    @IsOptional()
+    @IsBoolean()
+    isActive?: boolean;
 }

@@ -40,10 +40,34 @@ async function bootstrap() {
     }),
   );
 
-  // Enable CORS with credentials support
+  // Get ConfigService for CORS configuration
+  const configService = app.get(ConfigService);
+  const clientUrl = configService.get<string>('CLIENT_URL', 'http://localhost:3000');
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+
+  // Enable CORS with proper configuration for credentials
+  // In development, allow localhost origins; in production, use CLIENT_URL from env
+  const allowedOrigins = isProduction
+    ? [clientUrl]
+    : [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        clientUrl,
+      ].filter((origin, index, self) => self.indexOf(origin) === index); // Remove duplicates
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true, // Allow cookies to be sent
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+    exposedHeaders: ['Set-Cookie'],
   });
 
   // Set global prefix for all routes (exclude Swagger docs)
@@ -79,7 +103,6 @@ async function bootstrap() {
   });
 
   // RabbitMQ Connection (Hybrid App)
-  const configService = app.get(ConfigService);
   const rabbitmqUrl = configService.get<string>('RABBITMQ_URL', 'amqp://admin:admin123@localhost:5672');
 
   app.connectMicroservice<MicroserviceOptions>({
