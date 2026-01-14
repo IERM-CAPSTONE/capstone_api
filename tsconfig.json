@@ -50,6 +50,12 @@
       "@app/exam-sessions/*": [
         "libs/exam-sessions/src/*"
       ],
+      "@app/student-exams": [
+        "libs/student-exams/src"
+      ],
+      "@app/student-exams/*": [
+        "libs/student-exams/src/*"
+      ],
       "@app/cache": [
         "libs/cache/src"
       ],

@@ -8,6 +8,7 @@ import { HttpLoggerMiddleware } from './common/middleware';
 import { UsersModule } from './features/users';
 import { ExamRoomsModule } from './features/exam-rooms';
 import { ExamSessionsModule } from './features/exam-sessions';
+import { StudentExamsModule } from './features/student-exams';
 import { AppCacheModule } from '@app/cache';
 
 @Module({
@@ -30,6 +31,7 @@ import { AppCacheModule } from '@app/cache';
     UsersModule,
     ExamRoomsModule,
     ExamSessionsModule,
+    StudentExamsModule,
   ],
   providers: [],
   exports: [],
