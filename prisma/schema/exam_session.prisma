@@ -4,6 +4,13 @@
 model ExamSession {
     id String @id @default(uuid())
 
+
+    examCode String?
+    semester String?
+    examType String?
+    openCode String?
+    note String?
+
     examRoomId String?
     examRoom   ExamRoom? @relation(fields: [examRoomId], references: [id])
 
