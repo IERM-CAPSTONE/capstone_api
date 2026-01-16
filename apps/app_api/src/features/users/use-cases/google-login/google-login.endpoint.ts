@@ -38,17 +38,25 @@ export class GoogleLoginEndpoint {
         // Set authentication cookies (tokens are stored in httpOnly cookies)
         this.tokenService.setCookies(res, accessToken, refreshToken);
 
-        // Send response
-        res.json({
-            message: 'Successfully logged in with Google',
-            user: {
-                id: user.id,
-                email: user.email.value,
-                fullName: user.fullName,
-                role: user.role?.value,
-            },
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-        });
+        // Prepare user data for frontend
+        const userData = {
+            id: user.id,
+            email: user.email.value,
+            fullName: user.fullName,
+            role: user.role?.value,
+            avatarUrl: user.avatarUrl,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+        };
+
+        // Get frontend URL from config
+        const frontendUrl = this.configService.get<string>('CLIENT_URL', 'http://localhost:3000');
+        
+        // Redirect to frontend callback page with user data in query params
+        const callbackUrl = new URL('/auth/callback', frontendUrl);
+        callbackUrl.searchParams.set('user', encodeURIComponent(JSON.stringify(userData)));
+
+        // Redirect to frontend callback page
+        res.redirect(callbackUrl.toString());
     }
 }
