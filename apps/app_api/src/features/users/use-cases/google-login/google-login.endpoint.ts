@@ -16,7 +16,7 @@ export class GoogleLoginEndpoint {
         private readonly tokenService: TokenService,
         private readonly configService: ConfigService,
     ) { }
-    
+
     @Get()
     @UseGuards(AuthGuard('google'))
     @ApiOperation({ summary: 'Initiate Google OAuth login' })
@@ -38,9 +38,17 @@ export class GoogleLoginEndpoint {
         // Set authentication cookies (tokens are stored in httpOnly cookies)
         this.tokenService.setCookies(res, accessToken, refreshToken);
 
-        // Redirect to frontend callback page
-        // Frontend will fetch user info, check role, and redirect to dashboard if admin
-        const clientUrl = this.configService.get<string>('CLIENT_URL', 'http://localhost:3000');
-        return res.redirect(`${clientUrl}/auth/callback`);
+        // Send response
+        res.json({
+            message: 'Successfully logged in with Google',
+            user: {
+                id: user.id,
+                email: user.email.value,
+                fullName: user.fullName,
+                role: user.role?.value,
+            },
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+        });
     }
 }
