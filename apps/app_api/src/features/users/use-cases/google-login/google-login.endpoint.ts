@@ -42,6 +42,8 @@ export class GoogleLoginEndpoint {
                 fullName: user.fullName,
                 role: user.role?.value,
             },
+            accessToken: accessToken,
+            refreshToken: refreshToken,
         });
     }
 }
