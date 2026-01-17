@@ -2,35 +2,23 @@
 
 /// Junction table: which student belongs to which exam session
 model StudentExam {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    examSessionId String
-    examSession   ExamSession @relation(fields: [examSessionId], references: [id])
+  examSessionId String
+  examSession   ExamSession @relation(fields: [examSessionId], references: [id])
 
-    studentId String
-    student   User   @relation(fields: [studentId], references: [id])
+  studentId String
+  student   User   @relation(fields: [studentId], references: [id])
 
-    seatNumber Int?
-    status     StudentExamStatus @default(CHECKEDIN)
+  seatNumber String
 
-    /// Current location of student (e.g., "Room A1", "IT Helpdesk")
-    currentLocation String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    /// Optional link to identity snapshot used during check-in
-    identityId String?
-    identity   Identity? @relation(fields: [identityId], references: [id])
+  activityHistories ActivityHistory[]
+  parts             StudentExamPart[]
 
-    isMatched    Boolean   @default(false)
-    checkinTime  DateTime?
-    checkoutTime DateTime?
-
-    /// Admin/proctor can invalidate a record if fraud is detected
-    isValid Boolean @default(true)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@unique([examSessionId, studentId])
-    @@index([studentId])
-    @@index([examSessionId])
+  @@unique([examSessionId, studentId])
+  @@index([studentId])
+  @@index([examSessionId])
 }

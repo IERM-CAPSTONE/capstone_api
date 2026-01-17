@@ -2,38 +2,38 @@
 
 /// Represents a concrete exam session for a subject in a room at a given time
 model ExamSession {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    examRoomId String?
-    examRoom   ExamRoom? @relation(fields: [examRoomId], references: [id])
+  examRoomId String?
+  examRoom   ExamRoom? @relation(fields: [examRoomId], references: [id])
 
-    /// Assigned staff
-    proctorId String?
-    proctor   User?   @relation("proctor", fields: [proctorId], references: [id])
+  /// Assigned staff
+  proctorId String?
+  proctor   User?   @relation("proctor", fields: [proctorId], references: [id])
 
-    hallInvigilatorId String?
-    hallInvigilator   User?   @relation("hallInvigilator", fields: [hallInvigilatorId], references: [id])
+  hallInvigilatorId String?
+  hallInvigilator   User?   @relation("hallInvigilator", fields: [hallInvigilatorId], references: [id])
 
-    subjectCode   String?
-    examOpenTime  DateTime?
-    examCloseTime DateTime?
-    status        ExamSessionStatus @default(Scheduled)
+  subjectCode   String?
+  examOpenTime  DateTime?
+  examCloseTime DateTime?
+  status        ExamSessionStatus @default(Scheduled)
 
-    /// Attendance/registration list for this session
-    studentExams StudentExam[]
+  /// Attendance/registration list for this session
+  studentExams StudentExam[]
 
-    /// Related tickets/issues during this session
-    tickets IssueTicket[]
+  /// Related tickets/issues during this session
+  tickets IssueTicket[]
 
-    /// Assignment history/audit
-    assignments ProctorAssignment[]
+  /// Assignment history/audit
+  assignments ProctorAssignment[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([examRoomId])
-    @@index([proctorId])
-    @@index([hallInvigilatorId])
-    @@index([subjectCode])
-    @@index([examOpenTime, examCloseTime])
+  @@index([examRoomId])
+  @@index([proctorId])
+  @@index([hallInvigilatorId])
+  @@index([subjectCode])
+  @@index([examOpenTime, examCloseTime])
 }

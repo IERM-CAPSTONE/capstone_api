@@ -23,9 +23,6 @@ model Identity {
   /// Enrollment history (multi-enroll support)
   enrollments FaceEnrollment[]
 
-  /// Student exams using this identity snapshot
-  studentExams StudentExam[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

@@ -69,3 +69,15 @@ enum ExamSessionStatus {
   Ended
   Scheduled
 }
+
+/// Activity types for auditing student exam actions
+enum ActivityType {
+  CHECKED_IN
+  MOVED
+}
+
+/// Type of exam part
+enum ExamType {
+  PRACTICAL
+  THEORY
+}

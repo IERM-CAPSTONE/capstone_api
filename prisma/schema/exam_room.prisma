@@ -2,14 +2,18 @@
 
 /// Stores exam room information (room number, capacity, etc.)
 model ExamRoom {
-    id         String @id @default(uuid())
-    roomNumber String @unique
-    capacity   Int?
-    status     ExamRoomStatus @default(Available)
+  id         String         @id @default(uuid())
+  roomNumber String         @unique
+  capacity   Int?
+  status     ExamRoomStatus @default(Available)
 
-    examSessions  ExamSession[]
-    notifications Notification[]
+  max_rows    Int
+  max_columns Int
+  total_seats Int
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  examSessions  ExamSession[]
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

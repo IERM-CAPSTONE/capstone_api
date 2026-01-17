@@ -2,22 +2,22 @@
 
 /// Face enrollment history records (supports re-enroll, device tracking, audit)
 model FaceEnrollment {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    identityId String
-    identity   Identity @relation(fields: [identityId], references: [id])
+  identityId String
+  identity   Identity @relation(fields: [identityId], references: [id])
 
-    deviceId String?
-    device   Device? @relation(fields: [deviceId], references: [id])
+  deviceId String?
+  device   Device? @relation(fields: [deviceId], references: [id])
 
-    vector   Json // face embedding vector
-    quality  Float?
-    model    String?
-    isActive Boolean @default(false)
+  vector   Json // face embedding vector
+  quality  Float?
+  model    String?
+  isActive Boolean @default(false)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([identityId])
-    @@index([deviceId])
+  @@index([identityId])
+  @@index([deviceId])
 }
