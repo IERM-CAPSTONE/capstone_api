@@ -19,7 +19,7 @@ import { GetUserHandler, GetUserEndpoint } from './use-cases/get-user';
 import { ListUsersHandler, ListUsersEndpoint } from './use-cases/list-users';
 
 // Use Cases - Authentication
-import { GoogleLoginHandler, GoogleLoginEndpoint } from './use-cases/google-login';
+import { FirebaseLoginHandler, FirebaseLoginEndpoint } from './use-cases/firebase-login';
 import { RefreshTokenHandler, RefreshTokenEndpoint } from './use-cases/refresh-token';
 import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
 
@@ -43,7 +43,7 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         GetUserEndpoint,
         ListUsersEndpoint,
         // Authentication
-        GoogleLoginEndpoint,
+        FirebaseLoginEndpoint,
         RefreshTokenEndpoint,
         LogoutEndpoint,
         ImportStudentEndpoint,
@@ -65,7 +65,7 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         GetUserHandler,
         ListUsersHandler,
         // Handlers - Authentication
-        GoogleLoginHandler,
+        FirebaseLoginHandler,
         RefreshTokenHandler,
         LogoutHandler,
         ImportStudentHandler,
