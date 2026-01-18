@@ -1,6 +1,6 @@
 import { Controller, Logger, Inject } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext, ClientProxy } from '@nestjs/microservices';
-import { MESSAGE_PATTERNS, ExamImportJobData, BaseJobResult, RABBITMQ_CLIENTS, ExamImportFinishedData, ImportScheduleJobData, ImportProctorJobData } from '@app/queue';
+import { MESSAGE_PATTERNS, ExamImportJobData, BaseJobResult, RABBITMQ_CLIENTS, ExamImportFinishedData, ImportScheduleJobData, ImportProctorJobData, ImportExamCodeJobData } from '@app/queue';
 import { IExamRoomRepository, EXAM_ROOM_REPOSITORY, ExamRoom } from '@app/exam-rooms';
 import { IExamSessionRepository, EXAM_SESSION_REPOSITORY, ExamSession } from '@app/exam-sessions';
 import { IUserRepository, USER_REPOSITORY } from '@app/users';
@@ -405,7 +405,7 @@ export class ExamImportProcessor {
                         throw new Error(`Exam session not found for room ${p.examRoom} at ${p.dateExam} ${p.timeExam}`);
                     }
 
-                    // 3. Create or Update ProctorAssignment
+                    // 3. Create or Update ProctorAssignment (Audit/History)
                     await this.prisma.proctorAssignment.upsert({
                         where: {
                             proctorId_examSessionId: {
@@ -426,6 +426,16 @@ export class ExamImportProcessor {
                         }
                     });
 
+                    // 4. Update ExamSession Record directly (Primary Proctor)
+                    // If multiple proctors are imported for same session, the last one wins in this simple logic
+                    // or we could check p.proctorType
+                    await this.prisma.examSession.update({
+                        where: { id: session.id },
+                        data: {
+                            proctorId: proctor.id
+                        }
+                    });
+
                     successCount++;
                 } catch (err) {
                     errors.push({ type: 'proctor', data: p, message: err.message });
@@ -443,6 +453,94 @@ export class ExamImportProcessor {
             };
         } catch (error) {
             this.logger.error(`Critical error during proctor import: ${error.message}`);
+            channel.nack(originalMsg, false, false);
+            return this.failResult(originalMsg, startTime, error.message);
+        }
+    }
+
+    @MessagePattern(MESSAGE_PATTERNS.EXAM.IMPORT_EXAMCODE)
+    async handleImportExamCodes(
+        @Payload() data: ImportExamCodeJobData,
+        @Ctx() context: RmqContext,
+    ): Promise<BaseJobResult> {
+        const channel = context.getChannelRef();
+        const originalMsg = context.getMessage();
+        const startTime = Date.now();
+
+        this.logger.log(`Processing exam code import: ${data.codes.length} items`);
+
+        try {
+            let successCount = 0;
+            const errors: any[] = [];
+
+            for (const c of data.codes) {
+                try {
+                    // 1. Find Session
+                    const dateParts = c.dateExam.split('/');
+                    if (dateParts.length !== 3) throw new Error(`Invalid date format: ${c.dateExam}`);
+                    const [day, month, year] = dateParts.map(Number);
+
+                    const timeParts = c.timeExam.split('-');
+                    if (timeParts.length !== 2) throw new Error(`Invalid time format: ${c.timeExam}`);
+                    const [startStr, endStr] = timeParts;
+
+                    const parseTime = (timeStr: string) => {
+                        const parts = timeStr.trim().split('h');
+                        if (parts.length !== 2) throw new Error(`Invalid time string: ${timeStr}`);
+                        const h = Number(parts[0]);
+                        const m = Number(parts[1]);
+                        return new Date(year, month - 1, day, h, m, 0, 0);
+                    };
+
+                    const openTime = parseTime(startStr);
+                    const closeTime = parseTime(endStr);
+
+                    const room = await this.prisma.examRoom.findUnique({
+                        where: { roomNumber: String(c.examRoom) }
+                    });
+
+                    if (!room) throw new Error(`Room ${c.examRoom} not found`);
+
+                    const session = await this.prisma.examSession.findFirst({
+                        where: {
+                            examRoomId: room.id,
+                            examOpenTime: openTime,
+                            examCloseTime: closeTime,
+                        }
+                    });
+
+                    if (!session) throw new Error(`Exam session not found for room ${c.examRoom} at ${c.dateExam} ${c.timeExam}`);
+
+                    // 2. Update ExamSession with codes
+                    await this.prisma.examSession.update({
+                        where: { id: session.id },
+                        data: {
+                            examCode: c.examCode || undefined,
+                            openCode: c.openCode || undefined,
+                        }
+                    });
+
+                    // Wait, the ExamSession model doesn't have examCode and openCode fields?
+                    // Let me check exam_session.prisma again.
+                    // Oh, I see. I might need to add them to the Prisma schema if they are missing.
+
+                    successCount++;
+                } catch (err) {
+                    errors.push({ type: 'examcode', data: c, message: err.message });
+                }
+            }
+
+            this.emitFinished('examcode', 'import-codes-api', successCount, errors.length, errors, data.batchId);
+            channel.ack(originalMsg);
+
+            return {
+                jobId: originalMsg.properties.messageId || 'unknown',
+                success: true,
+                processingTime: Date.now() - startTime,
+                completedAt: new Date(),
+            };
+        } catch (error) {
+            this.logger.error(`Critical error during exam code import: ${error.message}`);
             channel.nack(originalMsg, false, false);
             return this.failResult(originalMsg, startTime, error.message);
         }

@@ -8,6 +8,7 @@ import { GetExamSessionHandler, GetExamSessionEndpoint } from './use-cases/get-e
 import { ListExamSessionsHandler, ListExamSessionsEndpoint } from './use-cases/list-exam-sessions';
 import { ImportScheduleHandler, ImportScheduleEndpoint } from './use-cases/import-schedule';
 import { ImportProctorHandler, ImportProctorEndpoint } from './use-cases/import-proctor';
+import { ImportExamCodeHandler, ImportExamCodeEndpoint } from './use-cases/import-exam-code';
 
 @Module({
     imports: [ExamSessionsCoreModule],
@@ -19,6 +20,7 @@ import { ImportProctorHandler, ImportProctorEndpoint } from './use-cases/import-
         ListExamSessionsEndpoint,
         ImportScheduleEndpoint,
         ImportProctorEndpoint,
+        ImportExamCodeEndpoint,
     ],
     providers: [
         CreateExamSessionHandler,
@@ -28,6 +30,7 @@ import { ImportProctorHandler, ImportProctorEndpoint } from './use-cases/import-
         ListExamSessionsHandler,
         ImportScheduleHandler,
         ImportProctorHandler,
+        ImportExamCodeHandler,
     ],
 })
 export class ExamSessionsModule { }

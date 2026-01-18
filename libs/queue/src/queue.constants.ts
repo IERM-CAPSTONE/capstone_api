@@ -35,6 +35,8 @@ export const MESSAGE_PATTERNS = {
         IMPORT_SESSION: 'exam.import.session',
         /** Import danh sách giám thị */
         IMPORT_PROCTORS: 'exam.import.proctors',
+        /** Import mã đề và mã mở đề */
+        IMPORT_EXAMCODE: 'exam.import.examcode',
         /** Thông báo import hoàn tất */
         IMPORT_FINISHED: 'exam.import.finished',
     },

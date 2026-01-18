@@ -141,6 +141,22 @@ export interface ImportProctorJobData {
     totalItems?: number;
 }
 
+export interface ExamCodeImportData {
+    dateExam: string;
+    timeExam: string;
+    examRoom: string;
+    subjectCode?: string;
+    examCode?: string | null;
+    openCode?: string | null;
+}
+
+export interface ImportExamCodeJobData {
+    importType: 'examcode';
+    codes: ExamCodeImportData[];
+    batchId?: string;
+    totalItems?: number;
+}
+
 /**
  * Base interface cho tất cả job results
  */
