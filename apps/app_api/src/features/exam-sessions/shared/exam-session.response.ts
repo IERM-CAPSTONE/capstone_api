@@ -18,6 +18,12 @@ export class ExamSessionResponse {
     subjectCode: string | null;
 
     @ApiProperty({ nullable: true })
+    examCode: string | null;
+
+    @ApiProperty({ nullable: true })
+    openCode: string | null;
+
+    @ApiProperty({ nullable: true })
     examOpenTime: Date | null;
 
     @ApiProperty({ nullable: true })
@@ -34,6 +40,15 @@ export class ExamSessionResponse {
 
     @ApiProperty()
     updatedAt: Date;
+
+    @ApiProperty({ nullable: true })
+    roomNumber: string | null;
+
+    @ApiProperty({ nullable: true })
+    proctorName: string | null;
+
+    @ApiProperty({ nullable: true })
+    hallInvigilatorName: string | null;
 }
 
 export function toExamSessionResponse(session: ExamSession): ExamSessionResponse {
@@ -43,12 +58,17 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         proctorId: session.proctorId,
         hallInvigilatorId: session.hallInvigilatorId,
         subjectCode: session.subjectCode?.value ?? null,
+        examCode: session.examCode,
+        openCode: session.openCode,
         examOpenTime: session.examTime.openTime,
         examCloseTime: session.examTime.closeTime,
         status: session.status,
         examType: session.examType,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
+        roomNumber: session.roomNumber,
+        proctorName: session.proctorName,
+        hallInvigilatorName: session.hallInvigilatorName,
     };
 }
 

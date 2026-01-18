@@ -18,7 +18,49 @@ export class ListExamSessionsDto {
     limit?: number;
 
     @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
     subjectCode?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    examCode?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    date?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    time?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    status?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    fromDate?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    toDate?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    startTime?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    endTime?: string;
 
     @ApiProperty({ required: false })
     @IsOptional()

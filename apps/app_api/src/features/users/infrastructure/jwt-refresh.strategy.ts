@@ -15,12 +15,15 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
             ]),
             ignoreExpiration: false,
             secretOrKey: configService.get<string>('JWT_REFRESH_SECRET'),
-            passToReqToCallback: true,
+            passReqToCallback: true, // ✅ Fixed typo: was "passToReqToCallback"
         });
     }
 
     async validate(req: Request, payload: any) {
+        console.log('[JWT-REFRESH-STRATEGY] Validating payload:', { sub: payload.sub, iat: payload.iat, exp: payload.exp });
         const refreshToken = req.cookies?.refresh_token;
-        return { userId: payload.sub, refreshToken };
+        const userId = payload.sub;
+        console.log('[JWT-REFRESH-STRATEGY] Extracted userId:', userId);
+        return { userId, refreshToken };
     }
 }

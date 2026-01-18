@@ -15,7 +15,7 @@ export class ListUsersEndpoint {
     constructor(private readonly handler: ListUsersHandler) { }
 
     @Get()
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
+    @Roles(RoleType.ADMIN)
     @ApiOperation({ summary: 'Get list of users with pagination' })
     @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
     @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
@@ -24,6 +24,19 @@ export class ListUsersEndpoint {
     @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name, email, or code' })
     @ApiResponse({ status: 200, description: 'Users retrieved successfully', type: PaginatedUserResponse })
     async handle(@Query() query: ListUsersDto): Promise<PaginatedUserResponse> {
+        return this.handler.execute(query);
+    }
+
+    @Get('proctors')
+    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR)
+    @ApiOperation({ summary: 'Get list of proctors with pagination' })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+    @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
+    @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name, email, or code' })
+    @ApiResponse({ status: 200, description: 'Proctors retrieved successfully', type: PaginatedUserResponse })
+    async getProctors(@Query() query: ListUsersDto): Promise<PaginatedUserResponse> {
+        query.role = RoleType.PROCTOR;
         return this.handler.execute(query);
     }
 }

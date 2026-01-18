@@ -5,6 +5,14 @@ export interface IExamSessionRepository {
     findById(id: string): Promise<ExamSession | null>;
     findMany(query?: {
         subjectCode?: string;
+        examCode?: string;
+        date?: string;
+        time?: string;
+        status?: string;
+        fromDate?: string;
+        toDate?: string;
+        startTime?: string;
+        endTime?: string;
         examRoomId?: string;
         proctorId?: string;
         skip?: number;
@@ -19,6 +27,14 @@ export interface IExamSessionRepository {
     exists(id: string): Promise<boolean>;
     count(query?: {
         subjectCode?: string;
+        examCode?: string;
+        date?: string;
+        time?: string;
+        status?: string;
+        fromDate?: string;
+        toDate?: string;
+        startTime?: string;
+        endTime?: string;
         examRoomId?: string;
         proctorId?: string;
     }): Promise<number>;

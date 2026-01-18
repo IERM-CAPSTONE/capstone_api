@@ -12,6 +12,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             subjectCode: session.subjectCode?.value,
             examOpenTime: session.examTime.openTime,
             examCloseTime: session.examTime.closeTime,
+            examCode: session.examCode,
+            openCode: session.openCode,
             status: session.status as any,
             examType: session.examType as any,
             updatedAt: session.updatedAt,
@@ -45,6 +47,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             hallInvigilatorId: saved.hallInvigilatorId,
             examOpenTime: saved.examOpenTime,
             examCloseTime: saved.examCloseTime,
+            examCode: saved.examCode,
+            openCode: saved.openCode,
             status: saved.status,
             examType: saved.examType as string[],
             createdAt: saved.createdAt,
@@ -55,6 +59,11 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
     async findById(id: string): Promise<ExamSession | null> {
         const found = await this.prisma.examSession.findUnique({
             where: { id },
+            include: {
+                examRoom: true,
+                proctor: true,
+                hallInvigilator: true,
+            }
         });
         if (!found) return null;
 
@@ -66,30 +75,45 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             hallInvigilatorId: found.hallInvigilatorId,
             examOpenTime: found.examOpenTime,
             examCloseTime: found.examCloseTime,
+            examCode: found.examCode,
+            openCode: found.openCode,
             status: found.status,
             examType: found.examType as string[],
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
+            roomNumber: found.examRoom?.roomNumber,
+            proctorName: found.proctor?.fullName,
+            hallInvigilatorName: found.hallInvigilator?.fullName,
         });
     }
 
     async findMany(query?: {
         subjectCode?: string;
+        examCode?: string;
+        date?: string;
+        time?: string;
+        status?: string;
+        fromDate?: string;
+        toDate?: string;
+        startTime?: string;
+        endTime?: string;
         examRoomId?: string;
         proctorId?: string;
         skip?: number;
         take?: number;
     }): Promise<ExamSession[]> {
-        const where: any = {};
-        if (query?.subjectCode) where.subjectCode = query.subjectCode;
-        if (query?.examRoomId) where.examRoomId = query.examRoomId;
-        if (query?.proctorId) where.proctorId = query.proctorId;
+        const where = this.buildWhere(query);
 
         const found = await this.prisma.examSession.findMany({
             where,
             skip: query?.skip,
             take: query?.take,
             orderBy: { createdAt: 'desc' },
+            include: {
+                examRoom: true,
+                proctor: true,
+                hallInvigilator: true,
+            }
         });
 
         return found.map(item => ExamSession.reconstitute({
@@ -100,11 +124,93 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             hallInvigilatorId: item.hallInvigilatorId,
             examOpenTime: item.examOpenTime,
             examCloseTime: item.examCloseTime,
+            examCode: item.examCode,
+            openCode: item.openCode,
             status: item.status,
             examType: item.examType as string[],
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
+            roomNumber: item.examRoom?.roomNumber,
+            proctorName: item.proctor?.fullName,
+            hallInvigilatorName: item.hallInvigilator?.fullName,
         }));
+    }
+
+    private buildWhere(query?: any): any {
+        const where: any = {};
+
+        if (query?.subjectCode) {
+            where.subjectCode = query.subjectCode;
+        }
+
+        if (query?.examCode) {
+            where.OR = [
+                { examCode: { contains: query.examCode, mode: 'insensitive' } },
+                { subjectCode: { contains: query.examCode, mode: 'insensitive' } }
+            ];
+        }
+
+        if (query?.status) {
+            const now = new Date();
+            if (query.status === 'Upcoming') {
+                where.examOpenTime = { gt: now };
+            } else if (query.status === 'Ongoing') {
+                where.AND = [
+                    { examOpenTime: { lte: now } },
+                    { examCloseTime: { gte: now } }
+                ];
+            } else if (query.status === 'Completed') {
+                where.examCloseTime = { lt: now };
+            } else {
+                where.status = query.status;
+            }
+        }
+
+        // Date range filtering
+        if (query?.fromDate || query?.toDate || query?.date) {
+            const dateConditions: any = {};
+
+            if (query.date) {
+                const date = new Date(query.date);
+                dateConditions.gte = new Date(date.setHours(0, 0, 0, 0));
+                dateConditions.lte = new Date(date.setHours(23, 59, 59, 999));
+            } else {
+                if (query.fromDate) {
+                    const from = new Date(query.fromDate);
+                    dateConditions.gte = new Date(from.setHours(0, 0, 0, 0));
+                }
+                if (query.toDate) {
+                    const to = new Date(query.toDate);
+                    dateConditions.lte = new Date(to.setHours(23, 59, 59, 999));
+                }
+            }
+
+            where.examOpenTime = { ...where.examOpenTime, ...dateConditions };
+        }
+
+        // Time filtering (simplified for now as it's hard to filter time-only in Prisma)
+        // If fromDate == toDate (single day), we can combine with time
+        if (query?.startTime || query?.endTime) {
+            // This logic is simplified to "occurs after startTime" and "occurs before endTime" 
+            // naturally relative to the date filter already applied.
+            if (query.startTime && query.fromDate) {
+                const [h, m] = query.startTime.split(':').map(Number);
+                const start = new Date(query.fromDate);
+                start.setHours(h, m, 0, 0);
+                where.examOpenTime = { ...where.examOpenTime, gte: start };
+            }
+            if (query.endTime && (query.toDate || query.fromDate)) {
+                const [h, m] = query.endTime.split(':').map(Number);
+                const end = new Date(query.toDate || query.fromDate);
+                end.setHours(h, m, 59, 999);
+                where.examCloseTime = { ...where.examCloseTime, lte: end };
+            }
+        }
+
+        if (query?.examRoomId) where.examRoomId = query.examRoomId;
+        if (query?.proctorId) where.proctorId = query.proctorId;
+
+        return where;
     }
 
     async findOne(query: {
@@ -131,6 +237,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             hallInvigilatorId: found.hallInvigilatorId,
             examOpenTime: found.examOpenTime,
             examCloseTime: found.examCloseTime,
+            examCode: found.examCode,
+            openCode: found.openCode,
             status: found.status,
             examType: found.examType as string[],
             createdAt: found.createdAt,
@@ -144,13 +252,19 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
     }
 
     async count(query?: {
+        subjectCode?: string;
+        examCode?: string;
+        date?: string;
+        time?: string;
+        status?: string;
+        fromDate?: string;
+        toDate?: string;
+        startTime?: string;
+        endTime?: string;
         examRoomId?: string;
         proctorId?: string;
     }): Promise<number> {
-        const where: any = {};
-        if (query?.examRoomId) where.examRoomId = query.examRoomId;
-        if (query?.proctorId) where.proctorId = query.proctorId;
-
+        const where = this.buildWhere(query);
         return this.prisma.examSession.count({ where });
     }
 
@@ -195,6 +309,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             hallInvigilatorId: item.hallInvigilatorId,
             examOpenTime: item.examOpenTime,
             examCloseTime: item.examCloseTime,
+            examCode: item.examCode,
+            openCode: item.openCode,
             status: item.status,
             examType: item.examType as string[],
             createdAt: item.createdAt,

@@ -121,10 +121,25 @@ export class ExamImportProcessor {
 
             // 1. Process Schedules
             const sessionMap = new Map<string, string>(); // sessionString -> sessionId
+            const failedSessions = new Map<string, string>(); // Track sessions that specifically failed in this batch (session -> errorMsg)
 
             for (const s of data.schedules) {
                 try {
                     const parsed = this.parseExamSession(s.examSession);
+                    if (!parsed) throw new Error(`Cannot parse examSession string: ${s.examSession}`);
+
+                    // ... (rest of schedule logic) ...
+
+                    // Note: If you need to verify where lines 130-192 went, they are unchanged inside this loop
+                    // I am replacing the variable declaration and loop start, 
+                    // but the Context view showed lines 122-196 roughly. 
+                    // To avoid destroying logic, I will use a targeted replacement for the Catch block and initialization.
+
+                    // Actually, safer to just replace the initialization and the catch block. 
+                    // But I cannot do two disjoint replacements in one tool call easily if they are far apart.
+
+                    // Let's rely on the fact that I can see the file. 
+                    // I will restart the reasoning to ensure I don't delete code.
                     if (!parsed) throw new Error(`Cannot parse examSession string: ${s.examSession}`);
 
                     // Find or create Room
@@ -191,6 +206,7 @@ export class ExamImportProcessor {
                     sessionMap.set(s.examSession, newSession.id);
                     schedulesCreated++;
                 } catch (err) {
+                    failedSessions.set(s.examSession, err.message);
                     errors.push({ type: 'schedule', data: s, message: err.message });
                 }
             }
@@ -206,7 +222,33 @@ export class ExamImportProcessor {
 
             for (const [sessionStr, students] of studentGroups.entries()) {
                 try {
-                    const finalSessionId = sessionMap.get(sessionStr);
+
+                    let finalSessionId = sessionMap.get(sessionStr);
+
+                    // Fallback: If not created in this batch, try to find in DB (needed for split batches)
+                    if (!finalSessionId) {
+                        try {
+                            const parsed = this.parseExamSession(sessionStr);
+                            const room = await this.prisma.examRoom.findUnique({ where: { roomNumber: parsed.roomName } });
+
+                            if (room) {
+                                const existingSession = await this.prisma.examSession.findFirst({
+                                    where: {
+                                        examRoomId: room.id,
+                                        examOpenTime: parsed.openTime,
+                                        examCloseTime: parsed.closeTime
+                                    }
+                                });
+                                if (existingSession) {
+                                    finalSessionId = existingSession.id;
+                                    sessionMap.set(sessionStr, finalSessionId); // Cache it
+                                }
+                            }
+                        } catch (parseErr) {
+                            // If parse fails or not found, strict check below will catch it
+                        }
+                    }
+
                     if (!finalSessionId) {
                         throw new Error(`Students skipped: Schedule for session ${sessionStr} already exists or failed to create in this batch.`);
                     }
@@ -240,21 +282,24 @@ export class ExamImportProcessor {
                             }
 
                             // Create or update StudentExam
+                            // Check duplicate student
                             let studentExam = await this.prisma.studentExam.findUnique({
                                 where: { examSessionId_studentId: { examSessionId: finalSessionId, studentId: user.id } }
                             });
 
-                            if (!studentExam) {
-                                studentExam = await this.prisma.studentExam.create({
-                                    data: {
-                                        id: uuidv4(),
-                                        examSessionId: finalSessionId,
-                                        studentId: user.id,
-                                        stt: st.stt ? Number(st.stt) : null,
-                                        seatNumber: availableSeats[i]
-                                    }
-                                });
+                            if (studentExam) {
+                                throw new Error(`Student ${st.studentCode} already exists in session ${sessionStr}`);
                             }
+
+                            studentExam = await this.prisma.studentExam.create({
+                                data: {
+                                    id: uuidv4(),
+                                    examSessionId: finalSessionId,
+                                    studentId: user.id,
+                                    stt: st.stt ? Number(st.stt) : null,
+                                    seatNumber: availableSeats[i]
+                                }
+                            });
 
                             // Process Exam Parts
                             const parts = st.examPart.split(',').map(p => p.trim());
@@ -312,10 +357,22 @@ export class ExamImportProcessor {
                     // ------------------------------------------------
                     // ------------------------------------------------
                 } catch (groupErr) {
-                    // Count all students in this group as errors if the group failed
                     this.logger.error(`Failed to process student group ${sessionStr}: ${groupErr.message}`);
+
+                    // 1. Report Schedule Error
+                    errors.push({
+                        type: 'schedule',
+                        data: { examSession: sessionStr },
+                        message: groupErr.message
+                    });
+
+                    // 2. Report Student Errors
                     for (const st of students) {
-                        errors.push({ type: 'student_in_failed_group', data: st, message: groupErr.message });
+                        errors.push({
+                            type: 'student',
+                            data: st,
+                            message: `${groupErr.message}`
+                        });
                     }
                 }
             }
@@ -353,13 +410,31 @@ export class ExamImportProcessor {
 
             for (const p of data.proctors) {
                 try {
-                    // 1. Find Proctor (User) by username (proctorEmail)
-                    const proctor = await this.prisma.user.findUnique({
+                    if (!p.proctorEmail || !p.proctorEmail.trim()) {
+                        throw new Error("Proctor Email is missing");
+                    }
+
+                    // 1. Find or Create Proctor (User) by username (proctorEmail)
+                    let proctor = await this.prisma.user.findUnique({
                         where: { username: p.proctorEmail.toLowerCase() }
                     });
 
                     if (!proctor) {
-                        throw new Error(`Proctor with username ${p.proctorEmail} not found`);
+                        // Auto-create proctor user if not exists
+                        this.logger.log(`Proctor ${p.proctorEmail} not found. Creating new user...`);
+
+                        proctor = await this.prisma.user.create({
+                            data: {
+                                id: uuidv4(),
+                                username: p.proctorEmail.toLowerCase(),
+                                email: p.proctorEmail.toLowerCase(),
+                                fullName: p.proctorEmail, // Use email as default name
+                                role: 'PROCTOR',
+                                isActive: true,
+                            }
+                        });
+
+                        this.logger.log(`Created new proctor user: ${proctor.username}`);
                     }
 
                     // 2. Parse Time & Room to find Session
@@ -378,8 +453,9 @@ export class ExamImportProcessor {
                         if (parts.length !== 2) throw new Error(`Invalid time string: ${timeStr}`);
                         const h = Number(parts[0]);
                         const m = Number(parts[1]);
-                        const date = new Date(year, month - 1, day, h, m, 0, 0);
-                        return date;
+                        // Vietnam is GMT+7, no DST.
+                        // We use Date.UTC and subtract 7 hours to get the correct UTC time.
+                        return new Date(Date.UTC(year, month - 1, day, h - 7, m, 0, 0));
                     };
 
                     const openTime = parseTime(startStr);
@@ -489,7 +565,8 @@ export class ExamImportProcessor {
                         if (parts.length !== 2) throw new Error(`Invalid time string: ${timeStr}`);
                         const h = Number(parts[0]);
                         const m = Number(parts[1]);
-                        return new Date(year, month - 1, day, h, m, 0, 0);
+                        // Vietnam is GMT+7, no DST.
+                        return new Date(Date.UTC(year, month - 1, day, h - 7, m, 0, 0));
                     };
 
                     const openTime = parseTime(startStr);
@@ -614,8 +691,8 @@ export class ExamImportProcessor {
 
         const parseTime = (timeStr: string) => {
             const [h, m] = timeStr.split('h').map(Number);
-            const date = new Date(year, month - 1, day, h, m, 0, 0);
-            return date;
+            // Vietnam is GMT+7, no DST.
+            return new Date(Date.UTC(year, month - 1, day, h - 7, m, 0, 0));
         };
 
         return {

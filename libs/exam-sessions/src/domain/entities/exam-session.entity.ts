@@ -9,10 +9,16 @@ export class ExamSession {
         public readonly hallInvigilatorId: string | null,
         public readonly subjectCode: SubjectCode | null,
         public readonly examTime: ExamTime,
+        public readonly examCode: string | null,
+        public readonly openCode: string | null,
         public readonly status: string,
         public readonly examType: string[],
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
+        // Display names (populated by repository if needed)
+        public readonly roomNumber: string | null = null,
+        public readonly proctorName: string | null = null,
+        public readonly hallInvigilatorName: string | null = null,
     ) { }
 
     static create(props: {
@@ -23,6 +29,8 @@ export class ExamSession {
         subjectCode?: string | null;
         examOpenTime?: Date | null;
         examCloseTime?: Date | null;
+        examCode?: string | null;
+        openCode?: string | null;
         status?: string;
         examType?: string[];
     }): ExamSession {
@@ -33,6 +41,8 @@ export class ExamSession {
             props.hallInvigilatorId ?? null,
             SubjectCode.create(props.subjectCode),
             ExamTime.create(props.examOpenTime, props.examCloseTime),
+            props.examCode ?? null,
+            props.openCode ?? null,
             props.status ?? 'Scheduled',
             props.examType ?? [],
             new Date(),
@@ -48,10 +58,15 @@ export class ExamSession {
         subjectCode: string | null;
         examOpenTime: Date | null;
         examCloseTime: Date | null;
+        examCode: string | null;
+        openCode: string | null;
         status: string;
         examType: string[];
         createdAt: Date;
         updatedAt: Date;
+        roomNumber?: string | null;
+        proctorName?: string | null;
+        hallInvigilatorName?: string | null;
     }): ExamSession {
         return new ExamSession(
             props.id,
@@ -60,10 +75,15 @@ export class ExamSession {
             props.hallInvigilatorId,
             SubjectCode.create(props.subjectCode),
             ExamTime.create(props.examOpenTime, props.examCloseTime),
+            props.examCode,
+            props.openCode,
             props.status,
             props.examType,
             props.createdAt,
             props.updatedAt,
+            props.roomNumber,
+            props.proctorName,
+            props.hallInvigilatorName,
         );
     }
 
@@ -74,6 +94,8 @@ export class ExamSession {
         subjectCode?: string | null;
         examOpenTime?: Date | null;
         examCloseTime?: Date | null;
+        examCode?: string | null;
+        openCode?: string | null;
         status?: string;
         examType?: string[];
     }): ExamSession {
@@ -87,6 +109,8 @@ export class ExamSession {
                 props.examOpenTime !== undefined ? props.examOpenTime : this.examTime.openTime,
                 props.examCloseTime !== undefined ? props.examCloseTime : this.examTime.closeTime
             ),
+            props.examCode !== undefined ? props.examCode : this.examCode,
+            props.openCode !== undefined ? props.openCode : this.openCode,
             props.status !== undefined ? props.status : this.status,
             props.examType !== undefined ? props.examType : this.examType,
             this.createdAt,

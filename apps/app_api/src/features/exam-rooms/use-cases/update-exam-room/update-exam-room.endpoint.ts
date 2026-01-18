@@ -18,7 +18,7 @@ import { UpdateExamRoomHandler } from './update-exam-room.handler';
 
 @ApiTags('ExamRooms')
 @ApiBearerAuth('JWT-auth')
-@Controller('exam-rooms')
+@Controller('rooms')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UpdateExamRoomEndpoint {
     constructor(private readonly handler: UpdateExamRoomHandler) { }

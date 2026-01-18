@@ -41,8 +41,8 @@ import { MeEndpoint } from './use-cases/me';
         UpdateUserEndpoint,
         DeleteUserEndpoint,
         ChangeRoleEndpoint,
-        GetUserEndpoint,
         ListUsersEndpoint,
+        GetUserEndpoint,
         // Authentication
         GoogleLoginEndpoint,
         RefreshTokenEndpoint,
