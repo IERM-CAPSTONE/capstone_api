@@ -10,6 +10,7 @@ export class ExamSession {
         public readonly subjectCode: SubjectCode | null,
         public readonly examTime: ExamTime,
         public readonly status: string,
+        public readonly examType: string[],
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
     ) { }
@@ -23,6 +24,7 @@ export class ExamSession {
         examOpenTime?: Date | null;
         examCloseTime?: Date | null;
         status?: string;
+        examType?: string[];
     }): ExamSession {
         return new ExamSession(
             props.id,
@@ -32,6 +34,7 @@ export class ExamSession {
             SubjectCode.create(props.subjectCode),
             ExamTime.create(props.examOpenTime, props.examCloseTime),
             props.status ?? 'Scheduled',
+            props.examType ?? [],
             new Date(),
             new Date(),
         );
@@ -46,6 +49,7 @@ export class ExamSession {
         examOpenTime: Date | null;
         examCloseTime: Date | null;
         status: string;
+        examType: string[];
         createdAt: Date;
         updatedAt: Date;
     }): ExamSession {
@@ -57,6 +61,7 @@ export class ExamSession {
             SubjectCode.create(props.subjectCode),
             ExamTime.create(props.examOpenTime, props.examCloseTime),
             props.status,
+            props.examType,
             props.createdAt,
             props.updatedAt,
         );
@@ -70,6 +75,7 @@ export class ExamSession {
         examOpenTime?: Date | null;
         examCloseTime?: Date | null;
         status?: string;
+        examType?: string[];
     }): ExamSession {
         return new ExamSession(
             this.id,
@@ -82,6 +88,7 @@ export class ExamSession {
                 props.examCloseTime !== undefined ? props.examCloseTime : this.examTime.closeTime
             ),
             props.status !== undefined ? props.status : this.status,
+            props.examType !== undefined ? props.examType : this.examType,
             this.createdAt,
             new Date(),
         );

@@ -50,10 +50,10 @@ async function bootstrap() {
   const allowedOrigins = isProduction
     ? [clientUrl]
     : [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        clientUrl,
-      ].filter((origin, index, self) => self.indexOf(origin) === index); // Remove duplicates
+      'http://localhost:3000',
+      'http://localhost:3001',
+      clientUrl,
+    ].filter((origin, index, self) => self.indexOf(origin) === index); // Remove duplicates
 
   app.enableCors({
     origin: (origin, callback) => {

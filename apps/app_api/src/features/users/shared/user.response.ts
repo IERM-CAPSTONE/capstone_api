@@ -8,11 +8,14 @@ export class UserResponse {
     @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000', description: 'User UUID' })
     id: string;
 
-    @ApiProperty({ example: 'user@example.com', description: 'User email address' })
-    email: string;
+    @ApiProperty({ example: 'user@example.com', description: 'User email address', nullable: true })
+    email: string | null;
 
     @ApiProperty({ example: 'John Doe', description: 'Full name', nullable: true })
     fullName: string | null;
+
+    @ApiProperty({ example: 'johndoe', description: 'Username', nullable: true })
+    username: string | null;
 
     @ApiProperty({ example: 'SE123456', description: 'Student ID (MSSV) or teacher code', nullable: true })
     code: string | null;
@@ -39,8 +42,9 @@ export class UserResponse {
 export function toUserResponse(user: User): UserResponse {
     return {
         id: user.id,
-        email: user.email.value,
+        email: user.email?.value ?? null,
         fullName: user.fullName,
+        username: user.username,
         code: user.code?.value ?? null,
         avatarUrl: user.avatarUrl,
         isActive: user.isActive,

@@ -72,6 +72,7 @@ export class StudentImportProcessor {
                     const user = User.create({
                         id: uuidv4(),
                         email: Email,
+                        username: Email.split('@')[0].toLowerCase(),
                         fullName: Name,
                         code: StudentCode?.toString(),
                         role: role

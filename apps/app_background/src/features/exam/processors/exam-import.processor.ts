@@ -1,10 +1,12 @@
 import { Controller, Logger, Inject } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext, ClientProxy } from '@nestjs/microservices';
-import { MESSAGE_PATTERNS, ExamImportJobData, BaseJobResult, RABBITMQ_CLIENTS, ExamImportFinishedData } from '@app/queue';
+import { MESSAGE_PATTERNS, ExamImportJobData, BaseJobResult, RABBITMQ_CLIENTS, ExamImportFinishedData, ImportScheduleJobData, ImportProctorJobData } from '@app/queue';
 import { IExamRoomRepository, EXAM_ROOM_REPOSITORY, ExamRoom } from '@app/exam-rooms';
 import { IExamSessionRepository, EXAM_SESSION_REPOSITORY, ExamSession } from '@app/exam-sessions';
 import { IUserRepository, USER_REPOSITORY } from '@app/users';
 import { CACHE_SERVICE, ICacheService } from '@app/cache';
+import { PrismaService } from '@app/prisma';
+import { ExamType } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -23,6 +25,7 @@ export class ExamImportProcessor {
         private readonly apiEventClient: ClientProxy,
         @Inject(CACHE_SERVICE)
         private readonly cacheService: ICacheService,
+        private readonly prisma: PrismaService,
     ) { }
 
     @MessagePattern(MESSAGE_PATTERNS.EXAM.IMPORT_ROOMS)
@@ -100,90 +103,224 @@ export class ExamImportProcessor {
         }
     }
 
-    @MessagePattern(MESSAGE_PATTERNS.EXAM.IMPORT_SESSION)
-    async handleImportSessions(
-        @Payload() data: ExamImportJobData,
+    @MessagePattern(MESSAGE_PATTERNS.EXAM.IMPORT_SCHEDULE)
+    async handleImportSchedule(
+        @Payload() data: ImportScheduleJobData,
         @Ctx() context: RmqContext,
     ): Promise<BaseJobResult> {
         const channel = context.getChannelRef();
         const originalMsg = context.getMessage();
         const startTime = Date.now();
 
-        this.logger.log(`Processing exam session import from file: ${data.fileName}`);
+        this.logger.log(`Processing schedule import: ${data.schedules.length} schedules, ${data.students.length} students`);
 
         try {
-            const buffer = Buffer.from(data.fileContent, 'base64');
-            const workbook = xlsx.read(buffer, { type: 'buffer' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const items: any[] = xlsx.utils.sheet_to_json(worksheet);
+            let schedulesCreated = 0;
+            let studentsImported = 0;
+            const errors: any[] = [];
 
-            this.logger.log(`Found ${items.length} rows for sessions import.`);
+            // 1. Process Schedules
+            const sessionMap = new Map<string, string>(); // sessionString -> sessionId
 
-            let successCount = 0;
-            let errorCount = 0;
-
-            for (const item of items) {
+            for (const s of data.schedules) {
                 try {
-                    // RoomNumber, ProctorEmail, HallInvigilatorEmail, SubjectCode (or SemesterCode), OpenTime, CloseTime
-                    const { RoomNumber, ProctorEmail, HallInvigilatorEmail, SubjectCode, SemesterCode, OpenTime, CloseTime } = item;
+                    const parsed = this.parseExamSession(s.examSession);
+                    if (!parsed) throw new Error(`Cannot parse examSession string: ${s.examSession}`);
 
-                    let roomId: string | null = null;
-                    if (RoomNumber) {
-                        const room = await this.examRoomRepository.findOne({ roomNumber: String(RoomNumber) });
-                        if (room) {
-                            roomId = room.id;
-                        } else {
-                            this.logger.warn(`Room ${RoomNumber} not found, skipping or setting to null`);
+                    // Find or create Room
+                    let room = await this.prisma.examRoom.findUnique({ where: { roomNumber: parsed.roomName } });
+                    if (!room) {
+                        room = await this.prisma.examRoom.create({
+                            data: {
+                                id: uuidv4(),
+                                roomNumber: parsed.roomName,
+                                max_rows: 5,
+                                max_columns: 6,
+                                total_seats: 30,
+                                capacity: 30,
+                                status: 'Available'
+                            }
+                        });
+                    }
+
+                    // Find or create Session
+                    // 1. Check for exact match first
+                    let session = await this.prisma.examSession.findFirst({
+                        where: {
+                            examRoomId: room.id,
+                            examOpenTime: parsed.openTime,
+                            examCloseTime: parsed.closeTime,
                         }
-                    }
-
-                    let proctorId: string | null = null;
-                    if (ProctorEmail) {
-                        const user = await this.userRepository.findOne({ email: ProctorEmail });
-                        if (user) proctorId = user.id;
-                    }
-
-                    let invigilatorId: string | null = null;
-                    if (HallInvigilatorEmail) {
-                        const user = await this.userRepository.findOne({ email: HallInvigilatorEmail });
-                        if (user) invigilatorId = user.id;
-                    }
-
-                    const session = ExamSession.create({
-                        id: uuidv4(),
-                        examRoomId: roomId,
-                        proctorId: proctorId,
-                        hallInvigilatorId: invigilatorId,
-                        subjectCode: (SubjectCode || SemesterCode)?.toString(),
-                        examOpenTime: OpenTime ? new Date(OpenTime) : null,
-                        examCloseTime: CloseTime ? new Date(CloseTime) : null,
                     });
 
-                    // Check for overlaps before saving
-                    if (session.examTime.openTime && session.examTime.closeTime) {
-                        const overlaps = await this.examSessionRepository.findOverlapping({
-                            startTime: session.examTime.openTime,
-                            endTime: session.examTime.closeTime,
-                            examRoomId: session.examRoomId,
-                            proctorId: session.proctorId,
-                            hallInvigilatorId: session.hallInvigilatorId,
-                        });
-
-                        if (overlaps.length > 0) {
-                            throw new Error(`Session overlaps with an existing session.`);
-                        }
+                    if (session) {
+                        throw new Error(`Schedule already exists for room ${parsed.roomName} at ${s.examSession}`);
                     }
 
-                    await this.examSessionRepository.save(session);
-                    successCount++;
+                    // 2. Check for ANY overlap in this room
+                    const overlappingSession = await this.prisma.examSession.findFirst({
+                        where: {
+                            examRoomId: room.id,
+                            AND: [
+                                { examOpenTime: { lt: parsed.closeTime } },
+                                { examCloseTime: { gt: parsed.openTime } }
+                            ]
+                        },
+                    });
+
+                    if (overlappingSession) {
+                        const existingStart = overlappingSession.examOpenTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const existingEnd = overlappingSession.examCloseTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        throw new Error(
+                            `Room ${parsed.roomName} has an overlapping session (${existingStart} - ${existingEnd}). `
+                        );
+                    }
+
+                    // 3. Create new
+                    const newSession = await this.prisma.examSession.create({
+                        data: {
+                            id: uuidv4(),
+                            examRoomId: room.id,
+                            subjectCode: s.subjectCode,
+                            examOpenTime: parsed.openTime,
+                            examCloseTime: parsed.closeTime,
+                            status: 'Scheduled'
+                        }
+                    });
+
+                    sessionMap.set(s.examSession, newSession.id);
+                    schedulesCreated++;
                 } catch (err) {
-                    this.logger.error(`Error processing session row: ${err.message}`);
-                    errorCount++;
+                    errors.push({ type: 'schedule', data: s, message: err.message });
                 }
             }
 
-            this.emitFinished('sessions', data.fileName, successCount, errorCount);
+            // 2. Process Students
+            // Group students by session to handle random seating per session
+            const studentGroups = new Map<string, typeof data.students>();
+            for (const st of data.students) {
+                const list = studentGroups.get(st.examSession) || [];
+                list.push(st);
+                studentGroups.set(st.examSession, list);
+            }
+
+            for (const [sessionStr, students] of studentGroups.entries()) {
+                try {
+                    const finalSessionId = sessionMap.get(sessionStr);
+                    if (!finalSessionId) {
+                        throw new Error(`Students skipped: Schedule for session ${sessionStr} already exists or failed to create in this batch.`);
+                    }
+
+                    const session = await this.prisma.examSession.findUnique({
+                        where: { id: finalSessionId },
+                        include: { examRoom: true }
+                    });
+
+                    if (!session || !session.examRoom) throw new Error(`Room not found for session ${finalSessionId}`);
+
+                    // Capacity Validation
+                    if (students.length > session.examRoom.total_seats) {
+                        throw new Error(`Student count (${students.length}) exceeds room capacity (${session.examRoom.total_seats}) for session ${sessionStr}`);
+                    }
+
+                    // Generate Random Seats
+                    const availableSeats = this.generateSeats(session.examRoom.max_rows, session.examRoom.max_columns);
+                    this.shuffleArray(availableSeats);
+
+                    for (let i = 0; i < students.length; i++) {
+                        const st = students[i];
+                        try {
+                            // Find or Create User (Auto-create for Dev Mode)
+                            const user = await this.ensureStudentExists(st);
+                            if (!user) {
+                                const errMsg = `Student with code ${st.studentCode} not found and could not be created.`;
+                                this.logger.error(errMsg);
+                                errors.push({ type: 'student', data: st, message: errMsg });
+                                continue;
+                            }
+
+                            // Create or update StudentExam
+                            let studentExam = await this.prisma.studentExam.findUnique({
+                                where: { examSessionId_studentId: { examSessionId: finalSessionId, studentId: user.id } }
+                            });
+
+                            if (!studentExam) {
+                                studentExam = await this.prisma.studentExam.create({
+                                    data: {
+                                        id: uuidv4(),
+                                        examSessionId: finalSessionId,
+                                        studentId: user.id,
+                                        stt: st.stt ? Number(st.stt) : null,
+                                        seatNumber: availableSeats[i]
+                                    }
+                                });
+                            }
+
+                            // Process Exam Parts
+                            const parts = st.examPart.split(',').map(p => p.trim());
+                            for (const partType of parts) {
+
+                                await this.prisma.studentExamPart.upsert({
+                                    where: {
+                                        studentExamId_examType: {
+                                            studentExamId: studentExam.id,
+                                            examType: partType as any
+                                        }
+                                    },
+                                    update: {}, // No update for now
+                                    create: {
+                                        id: uuidv4(),
+                                        studentExamId: studentExam.id,
+                                        examType: partType as any,
+                                        isInRoom: false,
+                                        isCheckedIn: false
+                                    }
+                                });
+                            }
+                            studentsImported++;
+                        } catch (stErr) {
+                            errors.push({ type: 'student', data: st, message: stErr.message });
+                        }
+                    }
+
+                    // --- NEW: Aggregate Exam Types for the Session ---
+                    const sessionParts = new Set<string>();
+                    for (const st of students) {
+                        st.examPart.split(',').forEach(p => {
+                            const trimmed = p.trim();
+                            if (trimmed && Object.values(ExamType).includes(trimmed as ExamType)) {
+                                sessionParts.add(trimmed);
+                            }
+                        });
+                    }
+
+                    if (sessionParts.size > 0) {
+                        const currentSession = await this.prisma.examSession.findUnique({
+                            where: { id: finalSessionId },
+                            select: { examType: true }
+                        });
+
+                        const existingTypes = currentSession?.examType || [];
+                        const newTypes = Array.from(sessionParts) as ExamType[];
+                        const mergedTypes = Array.from(new Set([...existingTypes, ...newTypes]));
+
+                        await this.prisma.examSession.update({
+                            where: { id: finalSessionId },
+                            data: { examType: mergedTypes }
+                        });
+                    }
+                    // ------------------------------------------------
+                    // ------------------------------------------------
+                } catch (groupErr) {
+                    // Count all students in this group as errors if the group failed
+                    this.logger.error(`Failed to process student group ${sessionStr}: ${groupErr.message}`);
+                    for (const st of students) {
+                        errors.push({ type: 'student_in_failed_group', data: st, message: groupErr.message });
+                    }
+                }
+            }
+
+            this.emitFinished('schedule', 'import-schedule-api', schedulesCreated + studentsImported, errors.length, errors, data.batchId);
             channel.ack(originalMsg);
 
             return {
@@ -193,18 +330,235 @@ export class ExamImportProcessor {
                 completedAt: new Date(),
             };
         } catch (error) {
-            this.logger.error(`Critical error during session import: ${error.message}`);
+            this.logger.error(`Critical error during schedule import: ${error.message}`);
             channel.nack(originalMsg, false, false);
             return this.failResult(originalMsg, startTime, error.message);
         }
     }
 
-    private emitFinished(action: 'rooms' | 'sessions', fileName: string, successCount: number, errorCount: number) {
+    @MessagePattern(MESSAGE_PATTERNS.EXAM.IMPORT_PROCTORS)
+    async handleImportProctors(
+        @Payload() data: ImportProctorJobData,
+        @Ctx() context: RmqContext,
+    ): Promise<BaseJobResult> {
+        const channel = context.getChannelRef();
+        const originalMsg = context.getMessage();
+        const startTime = Date.now();
+
+        this.logger.log(`Processing proctor import: ${data.proctors.length} assignments`);
+
+        try {
+            let successCount = 0;
+            const errors: any[] = [];
+
+            for (const p of data.proctors) {
+                try {
+                    // 1. Find Proctor (User) by username (proctorEmail)
+                    const proctor = await this.prisma.user.findUnique({
+                        where: { username: p.proctorEmail.toLowerCase() }
+                    });
+
+                    if (!proctor) {
+                        throw new Error(`Proctor with username ${p.proctorEmail} not found`);
+                    }
+
+                    // 2. Parse Time & Room to find Session
+                    // Assume dateExam is DD/MM/YYYY, timeExam is HHhMM-HHhMM
+                    const timeParts = p.timeExam.split('-');
+                    if (timeParts.length !== 2) throw new Error(`Invalid time format: ${p.timeExam}. Expected HHhMM-HHhMM`);
+
+                    const [startStr, endStr] = timeParts;
+                    const dateParts = p.dateExam.split('/');
+                    if (dateParts.length !== 3) throw new Error(`Invalid date format: ${p.dateExam}. Expected DD/MM/YYYY`);
+
+                    const [day, month, year] = dateParts.map(Number);
+
+                    const parseTime = (timeStr: string) => {
+                        const parts = timeStr.trim().split('h');
+                        if (parts.length !== 2) throw new Error(`Invalid time string: ${timeStr}`);
+                        const h = Number(parts[0]);
+                        const m = Number(parts[1]);
+                        const date = new Date(year, month - 1, day, h, m, 0, 0);
+                        return date;
+                    };
+
+                    const openTime = parseTime(startStr);
+                    const closeTime = parseTime(endStr);
+
+                    const room = await this.prisma.examRoom.findUnique({
+                        where: { roomNumber: String(p.examRoom) }
+                    });
+
+                    if (!room) {
+                        throw new Error(`Room ${p.examRoom} not found`);
+                    }
+
+                    const session = await this.prisma.examSession.findFirst({
+                        where: {
+                            examRoomId: room.id,
+                            examOpenTime: openTime,
+                            examCloseTime: closeTime,
+                        }
+                    });
+
+                    if (!session) {
+                        throw new Error(`Exam session not found for room ${p.examRoom} at ${p.dateExam} ${p.timeExam}`);
+                    }
+
+                    // 3. Create or Update ProctorAssignment
+                    await this.prisma.proctorAssignment.upsert({
+                        where: {
+                            proctorId_examSessionId: {
+                                proctorId: proctor.id,
+                                examSessionId: session.id
+                            }
+                        },
+                        update: {
+                            status: 'ASSIGNED',
+                            assignedById: data.creatorId || proctor.id,
+                        },
+                        create: {
+                            id: uuidv4(),
+                            proctorId: proctor.id,
+                            examSessionId: session.id,
+                            status: 'ASSIGNED',
+                            assignedById: data.creatorId || proctor.id,
+                        }
+                    });
+
+                    successCount++;
+                } catch (err) {
+                    errors.push({ type: 'proctor', data: p, message: err.message });
+                }
+            }
+
+            this.emitFinished('proctor', 'import-proctor-api', successCount, errors.length, errors, data.batchId);
+            channel.ack(originalMsg);
+
+            return {
+                jobId: originalMsg.properties.messageId || 'unknown',
+                success: true,
+                processingTime: Date.now() - startTime,
+                completedAt: new Date(),
+            };
+        } catch (error) {
+            this.logger.error(`Critical error during proctor import: ${error.message}`);
+            channel.nack(originalMsg, false, false);
+            return this.failResult(originalMsg, startTime, error.message);
+        }
+    }
+
+    private async ensureStudentExists(st: any) {
+        // 1. Find by Student Code (MSSV)
+        let user = await this.prisma.user.findUnique({ where: { code: st.studentCode } });
+        if (user) return user;
+
+        // 2. Find by Username (MemberCode)
+        const username = st.username || st.memberCode;
+        if (username) {
+            user = await this.prisma.user.findUnique({ where: { username: username.toLowerCase() } });
+            if (user) {
+                this.logger.debug(`Student with username ${username} exists but missing code. Updating code to ${st.studentCode}`);
+                return await this.prisma.user.update({
+                    where: { id: user.id },
+                    data: { code: st.studentCode }
+                });
+            }
+        }
+
+        // 3. Find by Email (If provided)
+        if (st.email) {
+            user = await this.prisma.user.findUnique({ where: { email: st.email } });
+            if (user) {
+                this.logger.debug(`Student with email ${st.email} exists but missing code. Updating code to ${st.studentCode}`);
+                return await this.prisma.user.update({
+                    where: { id: user.id },
+                    data: { code: st.studentCode }
+                });
+            }
+        }
+
+        // --- DEV ONLY: Auto-create student if not found ---
+        this.logger.warn(`[DEV] Auto-creating missing student: ${st.studentCode} | Username: ${username}`);
+
+        // Auto-generate email if missing
+        const finalEmail = st.email || (username ? `${username}@fpt.edu.vn` : null);
+
+        return await this.prisma.user.create({
+            data: {
+                id: uuidv4(),
+                code: st.studentCode,
+                email: finalEmail,
+                username: username?.toLowerCase() || null,
+                fullName: st.name,
+                role: 'STUDENT',
+            }
+        });
+        // --------------------------------------------------
+    }
+
+    // For Production: return null or throw error
+    // return null;
+    // --------------------------------------------------
+
+    private parseExamSession(sessionStr: string) {
+        // Regex to match formats like:
+        // "26/12/2025.13h30-15h00.ALPHA 201" 
+        // "26/12/2025 10h40-12h15 ALPHA 704"
+        const regex = /^(\d{2}\/\d{2}\/\d{4})[.\s](\d{2}h\d{2})-(\d{2}h\d{2})[.\s](.+)$/;
+        const match = sessionStr.match(regex);
+        if (!match) return null;
+
+        const [_, dateStr, startTimeStr, endTimeStr, roomName] = match;
+
+        // Parse date (DD/MM/YYYY)
+        const [day, month, year] = dateStr.split('/').map(Number);
+
+        const parseTime = (timeStr: string) => {
+            const [h, m] = timeStr.split('h').map(Number);
+            const date = new Date(year, month - 1, day, h, m, 0, 0);
+            return date;
+        };
+
+        return {
+            openTime: parseTime(startTimeStr),
+            closeTime: parseTime(endTimeStr),
+            roomName: roomName.trim(),
+        };
+    }
+
+    private generateSeats(rows: number, cols: number): string[] {
+        const seats: string[] = [];
+        for (let r = 1; r <= rows; r++) {
+            for (let c = 1; c <= cols; c++) {
+                seats.push(`${r}-${c}`);
+            }
+        }
+        return seats;
+    }
+
+    private shuffleArray(array: any[]) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    private emitFinished(
+        action: 'rooms' | 'schedule' | 'proctor' | 'examcode',
+        fileName: string,
+        successCount: number,
+        errorCount: number,
+        failedItems?: { item: any; error: string }[],
+        batchId?: string
+    ) {
         const finishedData: ExamImportFinishedData = {
             action,
             fileName,
             successCount,
             errorCount,
+            failedItems,
+            batchId,
             timestamp: new Date(),
         };
         this.apiEventClient.emit(MESSAGE_PATTERNS.EXAM.IMPORT_FINISHED, finishedData);

@@ -10,12 +10,14 @@ describe('UpdateUserHandler', () => {
     const userId = 'user-uuid';
     const updateDto: UpdateUserDto = {
         fullName: 'Updated Name',
+        username: 'updateduser',
         code: 'SE999999',
     };
 
     const mockUser = User.create({
         id: userId,
         email: 'test@fpt.edu.vn',
+        username: 'originaluser',
         fullName: 'Original Name',
         code: 'SE123456',
         role: RoleType.STUDENT,
@@ -43,6 +45,7 @@ describe('UpdateUserHandler', () => {
             // Arrange
             userRepository.findOne.mockResolvedValueOnce(mockUser); // first call for user retrieval
             userRepository.findOne.mockResolvedValueOnce(null); // second call for code check
+            userRepository.findOne.mockResolvedValueOnce(null); // third call for username check
             userRepository.save.mockImplementation(async (u) => u);
 
             // Act
@@ -51,7 +54,9 @@ describe('UpdateUserHandler', () => {
             // Assert
             expect(userRepository.findOne).toHaveBeenCalledWith({ id: userId });
             expect(userRepository.findOne).toHaveBeenCalledWith({ code: updateDto.code }, userId);
+            expect(userRepository.findOne).toHaveBeenCalledWith({ username: updateDto.username }, userId);
             expect(result.fullName).toBe(updateDto.fullName);
+            expect(result.username).toBe(updateDto.username);
             expect(result.code).toBe(updateDto.code);
         });
 

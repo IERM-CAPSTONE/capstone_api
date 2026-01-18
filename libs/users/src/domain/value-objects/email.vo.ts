@@ -19,7 +19,7 @@ export class Email {
             throw new Error('Email cannot be empty');
         }
 
-        const normalized = email.toLowerCase().trim();
+        const normalized = email.trim();
 
         if (!this.EMAIL_REGEX.test(normalized)) {
             throw new Error(`Invalid email format: ${email}`);

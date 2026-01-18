@@ -2,10 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsInt, IsEnum, IsBoolean, IsDateString, IsString } from 'class-validator';
 
 export class UpdateStudentExamDto {
-    @ApiProperty({ example: 1, description: 'Seat number', required: false, nullable: true })
+    @ApiProperty({ example: '1-1', description: 'Seat number', required: false, nullable: true })
     @IsOptional()
-    @IsInt()
-    seatNumber?: number | null;
+    @IsString()
+    seatNumber?: string | null;
 
     @ApiProperty({ example: 'CHECKEDIN', enum: ['REGISTERED', 'CHECKEDIN', 'CHECKEDOUT', 'MOVED', 'REMOVED'], required: false })
     @IsOptional()

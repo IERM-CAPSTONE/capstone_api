@@ -62,6 +62,8 @@ export interface UserImportFinishedData {
     fileName: string;
     successCount: number;
     errorCount: number;
+    failedItems?: any[];
+    batchId?: string;
     timestamp: Date;
 }
 
@@ -79,15 +81,64 @@ export interface ExamImportJobData {
     mimeType: string;
 }
 
-/**
- * Interface cho kết quả import exam hoàn tất
- */
 export interface ExamImportFinishedData {
-    action: 'rooms' | 'sessions';
-    fileName: string;
+    action: 'rooms' | 'schedule' | 'proctor' | 'examcode';
+    fileName?: string;
     successCount: number;
     errorCount: number;
+    failedItems?: { item: any; error: string }[];
+    batchId?: string;
     timestamp: Date;
+}
+
+/**
+ * Interface cho dữ liệu Import Schedule từ API
+ */
+export interface ScheduleImportData {
+    examCode?: string | null;
+    openCode?: string | null;
+    subjectCode: string;
+    examDate: string;
+    startTime: string;
+    endTime: string;
+    room: string;
+    examSession: string;
+}
+
+export interface StudentImportData {
+    stt?: number | null;
+    studentCode: string;
+    name: string;
+    email?: string | null;
+    username?: string | null;
+    memberCode?: string | null;
+    examSession?: string | null;
+    subjectCode: string;
+    examPart: string;
+}
+
+export interface ProctorImportData {
+    dateExam: string;
+    timeExam: string;
+    examRoom: string;
+    proctorEmail: string;
+    proctorType?: string;
+}
+
+export interface ImportScheduleJobData {
+    importType: 'schedule';
+    schedules: ScheduleImportData[];
+    students: StudentImportData[];
+    batchId?: string;
+    totalItems?: number;
+}
+
+export interface ImportProctorJobData {
+    importType: 'proctor';
+    proctors: ProctorImportData[];
+    creatorId?: string;
+    batchId?: string;
+    totalItems?: number;
 }
 
 /**

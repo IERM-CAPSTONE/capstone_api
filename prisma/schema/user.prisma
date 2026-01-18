@@ -3,8 +3,10 @@
 /// Stores user accounts for all actors in the system (Admin/ExamOfficer/Proctor/Student)
 model User {
   id        String  @id @default(uuid())
-  email     String  @unique
+  email     String? @unique
+  campus    Campus?
   fullName  String?
+  username  String? @unique
   code      String? @unique // MSSV or teacher's code
   avatarUrl String?
   isActive  Boolean @default(true)
@@ -41,4 +43,7 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([campus])
 }

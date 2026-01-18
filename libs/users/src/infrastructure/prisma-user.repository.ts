@@ -19,8 +19,9 @@ export class PrismaUserRepository implements IUserRepository {
 
     async save(user: User): Promise<User> {
         const data = {
-            email: user.email.value,
+            email: user.email?.value ?? null,
             fullName: user.fullName,
+            username: user.username,
             code: user.code?.value ?? null,
             avatarUrl: user.avatarUrl,
             isActive: user.isActive,
@@ -40,8 +41,8 @@ export class PrismaUserRepository implements IUserRepository {
         await this.prisma.user.delete({ where: { id } });
     }
 
-    async findOne(query: { id?: string; email?: string; code?: string }, excludeId?: string): Promise<User | null> {
-        const { id, email, code } = query;
+    async findOne(query: { id?: string; email?: string; code?: string; username?: string }, excludeId?: string): Promise<User | null> {
+        const { id, email, code, username } = query;
         const result = await this.prisma.user.findFirst({
             where: {
                 AND: [
@@ -50,6 +51,7 @@ export class PrismaUserRepository implements IUserRepository {
                             ...(id ? [{ id }] : []),
                             ...(email ? [{ email }] : []),
                             ...(code ? [{ code }] : []),
+                            ...(username ? [{ username }] : []),
                         ],
                     },
                     ...(excludeId ? [{ id: { not: excludeId } }] : []),
@@ -113,6 +115,7 @@ export class PrismaUserRepository implements IUserRepository {
                 { email: { contains: options.search, mode: 'insensitive' } },
                 { fullName: { contains: options.search, mode: 'insensitive' } },
                 { code: { contains: options.search, mode: 'insensitive' } },
+                { username: { contains: options.search, mode: 'insensitive' } },
             ];
         }
         return where;
@@ -120,8 +123,9 @@ export class PrismaUserRepository implements IUserRepository {
 
     private toDomain(data: {
         id: string;
-        email: string;
+        email: string | null;
         fullName: string | null;
+        username: string | null;
         code: string | null;
         avatarUrl: string | null;
         isActive: boolean;
@@ -133,6 +137,7 @@ export class PrismaUserRepository implements IUserRepository {
             id: data.id,
             email: data.email,
             fullName: data.fullName,
+            username: data.username,
             code: data.code,
             avatarUrl: data.avatarUrl,
             isActive: data.isActive,

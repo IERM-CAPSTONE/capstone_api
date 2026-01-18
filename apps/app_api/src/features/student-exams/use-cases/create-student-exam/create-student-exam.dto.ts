@@ -12,10 +12,10 @@ export class CreateStudentExamDto {
     @IsNotEmpty()
     studentId: string;
 
-    @ApiProperty({ example: 1, description: 'Seat number', required: false, nullable: true })
+    @ApiProperty({ example: '1-1', description: 'Seat number', required: false, nullable: true })
     @IsOptional()
-    @IsInt()
-    seatNumber?: number | null;
+    @IsString()
+    seatNumber?: string | null;
 
     @ApiProperty({ example: 'REGISTERED', enum: ['REGISTERED', 'CHECKEDIN', 'CHECKEDOUT', 'MOVED', 'REMOVED'], required: false })
     @IsOptional()

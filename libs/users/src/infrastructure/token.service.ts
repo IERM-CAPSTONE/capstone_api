@@ -33,18 +33,18 @@ export class TokenService {
     setCookies(res: Response, accessToken: string, refreshToken: string): void {
         const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
 
-        res.cookie('access_token', accessToken, {
+        const cookieOptions = {
             httpOnly: true,
-            secure: isProduction,
-            sameSite: isProduction ? 'strict' : 'lax', // Corrected: restricted to sameSite if production, lax for local dev
-            maxAge: 15 * 60 * 1000, // 15 mins
-        });
+            secure: isProduction, // Chỉ bật Secure khi có HTTPS (Production)
+            sameSite: (isProduction ? 'strict' : 'lax') as any,
+            path: '/',
+            maxAge: 15 * 60 * 1000,
+        };
 
+        res.cookie('access_token', accessToken, cookieOptions);
         res.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: isProduction,
-            sameSite: isProduction ? 'strict' : 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            ...cookieOptions,
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
     }
 

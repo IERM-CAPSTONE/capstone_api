@@ -29,8 +29,12 @@ export const MESSAGE_PATTERNS = {
     EXAM: {
         /** Import danh sách phòng thi */
         IMPORT_ROOMS: 'exam.import.rooms',
+        /** Import lịch thi và sinh viên */
+        IMPORT_SCHEDULE: 'exam.import.schedule',
         /** Import lịch thi */
         IMPORT_SESSION: 'exam.import.session',
+        /** Import danh sách giám thị */
+        IMPORT_PROCTORS: 'exam.import.proctors',
         /** Thông báo import hoàn tất */
         IMPORT_FINISHED: 'exam.import.finished',
     },

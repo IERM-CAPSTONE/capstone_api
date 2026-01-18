@@ -2,23 +2,32 @@
 
 /// Junction table: which student belongs to which exam session
 model StudentExam {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  examSessionId String
-  examSession   ExamSession @relation(fields: [examSessionId], references: [id])
+    examSessionId String
+    examSession   ExamSession @relation(fields: [examSessionId], references: [id])
 
-  studentId String
-  student   User   @relation(fields: [studentId], references: [id])
+    studentId String
+    student   User   @relation(fields: [studentId], references: [id])
 
-  seatNumber String
+    stt        Int?
+    seatNumber String
+    status     StudentExamStatus @default(REGISTERED)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    currentLocation String?
+    identityId      String?
+    isMatched       Boolean   @default(false)
+    checkinTime     DateTime?
+    checkoutTime    DateTime?
+    isValid         Boolean   @default(true)
 
-  activityHistories ActivityHistory[]
-  parts             StudentExamPart[]
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  @@unique([examSessionId, studentId])
-  @@index([studentId])
-  @@index([examSessionId])
+    activityHistories ActivityHistory[]
+    parts             StudentExamPart[]
+
+    @@unique([examSessionId, studentId])
+    @@index([studentId])
+    @@index([examSessionId])
 }

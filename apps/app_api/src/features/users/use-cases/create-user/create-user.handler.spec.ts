@@ -9,6 +9,7 @@ describe('CreateUserHandler', () => {
 
     const createDto: CreateUserDto = {
         email: 'new@fpt.edu.vn',
+        username: 'newuser',
         fullName: 'New User',
         code: 'SE123456',
         role: RoleType.STUDENT,
@@ -41,9 +42,10 @@ describe('CreateUserHandler', () => {
             const result = await handler.execute(createDto);
 
             // Assert
-            expect(userRepository.findOne).toHaveBeenCalledTimes(2); // email, code
+            expect(userRepository.findOne).toHaveBeenCalledTimes(3); // email, code, username
             expect(userRepository.save).toHaveBeenCalled();
             expect(result.email).toBe(createDto.email);
+            expect(result.username).toBe(createDto.username);
             expect(result.fullName).toBe(createDto.fullName);
             expect(result.code).toBe(createDto.code);
             expect(result.role).toBe(createDto.role);
@@ -76,6 +78,18 @@ describe('CreateUserHandler', () => {
 
             // Act & Assert
             await expect(handler.execute(createDto)).rejects.toThrow(`Code '${createDto.code}' already exists`);
+            expect(userRepository.save).not.toHaveBeenCalled();
+        });
+
+        it('should throw error if username already exists', async () => {
+            // Arrange
+            userRepository.findOne
+                .mockResolvedValueOnce(null) // email check
+                .mockResolvedValueOnce(null) // code check
+                .mockResolvedValueOnce({ id: 'existing-id' } as User); // username check
+
+            // Act & Assert
+            await expect(handler.execute(createDto)).rejects.toThrow(`Username '${createDto.username}' already exists`);
             expect(userRepository.save).not.toHaveBeenCalled();
         });
 

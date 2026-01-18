@@ -12,7 +12,7 @@ export interface IUserRepository {
     delete(id: string): Promise<void>;
 
     // Queries
-    findOne(query: { id?: string; email?: string; code?: string }, excludeId?: string): Promise<User | null>;
+    findOne(query: { id?: string; email?: string; code?: string; username?: string }, excludeId?: string): Promise<User | null>;
     findMany(query: { role?: RoleType; isActive?: boolean; search?: string }): Promise<User[]>;
     findPaginated(options: FindPaginatedOptions): Promise<PaginatedResult<User>>;
 

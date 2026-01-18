@@ -18,6 +18,7 @@ model ExamSession {
   examOpenTime  DateTime?
   examCloseTime DateTime?
   status        ExamSessionStatus @default(Scheduled)
+  examType      ExamType[]
 
   /// Attendance/registration list for this session
   studentExams StudentExam[]

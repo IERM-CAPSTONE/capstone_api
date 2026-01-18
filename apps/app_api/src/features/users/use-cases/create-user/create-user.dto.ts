@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import { RoleType } from '@app/users';
 import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString } from 'class-validator';
 
@@ -5,8 +6,15 @@ import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString } from 'class-validato
  * Create User - Request DTO
  */
 export class CreateUserDto {
+    @IsOptional()
     @IsEmail()
-    email: string;
+    @Transform(({ value }) => value?.trim())
+    email?: string;
+
+    @IsOptional()
+    @IsString()
+    @Transform(({ value }) => value?.toLowerCase().trim())
+    username?: string;
 
     @IsOptional()
     @IsString()

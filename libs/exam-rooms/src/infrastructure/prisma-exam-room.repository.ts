@@ -15,6 +15,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             roomNumber: examRoom.roomNumber.value,
             capacity: examRoom.capacity?.value ?? null,
             status: examRoom.status as any,
+            max_rows: examRoom.maxRows,
+            max_columns: examRoom.maxColumns,
+            total_seats: examRoom.totalSeats,
             updatedAt: examRoom.updatedAt,
         };
 
@@ -33,6 +36,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             roomNumber: saved.roomNumber,
             capacity: saved.capacity,
             status: saved.status,
+            maxRows: saved.max_rows,
+            maxColumns: saved.max_columns,
+            totalSeats: saved.total_seats,
             createdAt: saved.createdAt,
             updatedAt: saved.updatedAt,
         });
@@ -50,6 +56,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             roomNumber: found.roomNumber,
             capacity: found.capacity,
             status: found.status,
+            maxRows: found.max_rows,
+            maxColumns: found.max_columns,
+            totalSeats: found.total_seats,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
         });
@@ -79,6 +88,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
                 roomNumber: item.roomNumber,
                 capacity: item.capacity,
                 status: item.status,
+                maxRows: item.max_rows,
+                maxColumns: item.max_columns,
+                totalSeats: item.total_seats,
                 createdAt: item.createdAt,
                 updatedAt: item.updatedAt,
             }),
@@ -97,6 +109,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             roomNumber: found.roomNumber,
             capacity: found.capacity,
             status: found.status,
+            maxRows: found.max_rows,
+            maxColumns: found.max_columns,
+            totalSeats: found.total_seats,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
         });
