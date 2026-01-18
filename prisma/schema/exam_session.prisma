@@ -17,7 +17,10 @@ model ExamSession {
   subjectCode   String?
   examOpenTime  DateTime?
   examCloseTime DateTime?
+  examCode      String?
+  openCode      String?
   status        ExamSessionStatus @default(Scheduled)
+  examType      ExamType[]
 
   /// Attendance/registration list for this session
   studentExams StudentExam[]

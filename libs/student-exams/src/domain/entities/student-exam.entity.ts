@@ -7,7 +7,7 @@ export class StudentExam {
         public readonly id: string,
         public readonly examSessionId: string,
         public readonly studentId: string,
-        public readonly seatNumber: number | null,
+        public readonly seatNumber: string | null,
         public readonly status: string,
         public readonly currentLocation: string | null,
         public readonly identityId: string | null,
@@ -23,7 +23,7 @@ export class StudentExam {
         id: string;
         examSessionId: string;
         studentId: string;
-        seatNumber?: number | null;
+        seatNumber?: string | null;
         status?: string;
         currentLocation?: string | null;
         identityId?: string | null;
@@ -53,7 +53,7 @@ export class StudentExam {
         id: string;
         examSessionId: string;
         studentId: string;
-        seatNumber: number | null;
+        seatNumber: string | null;
         status: string;
         currentLocation: string | null;
         identityId: string | null;
@@ -82,7 +82,7 @@ export class StudentExam {
     }
 
     update(props: {
-        seatNumber?: number | null;
+        seatNumber?: string | null;
         status?: string;
         currentLocation?: string | null;
         identityId?: string | null;

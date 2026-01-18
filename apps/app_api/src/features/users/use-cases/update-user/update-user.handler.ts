@@ -24,12 +24,17 @@ export class UpdateUserHandler {
             throw new Error(`Code '${dto.code}' already exists`);
         }
 
+        if (dto.username && (await this.userRepository.findOne({ username: dto.username }, id))) {
+            throw new Error(`Username '${dto.username}' already exists`);
+        }
+
         if (dto.email && (await this.userRepository.findOne({ email: dto.email }, id))) {
             throw new Error(`Email '${dto.email}' already exists`);
         }
 
         user.updateProfile({
             fullName: dto.fullName,
+            username: dto.username,
             code: dto.code,
             avatarUrl: dto.avatarUrl,
         });

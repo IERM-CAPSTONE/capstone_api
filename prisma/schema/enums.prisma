@@ -10,6 +10,14 @@ enum Role {
   IT_SUPPORT
 }
 
+enum Campus {
+  HCM
+  HN
+  DN
+  QN
+  CT
+}
+
 /// Student exam attendance status
 enum StudentExamStatus {
   REGISTERED
@@ -78,6 +86,13 @@ enum ActivityType {
 
 /// Type of exam part
 enum ExamType {
-  PRACTICAL
-  THEORY
+  PE
+  TE
+  S
+  L
+  R
+  W
+  FE
+  GV
+  MC
 }

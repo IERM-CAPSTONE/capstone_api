@@ -20,6 +20,7 @@ export class GoogleLoginHandler {
             user = User.create({
                 id: uuidv4(),
                 email: googleUser.email,
+                username: googleUser.email.split('@')[0].toLowerCase(),
                 fullName: `${googleUser.firstName} ${googleUser.lastName}`,
                 avatarUrl: googleUser.picture,
                 role: RoleType.STUDENT, // Default role
@@ -33,6 +34,6 @@ export class GoogleLoginHandler {
 
         Redirect('http://localhost:3000/admin-dashboard');
         return { user, accessToken, refreshToken };
-       
+
     }
 }

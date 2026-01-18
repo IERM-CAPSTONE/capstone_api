@@ -26,6 +26,9 @@ export class ExamSessionResponse {
     @ApiProperty({ example: 'Scheduled', enum: ['Ongoing', 'Ended', 'Scheduled'], description: 'Session status' })
     status: string;
 
+    @ApiProperty({ example: ['L', 'R'] })
+    examType: string[];
+
     @ApiProperty()
     createdAt: Date;
 
@@ -43,6 +46,7 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         examOpenTime: session.examTime.openTime,
         examCloseTime: session.examTime.closeTime,
         status: session.status,
+        examType: session.examType,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
     };

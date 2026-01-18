@@ -34,10 +34,16 @@ export class CreateUserHandler {
             throw new Error(`Code '${dto.code}' already exists`);
         }
 
+        // Check username uniqueness
+        if (dto.username && (await this.userRepository.findOne({ username: dto.username }))) {
+            throw new Error(`Username '${dto.username}' already exists`);
+        }
+
         // Create aggregate using factory
         const user = User.create({
             id: uuidv4(),
             email: dto.email,
+            username: dto.username,
             fullName: dto.fullName,
             code: dto.code,
             avatarUrl: dto.avatarUrl,

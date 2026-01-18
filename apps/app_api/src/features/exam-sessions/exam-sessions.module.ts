@@ -6,7 +6,9 @@ import { UpdateExamSessionHandler, UpdateExamSessionEndpoint } from './use-cases
 import { DeleteExamSessionHandler, DeleteExamSessionEndpoint } from './use-cases/delete-exam-session';
 import { GetExamSessionHandler, GetExamSessionEndpoint } from './use-cases/get-exam-session';
 import { ListExamSessionsHandler, ListExamSessionsEndpoint } from './use-cases/list-exam-sessions';
-import { ImportExamSessionHandler, ImportExamSessionEndpoint } from './use-cases/import-exam-session';
+import { ImportScheduleHandler, ImportScheduleEndpoint } from './use-cases/import-schedule';
+import { ImportProctorHandler, ImportProctorEndpoint } from './use-cases/import-proctor';
+import { ImportExamCodeHandler, ImportExamCodeEndpoint } from './use-cases/import-exam-code';
 
 @Module({
     imports: [ExamSessionsCoreModule],
@@ -16,7 +18,9 @@ import { ImportExamSessionHandler, ImportExamSessionEndpoint } from './use-cases
         DeleteExamSessionEndpoint,
         GetExamSessionEndpoint,
         ListExamSessionsEndpoint,
-        ImportExamSessionEndpoint,
+        ImportScheduleEndpoint,
+        ImportProctorEndpoint,
+        ImportExamCodeEndpoint,
     ],
     providers: [
         CreateExamSessionHandler,
@@ -24,7 +28,9 @@ import { ImportExamSessionHandler, ImportExamSessionEndpoint } from './use-cases
         DeleteExamSessionHandler,
         GetExamSessionHandler,
         ListExamSessionsHandler,
-        ImportExamSessionHandler,
+        ImportScheduleHandler,
+        ImportProctorHandler,
+        ImportExamCodeHandler,
     ],
 })
 export class ExamSessionsModule { }

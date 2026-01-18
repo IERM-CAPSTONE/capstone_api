@@ -13,6 +13,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examOpenTime: session.examTime.openTime,
             examCloseTime: session.examTime.closeTime,
             status: session.status as any,
+            examType: session.examType as any,
             updatedAt: session.updatedAt,
         };
 
@@ -45,6 +46,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examOpenTime: saved.examOpenTime,
             examCloseTime: saved.examCloseTime,
             status: saved.status,
+            examType: saved.examType as string[],
             createdAt: saved.createdAt,
             updatedAt: saved.updatedAt,
         });
@@ -65,6 +67,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examOpenTime: found.examOpenTime,
             examCloseTime: found.examCloseTime,
             status: found.status,
+            examType: found.examType as string[],
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
         });
@@ -98,6 +101,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examOpenTime: item.examOpenTime,
             examCloseTime: item.examCloseTime,
             status: item.status,
+            examType: item.examType as string[],
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
         }));
@@ -128,6 +132,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examOpenTime: found.examOpenTime,
             examCloseTime: found.examCloseTime,
             status: found.status,
+            examType: found.examType as string[],
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
         });
@@ -191,6 +196,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examOpenTime: item.examOpenTime,
             examCloseTime: item.examCloseTime,
             status: item.status,
+            examType: item.examType as string[],
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
         }));

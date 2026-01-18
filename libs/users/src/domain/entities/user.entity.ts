@@ -9,8 +9,9 @@ import { UserCode } from '../value-objects/user-code.vo';
 export class User {
     private constructor(
         private readonly _id: string,
-        private _email: Email,
+        private _email: Email | null,
         private _fullName: string | null,
+        private _username: string | null,
         private _code: UserCode | null,
         private _avatarUrl: string | null,
         private _isActive: boolean,
@@ -25,12 +26,16 @@ export class User {
         return this._id;
     }
 
-    get email(): Email {
+    get email(): Email | null {
         return this._email;
     }
 
     get fullName(): string | null {
         return this._fullName;
+    }
+
+    get username(): string | null {
+        return this._username;
     }
 
     get code(): UserCode | null {
@@ -64,14 +69,15 @@ export class User {
      */
     static create(props: {
         id: string;
-        email: string;
+        email?: string | null;
         fullName?: string;
+        username?: string;
         code?: string;
         avatarUrl?: string;
         role?: RoleType;
         isActive?: boolean;
     }): User {
-        const email = Email.create(props.email);
+        const email = props.email ? Email.create(props.email) : null;
         const code = props.code ? UserCode.create(props.code) : null;
         const role = props.role ? Role.create(props.role) : null;
 
@@ -79,6 +85,7 @@ export class User {
             props.id,
             email,
             props.fullName ?? null,
+            props.username?.toLowerCase() ?? null,
             code,
             props.avatarUrl ?? null,
             props.isActive ?? true,
@@ -93,8 +100,9 @@ export class User {
      */
     static fromPersistence(props: {
         id: string;
-        email: string;
+        email: string | null;
         fullName: string | null;
+        username: string | null;
         code: string | null;
         avatarUrl: string | null;
         isActive: boolean;
@@ -104,8 +112,9 @@ export class User {
     }): User {
         return new User(
             props.id,
-            Email.create(props.email),
+            props.email ? Email.fromPersistence(props.email) : null,
             props.fullName,
+            props.username,
             props.code ? UserCode.create(props.code) : null,
             props.avatarUrl,
             props.isActive,
@@ -123,12 +132,20 @@ export class User {
      * Update user profile
      */
     updateProfile(props: {
+        email?: string;
         fullName?: string;
+        username?: string;
         code?: string;
         avatarUrl?: string;
     }): void {
+        if (props.email !== undefined) {
+            this._email = props.email ? Email.create(props.email) : null;
+        }
         if (props.fullName !== undefined) {
             this._fullName = props.fullName || null;
+        }
+        if (props.username !== undefined) {
+            this._username = props.username?.toLowerCase() || null;
         }
         if (props.code !== undefined) {
             this._code = props.code ? UserCode.create(props.code) : null;
