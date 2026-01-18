@@ -15,6 +15,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             roomNumber: examRoom.roomNumber.value,
             capacity: examRoom.capacity?.value ?? null,
             status: examRoom.status as any,
+            max_rows: examRoom.max_rows ?? null,
+            max_columns: examRoom.max_columns ?? null,
+            total_seats: examRoom.total_seats ?? null,
             updatedAt: examRoom.updatedAt,
         };
 
@@ -26,6 +29,17 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
                 createdAt: examRoom.createdAt,
             },
             update: data,
+            select: {
+                id: true,
+                roomNumber: true,
+                capacity: true,
+                status: true,
+                max_rows: true,
+                max_columns: true,
+                total_seats: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
 
         return ExamRoom.reconstitute({
@@ -33,6 +47,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             roomNumber: saved.roomNumber,
             capacity: saved.capacity,
             status: saved.status,
+            max_rows: saved.max_rows,
+            max_columns: saved.max_columns,
+            total_seats: saved.total_seats,
             createdAt: saved.createdAt,
             updatedAt: saved.updatedAt,
         });
@@ -79,6 +96,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
                 roomNumber: item.roomNumber,
                 capacity: item.capacity,
                 status: item.status,
+                max_rows: item.max_rows,
+                max_columns: item.max_columns,
+                total_seats: item.total_seats,
                 createdAt: item.createdAt,
                 updatedAt: item.updatedAt,
             }),
@@ -97,6 +117,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             roomNumber: found.roomNumber,
             capacity: found.capacity,
             status: found.status,
+            max_rows: found.max_rows,
+            max_columns: found.max_columns,
+            total_seats: found.total_seats,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
         });

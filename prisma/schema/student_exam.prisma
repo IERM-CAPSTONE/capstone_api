@@ -10,7 +10,15 @@ model StudentExam {
   studentId String
   student   User   @relation(fields: [studentId], references: [id])
 
-  seatNumber String
+  seatNumber Int?
+
+  status          StudentExamStatus @default(REGISTERED)
+  currentLocation String?
+  identityId      String?
+  isMatched       Boolean           @default(false)
+  checkinTime     DateTime?
+  checkoutTime    DateTime?
+  isValid         Boolean           @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

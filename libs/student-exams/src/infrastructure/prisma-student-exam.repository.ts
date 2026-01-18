@@ -30,6 +30,21 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
                 createdAt: studentExam.createdAt,
             },
             update: data,
+            select: {
+                id: true,
+                examSessionId: true,
+                studentId: true,
+                seatNumber: true,
+                status: true,
+                currentLocation: true,
+                identityId: true,
+                isMatched: true,
+                checkinTime: true,
+                checkoutTime: true,
+                isValid: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
 
         return StudentExam.reconstitute({
@@ -52,6 +67,21 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
     async findById(id: string): Promise<StudentExam | null> {
         const found = await this.prisma.studentExam.findUnique({
             where: { id },
+            select: {
+                id: true,
+                examSessionId: true,
+                studentId: true,
+                seatNumber: true,
+                status: true,
+                currentLocation: true,
+                identityId: true,
+                isMatched: true,
+                checkinTime: true,
+                checkoutTime: true,
+                isValid: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
 
         if (!found) return null;
@@ -75,8 +105,21 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
 
     async findByExamSessionId(examSessionId: string): Promise<StudentExam[]> {
         const results = await this.prisma.studentExam.findMany({
-            where: { examSessionId },
-        });
+            where: { examSessionId },            select: {
+                id: true,
+                examSessionId: true,
+                studentId: true,
+                seatNumber: true,
+                status: true,
+                currentLocation: true,
+                identityId: true,
+                isMatched: true,
+                checkinTime: true,
+                checkoutTime: true,
+                isValid: true,
+                createdAt: true,
+                updatedAt: true,
+            },        });
 
         return results.map(item => StudentExam.reconstitute({
             id: item.id,

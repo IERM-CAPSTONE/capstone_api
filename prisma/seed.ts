@@ -115,46 +115,98 @@ async function main() {
       },
     });
 
-    console.log(`✅ Created 8 users`);
+    const student5 = await prisma.user.create({
+      data: {
+        email: 'student5@exam.com',
+        fullName: 'Hoang Thi E',
+        code: 'SE005',
+        role: 'STUDENT',
+        isActive: true,
+      },
+    });
+
+    const student6 = await prisma.user.create({
+      data: {
+        email: 'student6@exam.com',
+        fullName: 'Vo Van F',
+        code: 'SE006',
+        role: 'STUDENT',
+        isActive: true,
+      },
+    });
+
+    const student7 = await prisma.user.create({
+      data: {
+        email: 'student7@exam.com',
+        fullName: 'Do Thi G',
+        code: 'SE007',
+        role: 'STUDENT',
+        isActive: true,
+      },
+    });
+
+    const student8 = await prisma.user.create({
+      data: {
+        email: 'student8@exam.com',
+        fullName: 'Bui Van H',
+        code: 'SE008',
+        role: 'STUDENT',
+        isActive: true,
+      },
+    });
+
+    console.log(`✅ Created 12 users`);
 
     // ============================================
-    // 2. CREATE EXAM ROOMS
+    // 2. CREATE EXAM ROOMS WITH SEAT CONFIGURATION
     // ============================================
-    console.log('🏢 Creating exam rooms...');
+    console.log('🏢 Creating exam rooms with seat maps...');
 
     const room101 = await prisma.examRoom.create({
       data: {
         roomNumber: '101',
-        capacity: 30,
+        capacity: 20,
         status: 'Available',
+        max_rows: 4,
+        max_columns: 5,
+        total_seats: 20,
       },
     });
 
     const room102 = await prisma.examRoom.create({
       data: {
         roomNumber: '102',
-        capacity: 30,
+        capacity: 25,
         status: 'Available',
+        max_rows: 5,
+        max_columns: 5,
+        total_seats: 25,
       },
     });
 
     const room201 = await prisma.examRoom.create({
       data: {
         roomNumber: '201',
-        capacity: 40,
+        capacity: 21,
         status: 'Available',
+        max_rows: 4,
+        max_columns: 5,
+        total_seats: 21,
       },
     });
 
     const room202 = await prisma.examRoom.create({
       data: {
         roomNumber: '202',
-        capacity: 40,
+        capacity: 19,
         status: 'Available',
+        max_rows: 4,
+        max_columns: 5,
+        total_seats: 19,
       },
     });
 
-    console.log(`✅ Created 4 exam rooms`);
+    console.log(`✅ Created 4 exam rooms with seat configurations`);
 
     // ============================================
     // 3. CREATE EXAM SESSIONS
@@ -207,80 +259,122 @@ async function main() {
     console.log(`✅ Created 3 exam sessions`);
 
     // ============================================
-    // 4. CREATE STUDENT EXAMS
+    // 4. CREATE STUDENT EXAMS (WITHOUT SEAT ASSIGNMENTS YET)
     // ============================================
-    console.log('📝 Creating student exam registrations...');
+    console.log('📝 Creating student exam registrations (seats will be assigned via API)...');
 
-    // Session 1: CS101 (3 students)
-    const studentExam1 = await prisma.studentExam.create({
+    // Session 1: CS101 (5 students, no seats assigned yet)
+    await prisma.studentExam.create({
       data: {
         examSessionId: examSession1.id,
         studentId: student1.id,
-        seatNumber: 1,
         status: 'REGISTERED',
-        currentLocation: 'Room 101',
-        isMatched: true,
-      },
-    });
-
-    const studentExam2 = await prisma.studentExam.create({
-      data: {
-        examSessionId: examSession1.id,
-        studentId: student2.id,
-        seatNumber: 2,
-        status: 'REGISTERED',
-        currentLocation: 'Room 101',
-        isMatched: true,
-      },
-    });
-
-    // Session 2: MATH101 (3 students)
-    const studentExam3 = await prisma.studentExam.create({
-      data: {
-        examSessionId: examSession2.id,
-        studentId: student2.id,
-        seatNumber: 1,
-        status: 'REGISTERED',
-        currentLocation: 'Room 102',
-        isMatched: true,
-      },
-    });
-
-    const studentExam4 = await prisma.studentExam.create({
-      data: {
-        examSessionId: examSession2.id,
-        studentId: student3.id,
-        seatNumber: 2,
-        status: 'REGISTERED',
-        currentLocation: 'Room 102',
         isMatched: false,
       },
     });
 
-    // Session 3: ENG101 (2 students)
-    const studentExam5 = await prisma.studentExam.create({
+    await prisma.studentExam.create({
+      data: {
+        examSessionId: examSession1.id,
+        studentId: student2.id,
+        status: 'REGISTERED',
+        isMatched: false,
+      },
+    });
+
+    await prisma.studentExam.create({
+      data: {
+        examSessionId: examSession1.id,
+        studentId: student3.id,
+        status: 'REGISTERED',
+        isMatched: false,
+      },
+    });
+
+    await prisma.studentExam.create({
+      data: {
+        examSessionId: examSession1.id,
+        studentId: student4.id,
+        status: 'REGISTERED',
+        isMatched: false,
+      },
+    });
+
+    await prisma.studentExam.create({
+      data: {
+        examSessionId: examSession1.id,
+        studentId: student5.id,
+        status: 'REGISTERED',
+        isMatched: false,
+      },
+    });
+
+    // Session 2: MATH101 (4 students)
+    await prisma.studentExam.create({
+      data: {
+        examSessionId: examSession2.id,
+        studentId: student2.id,
+        status: 'REGISTERED',
+        isMatched: false,
+      },
+    });
+
+    await prisma.studentExam.create({
+      data: {
+        examSessionId: examSession2.id,
+        studentId: student3.id,
+        status: 'REGISTERED',
+        isMatched: false,
+      },
+    });
+
+    await prisma.studentExam.create({
+      data: {
+        examSessionId: examSession2.id,
+        studentId: student6.id,
+        status: 'REGISTERED',
+        isMatched: false,
+      },
+    });
+
+    await prisma.studentExam.create({
+      data: {
+        examSessionId: examSession2.id,
+        studentId: student7.id,
+        status: 'REGISTERED',
+        isMatched: false,
+      },
+    });
+
+    // Session 3: ENG101 (3 students)
+    await prisma.studentExam.create({
       data: {
         examSessionId: examSession3.id,
         studentId: student1.id,
-        seatNumber: 1,
         status: 'REGISTERED',
-        currentLocation: 'Room 201',
-        isMatched: true,
+        isMatched: false,
       },
     });
 
-    const studentExam6 = await prisma.studentExam.create({
+    await prisma.studentExam.create({
       data: {
         examSessionId: examSession3.id,
         studentId: student4.id,
-        seatNumber: 2,
         status: 'REGISTERED',
-        currentLocation: 'Room 201',
-        isMatched: true,
+        isMatched: false,
       },
     });
 
-    console.log(`✅ Created 6 student exam registrations`);
+    await prisma.studentExam.create({
+      data: {
+        examSessionId: examSession3.id,
+        studentId: student8.id,
+        status: 'REGISTERED',
+        isMatched: false,
+      },
+    });
+
+    console.log(`✅ Created 12 student exam registrations`);
 
     // ============================================
     // SUMMARY
@@ -289,20 +383,23 @@ async function main() {
     console.log('✅ Database seeding completed successfully!');
     console.log('='.repeat(50));
     console.log('\n📊 Summary:');
-    console.log(`   Users: 8 (1 Admin, 1 Officer, 2 Proctors, 4 Students)`);
-    console.log(`   Exam Rooms: 4`);
+    console.log(`   Users: 12 (1 Admin, 1 Officer, 2 Proctors, 8 Students)`);
+    console.log(`   Exam Rooms: 4 (with seat configs: 4x5, 5x5)`);
     console.log(`   Exam Sessions: 3`);
-    console.log(`   Student Exams: 6`);
+    console.log(`   Student Exams: 12 (no seats assigned yet)`);
 
     console.log('\n🔐 Test Credentials:');
     console.log(`   Admin: admin@exam.com / ADMIN001`);
     console.log(`   Officer: officer@exam.com / EO001`);
     console.log(`   Student: student1@exam.com / SE001`);
 
-    console.log('\n💡 Next Steps:');
-    console.log(`   1. Start the API: npm run start:dev:api`);
-    console.log(`   2. Get test token: POST /api/auth/test-token`);
-    console.log(`   3. Use Postman collection to test endpoints`);
+    console.log('\n💡 Testing the Seat Map Feature:');
+    console.log(`   1. Start API: npm run start:dev:api`);
+    console.log(`   2. Get auth token (use Google login or test endpoint)`);
+    console.log(`   3. Assign seats: POST /student-exams/assign-seats`);
+    console.log(`      Body: { "examSessionId": "<sessionId>", "studentIds": ["<id1>", "<id2>", ...] }`);
+    console.log(`   4. View seat map: GET /exam-rooms/<roomId>/seat-map`);
+    console.log(`   5. Filter by session: GET /exam-rooms/<roomId>/seat-map?examSessionId=<sessionId>`);
     console.log('\n');
   } catch (error) {
     console.error('❌ Error seeding database:', error);
