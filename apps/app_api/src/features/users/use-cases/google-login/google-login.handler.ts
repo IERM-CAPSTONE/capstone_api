@@ -32,7 +32,7 @@ export class GoogleLoginHandler {
         const accessToken = await this.tokenService.generateAccessToken(user.id, user.role?.value);
         const refreshToken = await this.tokenService.generateRefreshToken(user.id);
 
-        Redirect('http://localhost:3000/admin-dashboard');
+        Redirect('http://localhost:3001/en/admin');
         return { user, accessToken, refreshToken };
 
     }

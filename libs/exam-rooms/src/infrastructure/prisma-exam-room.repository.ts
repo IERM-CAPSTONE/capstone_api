@@ -91,6 +91,17 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             skip: query?.skip,
             take: query?.take,
             orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                roomNumber: true,
+                capacity: true,
+                status: true,
+                max_rows: true,
+                max_columns: true,
+                total_seats: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
 
         return found.map((item) =>

@@ -17,6 +17,15 @@ export class ExamRoomResponse {
     @ApiProperty({ example: 'Available', enum: ['Available', 'Occupied', 'Maintenance', 'Exam_Ongoing', 'For_Exam'], description: 'Room status' })
     status: string;
 
+    @ApiProperty({ example: 4, description: 'Maximum number of rows', nullable: true })
+    maxRows: number | null;
+
+    @ApiProperty({ example: 5, description: 'Maximum number of columns', nullable: true })
+    maxColumns: number | null;
+
+    @ApiProperty({ example: 20, description: 'Total number of seats', nullable: true })
+    totalSeats: number | null;
+
     @ApiProperty({ example: '2024-01-01T00:00:00.000Z', description: 'Creation timestamp' })
     createdAt: Date;
 
@@ -33,6 +42,9 @@ export function toExamRoomResponse(examRoom: ExamRoom): ExamRoomResponse {
         roomNumber: examRoom.roomNumber.value,
         capacity: examRoom.capacity?.value ?? null,
         status: examRoom.status,
+        maxRows: examRoom.maxRows ?? null,
+        maxColumns: examRoom.maxColumns ?? null,
+        totalSeats: examRoom.totalSeats ?? null,
         createdAt: examRoom.createdAt,
         updatedAt: examRoom.updatedAt,
     };
