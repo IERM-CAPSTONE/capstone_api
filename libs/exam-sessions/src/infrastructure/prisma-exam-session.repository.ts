@@ -55,6 +55,19 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
     async findById(id: string): Promise<ExamSession | null> {
         const found = await this.prisma.examSession.findUnique({
             where: { id },
+            select: {
+                id: true,
+                subjectCode: true,
+                examRoomId: true,
+                proctorId: true,
+                hallInvigilatorId: true,
+                examOpenTime: true,
+                examCloseTime: true,
+                status: true,
+                examType: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
         if (!found) return null;
 
@@ -90,6 +103,19 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             skip: query?.skip,
             take: query?.take,
             orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                subjectCode: true,
+                examRoomId: true,
+                proctorId: true,
+                hallInvigilatorId: true,
+                examOpenTime: true,
+                examCloseTime: true,
+                status: true,
+                examType: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
 
         return found.map(item => ExamSession.reconstitute({
@@ -119,6 +145,19 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
         const found = await this.prisma.examSession.findFirst({
             where,
+            select: {
+                id: true,
+                subjectCode: true,
+                examRoomId: true,
+                proctorId: true,
+                hallInvigilatorId: true,
+                examOpenTime: true,
+                examCloseTime: true,
+                status: true,
+                examType: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
 
         if (!found) return null;
@@ -184,6 +223,19 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                     { examCloseTime: { gt: startTime } },
                 ],
                 OR: orConditions,
+            },
+            select: {
+                id: true,
+                subjectCode: true,
+                examRoomId: true,
+                proctorId: true,
+                hallInvigilatorId: true,
+                examOpenTime: true,
+                examCloseTime: true,
+                status: true,
+                examType: true,
+                createdAt: true,
+                updatedAt: true,
             },
         });
 

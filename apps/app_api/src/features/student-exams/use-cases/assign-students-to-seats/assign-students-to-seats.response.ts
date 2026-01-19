@@ -9,7 +9,7 @@ export interface SeatAssignment {
 
 export interface StudentExamAssignment {
     id: string;
-    seatNumber: number | null;
+    seatNumber: string | null;
     student: {
         id: string;
         fullName: string;

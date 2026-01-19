@@ -266,8 +266,8 @@ async function main() {
     // Session 1: CS101 (5 students, no seats assigned yet)
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession1.id,
-        studentId: student1.id,
+        examSession: { connect: { id: examSession1.id } },
+        student: { connect: { id: student1.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -275,8 +275,8 @@ async function main() {
 
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession1.id,
-        studentId: student2.id,
+        examSession: { connect: { id: examSession1.id } },
+        student: { connect: { id: student2.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -284,8 +284,8 @@ async function main() {
 
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession1.id,
-        studentId: student3.id,
+        examSession: { connect: { id: examSession1.id } },
+        student: { connect: { id: student3.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -293,8 +293,8 @@ async function main() {
 
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession1.id,
-        studentId: student4.id,
+        examSession: { connect: { id: examSession1.id } },
+        student: { connect: { id: student4.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -302,8 +302,8 @@ async function main() {
 
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession1.id,
-        studentId: student5.id,
+        examSession: { connect: { id: examSession1.id } },
+        student: { connect: { id: student5.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -312,8 +312,8 @@ async function main() {
     // Session 2: MATH101 (4 students)
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession2.id,
-        studentId: student2.id,
+        examSession: { connect: { id: examSession2.id } },
+        student: { connect: { id: student2.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -321,8 +321,8 @@ async function main() {
 
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession2.id,
-        studentId: student3.id,
+        examSession: { connect: { id: examSession2.id } },
+        student: { connect: { id: student3.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -330,8 +330,8 @@ async function main() {
 
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession2.id,
-        studentId: student6.id,
+        examSession: { connect: { id: examSession2.id } },
+        student: { connect: { id: student6.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -339,8 +339,8 @@ async function main() {
 
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession2.id,
-        studentId: student7.id,
+        examSession: { connect: { id: examSession2.id } },
+        student: { connect: { id: student7.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -349,8 +349,8 @@ async function main() {
     // Session 3: ENG101 (3 students)
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession3.id,
-        studentId: student1.id,
+        examSession: { connect: { id: examSession3.id } },
+        student: { connect: { id: student1.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -358,8 +358,8 @@ async function main() {
 
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession3.id,
-        studentId: student4.id,
+        examSession: { connect: { id: examSession3.id } },
+        student: { connect: { id: student4.id } },
         status: 'REGISTERED',
         isMatched: false,
       },
@@ -367,8 +367,8 @@ async function main() {
 
     await prisma.studentExam.create({
       data: {
-        examSessionId: examSession3.id,
-        studentId: student8.id,
+        examSession: { connect: { id: examSession3.id } },
+        student: { connect: { id: student8.id } },
         status: 'REGISTERED',
         isMatched: false,
       },

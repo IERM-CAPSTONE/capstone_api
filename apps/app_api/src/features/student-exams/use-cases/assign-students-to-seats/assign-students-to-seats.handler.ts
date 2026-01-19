@@ -41,10 +41,21 @@ export class AssignStudentsToSeatsHandler {
         // Remove duplicates from student IDs
         const uniqueStudentIds = Array.from(new Set(dto.studentIds));
 
-        // Validate exam session exists and get associated room
+        // Validate exam session exists and get associated room (select only needed fields to avoid missing columns on older DBs)
         const rawSession = await this.prisma.examSession.findUnique({
             where: { id: dto.examSessionId },
-            include: { examRoom: true },
+            select: {
+                id: true,
+                examRoom: {
+                    select: {
+                        id: true,
+                        roomNumber: true,
+                        max_rows: true,
+                        max_columns: true,
+                        total_seats: true,
+                    },
+                },
+            },
         });
 
         if (!rawSession) {
@@ -72,17 +83,17 @@ export class AssignStudentsToSeatsHandler {
         }
 
         // Get already-assigned students in this session to prevent double-booking
-        const existingAssignments = await this.prisma.studentExam.findMany({
+        // Fetch assigned seats (filter nulls in memory to avoid Prisma null filter issues on legacy DB)
+        const existingAssignments = (await this.prisma.studentExam.findMany({
             where: {
                 examSessionId: dto.examSessionId,
-                seatNumber: { not: null },
             },
             select: { seatNumber: true },
-        });
+        })).filter((a) => a.seatNumber !== null && a.seatNumber !== undefined);
 
         // Map seat numbers to seat IDs (format: R{row}C{column})
         const occupiedSeatIds = existingAssignments
-            .map((a) => this.seatNumberToSeatId(a.seatNumber as number, seatConfig.max_columns))
+            .map((a) => a.seatNumber ? this.seatNumberToSeatId(parseInt(a.seatNumber, 10), seatConfig.max_columns) : null)
             .filter(Boolean);
 
         // Generate seat grid and allocate
@@ -106,6 +117,7 @@ export class AssignStudentsToSeatsHandler {
 
                 for (const assignment of assignments) {
                     const seatNumber = this.seatIdToSeatNumber(assignment.seatId, seatConfig.max_columns);
+                    const seatNumberStr = seatNumber.toString();
                     const studentExamRecord = await tx.studentExam.findFirst({
                         where: {
                             examSessionId: dto.examSessionId,
@@ -118,7 +130,7 @@ export class AssignStudentsToSeatsHandler {
                         await tx.studentExam.update({
                             where: { id: studentExamRecord.id },
                             data: {
-                                seatNumber,
+                                seatNumber: seatNumberStr,
                                 status: 'REGISTERED', // Ensure registered status
                                 updatedAt: new Date(),
                             },
@@ -132,7 +144,7 @@ export class AssignStudentsToSeatsHandler {
                                 id: newId,
                                 examSessionId: dto.examSessionId,
                                 studentId: assignment.studentId,
-                                seatNumber,
+                                seatNumber: seatNumberStr,
                                 status: 'REGISTERED',
                                 isMatched: false,
                                 isValid: true,
@@ -150,10 +162,9 @@ export class AssignStudentsToSeatsHandler {
         );
 
         // Fetch complete assigned data with student info for frontend seat map rendering
-        const assignedStudentExams = await this.prisma.studentExam.findMany({
+        const assignedStudentExams = (await this.prisma.studentExam.findMany({
             where: {
                 examSessionId: dto.examSessionId,
-                seatNumber: { not: null },
             },
             include: {
                 student: {
@@ -164,7 +175,7 @@ export class AssignStudentsToSeatsHandler {
                     },
                 },
             },
-        });
+        })).filter((se) => se.seatNumber !== null && se.seatNumber !== undefined);
 
         this.logger.log(
             `✅ Seat assignment completed: ${result.length} students assigned, ${remainingSeats.length} seats remaining`,

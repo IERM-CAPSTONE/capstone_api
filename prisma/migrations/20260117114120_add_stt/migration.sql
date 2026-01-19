@@ -13,12 +13,13 @@ ALTER TYPE "ExamType_new" RENAME TO "ExamType";
 DROP TYPE "public"."ExamType_old";
 COMMIT;
 
--- AlterTable
-ALTER TABLE "StudentExam" ADD COLUMN     "checkinTime" TIMESTAMP(3),
-ADD COLUMN     "checkoutTime" TIMESTAMP(3),
-ADD COLUMN     "currentLocation" TEXT,
-ADD COLUMN     "identityId" TEXT,
-ADD COLUMN     "isMatched" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "isValid" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "status" "StudentExamStatus" NOT NULL DEFAULT 'REGISTERED',
-ADD COLUMN     "stt" INTEGER;
+-- AlterTable (use IF NOT EXISTS to tolerate existing columns)
+ALTER TABLE "StudentExam" 
+  ADD COLUMN IF NOT EXISTS "checkinTime" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "checkoutTime" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "currentLocation" TEXT,
+  ADD COLUMN IF NOT EXISTS "identityId" TEXT,
+  ADD COLUMN IF NOT EXISTS "isMatched" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "isValid" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "status" "StudentExamStatus" NOT NULL DEFAULT 'REGISTERED',
+  ADD COLUMN IF NOT EXISTS "stt" INTEGER;
