@@ -11,7 +11,7 @@ export class StudentExamResponse {
     studentId: string;
 
     @ApiProperty({ nullable: true })
-    seatNumber: number | null;
+    seatNumber: string | null;
 
     @ApiProperty()
     status: string;
@@ -39,6 +39,12 @@ export class StudentExamResponse {
 
     @ApiProperty()
     updatedAt: Date;
+
+    @ApiProperty({ nullable: true })
+    studentName: string | null;
+
+    @ApiProperty({ nullable: true })
+    studentCode: string | null;
 }
 
 export class PaginatedStudentExamResponse {
@@ -73,5 +79,7 @@ export function toStudentExamResponse(studentExam: any): StudentExamResponse {
         isValid: studentExam.isValid,
         createdAt: studentExam.createdAt,
         updatedAt: studentExam.updatedAt,
+        studentName: studentExam.studentName,
+        studentCode: studentExam.studentCode,
     };
 }

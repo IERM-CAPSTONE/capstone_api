@@ -19,6 +19,9 @@ export class ExamSession {
         public readonly roomNumber: string | null = null,
         public readonly proctorName: string | null = null,
         public readonly hallInvigilatorName: string | null = null,
+        public readonly maxRows: number | null = null,
+        public readonly maxColumns: number | null = null,
+        public readonly totalSeats: number | null = null,
     ) { }
 
     static create(props: {
@@ -67,6 +70,9 @@ export class ExamSession {
         roomNumber?: string | null;
         proctorName?: string | null;
         hallInvigilatorName?: string | null;
+        maxRows?: number | null;
+        maxColumns?: number | null;
+        totalSeats?: number | null;
     }): ExamSession {
         return new ExamSession(
             props.id,
@@ -84,6 +90,9 @@ export class ExamSession {
             props.roomNumber,
             props.proctorName,
             props.hallInvigilatorName,
+            props.maxRows,
+            props.maxColumns,
+            props.totalSeats,
         );
     }
 
@@ -115,6 +124,12 @@ export class ExamSession {
             props.examType !== undefined ? props.examType : this.examType,
             this.createdAt,
             new Date(),
+            this.roomNumber,
+            this.proctorName,
+            this.hallInvigilatorName,
+            this.maxRows,
+            this.maxColumns,
+            this.totalSeats,
         );
     }
 }

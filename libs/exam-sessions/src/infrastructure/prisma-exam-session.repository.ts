@@ -19,7 +19,12 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             updatedAt: session.updatedAt,
         };
 
-        const relationData = {
+        const createRelationData: any = {};
+        if (session.examRoomId) createRelationData.examRoom = { connect: { id: session.examRoomId } };
+        if (session.proctorId) createRelationData.proctor = { connect: { id: session.proctorId } };
+        if (session.hallInvigilatorId) createRelationData.hallInvigilator = { connect: { id: session.hallInvigilatorId } };
+
+        const updateRelationData = {
             examRoom: session.examRoomId ? { connect: { id: session.examRoomId } } : { disconnect: true },
             proctor: session.proctorId ? { connect: { id: session.proctorId } } : { disconnect: true },
             hallInvigilator: session.hallInvigilatorId ? { connect: { id: session.hallInvigilatorId } } : { disconnect: true },
@@ -30,13 +35,16 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             create: {
                 id: session.id,
                 ...data,
-                ...relationData,
+                ...createRelationData,
                 createdAt: session.createdAt,
             },
             update: {
                 ...data,
-                ...relationData,
+                ...updateRelationData,
             },
+            include: {
+                examRoom: true,
+            }
         });
 
         return ExamSession.reconstitute({
@@ -53,6 +61,10 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examType: saved.examType as string[],
             createdAt: saved.createdAt,
             updatedAt: saved.updatedAt,
+            roomNumber: saved.examRoom?.roomNumber,
+            maxRows: saved.examRoom?.max_rows,
+            maxColumns: saved.examRoom?.max_columns,
+            totalSeats: saved.examRoom?.total_seats,
         });
     }
 
@@ -84,6 +96,9 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             roomNumber: found.examRoom?.roomNumber,
             proctorName: found.proctor?.fullName,
             hallInvigilatorName: found.hallInvigilator?.fullName,
+            maxRows: found.examRoom?.max_rows,
+            maxColumns: found.examRoom?.max_columns,
+            totalSeats: found.examRoom?.total_seats,
         });
     }
 
@@ -133,6 +148,9 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             roomNumber: item.examRoom?.roomNumber,
             proctorName: item.proctor?.fullName,
             hallInvigilatorName: item.hallInvigilator?.fullName,
+            maxRows: item.examRoom?.max_rows,
+            maxColumns: item.examRoom?.max_columns,
+            totalSeats: item.examRoom?.total_seats,
         }));
     }
 

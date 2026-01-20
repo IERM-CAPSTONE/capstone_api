@@ -17,6 +17,8 @@ export class StudentExam {
         public readonly isValid: boolean,
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
+        public readonly studentName: string | null = null,
+        public readonly studentCode: string | null = null,
     ) { }
 
     static create(props: {
@@ -63,6 +65,8 @@ export class StudentExam {
         isValid: boolean;
         createdAt: Date;
         updatedAt: Date;
+        studentName?: string | null;
+        studentCode?: string | null;
     }): StudentExam {
         return new StudentExam(
             props.id,
@@ -78,6 +82,8 @@ export class StudentExam {
             props.isValid,
             props.createdAt,
             props.updatedAt,
+            props.studentName,
+            props.studentCode,
         );
     }
 
@@ -105,6 +111,8 @@ export class StudentExam {
             props.isValid !== undefined ? props.isValid : this.isValid,
             this.createdAt,
             new Date(),
+            this.studentName,
+            this.studentCode,
         );
     }
 }

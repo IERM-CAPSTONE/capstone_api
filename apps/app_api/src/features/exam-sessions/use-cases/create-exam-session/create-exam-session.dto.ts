@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsDateString, IsUUID, IsEnum } from 'class-validator';
+import { ExamType } from '@prisma/client';
+import { IsString, IsOptional, IsDateString, IsUUID, IsEnum, IsArray } from 'class-validator';
 
 export class CreateExamSessionDto {
     @ApiProperty({ required: false, nullable: true })
@@ -31,6 +32,22 @@ export class CreateExamSessionDto {
     @IsOptional()
     @IsDateString()
     examCloseTime?: Date | null;
+
+    @ApiProperty({ required: false, nullable: true })
+    @IsOptional()
+    @IsString()
+    examCode?: string | null;
+
+    @ApiProperty({ required: false, nullable: true })
+    @IsOptional()
+    @IsString()
+    openCode?: string | null;
+
+    @ApiProperty({ required: false, nullable: true, enum: ExamType, isArray: true })
+    @IsOptional()
+    @IsArray()
+    @IsEnum(ExamType, { each: true })
+    examType?: ExamType[];
 
     @ApiProperty({ example: 'Scheduled', enum: ['Ongoing', 'Ended', 'Scheduled'], description: 'Session status', required: false })
     @IsOptional()

@@ -230,8 +230,10 @@ export class ExamImportProcessor {
                         try {
                             const parsed = this.parseExamSession(sessionStr);
                             const room = await this.prisma.examRoom.findUnique({ where: { roomNumber: parsed.roomName } });
+                            this.logger.log(`Fallback Lookup: Room ${parsed.roomName} found: ${!!room}`);
 
                             if (room) {
+                                this.logger.log(`Searching for session: RoomId=${room.id}, Open=${parsed.openTime.toISOString()}, Close=${parsed.closeTime.toISOString()}`);
                                 const existingSession = await this.prisma.examSession.findFirst({
                                     where: {
                                         examRoomId: room.id,
@@ -265,8 +267,9 @@ export class ExamImportProcessor {
                         throw new Error(`Student count (${students.length}) exceeds room capacity (${session.examRoom.total_seats}) for session ${sessionStr}`);
                     }
 
-                    // Generate Random Seats
-                    const availableSeats = this.generateSeats(session.examRoom.max_rows, session.examRoom.max_columns);
+                    // Generate Random Seats (Front-row-first)
+                    const allPossibleSeats = this.generateSeats(session.examRoom.max_rows, session.examRoom.max_columns);
+                    const availableSeats = allPossibleSeats.slice(0, students.length);
                     this.shuffleArray(availableSeats);
 
                     for (let i = 0; i < students.length; i++) {

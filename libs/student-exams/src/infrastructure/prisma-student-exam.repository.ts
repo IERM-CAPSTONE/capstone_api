@@ -52,6 +52,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
     async findById(id: string): Promise<StudentExam | null> {
         const found = await this.prisma.studentExam.findUnique({
             where: { id },
+            include: { student: true },
         });
 
         if (!found) return null;
@@ -70,12 +71,15 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             isValid: found.isValid,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
+            studentName: found.student?.fullName,
+            studentCode: found.student?.code,
         });
     }
 
     async findByExamSessionId(examSessionId: string): Promise<StudentExam[]> {
         const results = await this.prisma.studentExam.findMany({
             where: { examSessionId },
+            include: { student: true },
         });
 
         return results.map(item => StudentExam.reconstitute({
@@ -92,12 +96,15 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             isValid: item.isValid,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
+            studentName: item.student?.fullName,
+            studentCode: item.student?.code,
         }));
     }
 
     async findByStudentId(studentId: string): Promise<StudentExam[]> {
         const results = await this.prisma.studentExam.findMany({
             where: { studentId },
+            include: { student: true },
         });
 
         return results.map(item => StudentExam.reconstitute({
@@ -114,6 +121,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             isValid: item.isValid,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
+            studentName: item.student?.fullName,
+            studentCode: item.student?.code,
         }));
     }
 
@@ -139,6 +148,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
                 skip,
                 take: limit,
                 orderBy: { createdAt: 'desc' },
+                include: { student: true },
             }),
             this.prisma.studentExam.count({ where }),
         ]);
@@ -157,6 +167,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             isValid: item.isValid,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
+            studentName: item.student?.fullName,
+            studentCode: item.student?.code,
         }));
 
         return { data, total };

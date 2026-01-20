@@ -93,6 +93,7 @@ enum ExamType {
   R
   W
   FE
+  RE
   GV
   MC
 }
