@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersCoreModule } from '@app/users';
@@ -19,7 +20,7 @@ import { GetUserHandler, GetUserEndpoint } from './use-cases/get-user';
 import { ListUsersHandler, ListUsersEndpoint } from './use-cases/list-users';
 
 // Use Cases - Authentication
-import { GoogleLoginHandler, GoogleLoginEndpoint } from './use-cases/google-login';
+import { FirebaseLoginHandler, FirebaseLoginEndpoint } from './use-cases/firebase-login';
 import { RefreshTokenHandler, RefreshTokenEndpoint } from './use-cases/refresh-token';
 import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
 
@@ -44,7 +45,7 @@ import { MeEndpoint } from './use-cases/me';
         ListUsersEndpoint,
         GetUserEndpoint,
         // Authentication
-        GoogleLoginEndpoint,
+        FirebaseLoginEndpoint,
         RefreshTokenEndpoint,
         LogoutEndpoint,
         ImportStudentEndpoint,
@@ -67,7 +68,7 @@ import { MeEndpoint } from './use-cases/me';
         GetUserHandler,
         ListUsersHandler,
         // Handlers - Authentication
-        GoogleLoginHandler,
+        FirebaseLoginHandler,
         RefreshTokenHandler,
         LogoutHandler,
         ImportStudentHandler,

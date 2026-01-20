@@ -16,10 +16,10 @@ import { AppCacheModule } from '@app/cache';
     // Load environment variables
     ConfigModule.forRoot({
       isGlobal: true,
-      ignoreEnvFile: !!process.env.DATABASE_URL,
-      envFilePath: process.env.NODE_ENV === 'production'
-        ? '.env.production'
-        : '.env.development',
+      envFilePath: [
+        '.env',
+        process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development',
+      ],
     }),
     // Prisma for database access
     PrismaModule,
@@ -40,6 +40,6 @@ export class AppApiModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(HttpLoggerMiddleware)
-      .forRoutes('*'); // Apply to all routes
+      .forRoutes('*');
   }
 }
