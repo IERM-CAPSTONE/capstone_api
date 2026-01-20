@@ -9,7 +9,6 @@ import { ListStudentExamsHandler, ListStudentExamsEndpoint } from './use-cases/l
 import { GetStudentExamHandler, GetStudentExamEndpoint } from './use-cases/get-student-exam';
 import { UpdateStudentExamHandler, UpdateStudentExamEndpoint } from './use-cases/update-student-exam';
 import { DeleteStudentExamHandler, DeleteStudentExamEndpoint } from './use-cases/delete-student-exam';
-import { AssignStudentsToSeatsHandler, AssignStudentsToSeatsEndpoint } from './use-cases/assign-students-to-seats';
 
 @Module({
     imports: [StudentExamsCoreModule, ExamRoomsCoreModule, ExamSessionsCoreModule],
@@ -19,7 +18,6 @@ import { AssignStudentsToSeatsHandler, AssignStudentsToSeatsEndpoint } from './u
         GetStudentExamEndpoint,
         UpdateStudentExamEndpoint,
         DeleteStudentExamEndpoint,
-        AssignStudentsToSeatsEndpoint,
     ],
     providers: [
         CreateStudentExamHandler,
@@ -27,7 +25,6 @@ import { AssignStudentsToSeatsHandler, AssignStudentsToSeatsEndpoint } from './u
         GetStudentExamHandler,
         UpdateStudentExamHandler,
         DeleteStudentExamHandler,
-        AssignStudentsToSeatsHandler,
     ],
 })
 export class StudentExamsModule { }
