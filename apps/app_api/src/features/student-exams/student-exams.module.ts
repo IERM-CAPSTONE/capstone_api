@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { StudentExamsCoreModule } from '@app/student-exams';
+import { ExamRoomsCoreModule } from '@app/exam-rooms';
+import { ExamSessionsCoreModule } from '@app/exam-sessions';
 
 // Use Cases
 import { CreateStudentExamHandler, CreateStudentExamEndpoint } from './use-cases/create-student-exam';
@@ -9,7 +11,7 @@ import { UpdateStudentExamHandler, UpdateStudentExamEndpoint } from './use-cases
 import { DeleteStudentExamHandler, DeleteStudentExamEndpoint } from './use-cases/delete-student-exam';
 
 @Module({
-    imports: [StudentExamsCoreModule],
+    imports: [StudentExamsCoreModule, ExamRoomsCoreModule, ExamSessionsCoreModule],
     controllers: [
         CreateStudentExamEndpoint,
         ListStudentExamsEndpoint,

@@ -14,8 +14,8 @@ export class ListExamRoomsHandler {
     ) { }
 
     async execute(dto: ListExamRoomsDto): Promise<PaginatedExamRoomResponse> {
-        const page = dto.page || 1;
-        const limit = dto.limit || 10;
+        const page = parseInt(String(dto.page || 1), 10);
+        const limit = parseInt(String(dto.limit || 10), 10);
         const skip = (page - 1) * limit;
 
         const cacheKey = `exam-rooms:list:p${page}:l${limit}:rn${dto.roomNumber ?? 'all'}`;

@@ -30,6 +30,21 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
                 createdAt: studentExam.createdAt,
             },
             update: data,
+            select: {
+                id: true,
+                examSessionId: true,
+                studentId: true,
+                seatNumber: true,
+                status: true,
+                currentLocation: true,
+                identityId: true,
+                isMatched: true,
+                checkinTime: true,
+                checkoutTime: true,
+                isValid: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
 
         return StudentExam.reconstitute({

@@ -7,9 +7,9 @@ model ExamRoom {
   capacity   Int?
   status     ExamRoomStatus @default(Available)
 
-  max_rows    Int
-  max_columns Int
-  total_seats Int
+  max_rows    Int?
+  max_columns Int?
+  total_seats Int?
 
   examSessions  ExamSession[]
   notifications Notification[]

@@ -11,7 +11,7 @@ model StudentExam {
     student   User   @relation(fields: [studentId], references: [id])
 
     stt        Int?
-    seatNumber String
+    seatNumber String?
     status     StudentExamStatus @default(REGISTERED)
 
     currentLocation String?

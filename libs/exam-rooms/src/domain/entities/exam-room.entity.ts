@@ -25,6 +25,9 @@ export class ExamRoom {
         id: string;
         roomNumber: string | number;
         capacity?: number | null;
+        max_rows?: number | null;
+        max_columns?: number | null;
+        total_seats?: number | null;
         status?: string;
         maxRows?: number;
         maxColumns?: number;
@@ -53,6 +56,9 @@ export class ExamRoom {
         id: string;
         roomNumber: string | number;
         capacity: number | null;
+        max_rows?: number | null;
+        max_columns?: number | null;
+        total_seats?: number | null;
         status: string;
         maxRows: number;
         maxColumns: number;
@@ -82,6 +88,9 @@ export class ExamRoom {
     update(props: {
         roomNumber?: string | number;
         capacity?: number | null;
+        max_rows?: number;
+        max_columns?: number;
+        total_seats?: number;
         status?: string;
         maxRows?: number;
         maxColumns?: number;
