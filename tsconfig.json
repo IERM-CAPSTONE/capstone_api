@@ -19,6 +19,9 @@
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
     "esModuleInterop": true,
+    "types": [
+      "node"
+    ],
     "paths": {
       "@app/queue": [
         "libs/queue/src"
@@ -66,7 +69,8 @@
   },
   "include": [
     "apps/**/*.ts",
-    "libs/**/*.ts"
+    "libs/**/*.ts",
+    "*.ts"
   ],
   "exclude": [
     "node_modules",
