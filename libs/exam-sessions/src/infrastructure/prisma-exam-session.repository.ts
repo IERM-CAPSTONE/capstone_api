@@ -16,6 +16,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             openCode: session.openCode,
             status: session.status as any,
             examType: session.examType as any,
+            semester: session.semester,
+            note: session.note,
             updatedAt: session.updatedAt,
         };
 
@@ -59,6 +61,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             openCode: saved.openCode,
             status: saved.status,
             examType: saved.examType as string[],
+            semester: saved.semester,
+            note: saved.note,
             createdAt: saved.createdAt,
             updatedAt: saved.updatedAt,
             roomNumber: saved.examRoom?.roomNumber,
@@ -91,6 +95,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             openCode: found.openCode,
             status: found.status,
             examType: found.examType as string[],
+            semester: found.semester,
+            note: found.note,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
             roomNumber: found.examRoom?.roomNumber,
@@ -143,6 +149,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             openCode: item.openCode,
             status: item.status,
             examType: item.examType as string[],
+            semester: item.semester,
+            note: item.note,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             roomNumber: item.examRoom?.roomNumber,
@@ -151,11 +159,15 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             maxRows: item.examRoom?.max_rows,
             maxColumns: item.examRoom?.max_columns,
             totalSeats: item.examRoom?.total_seats,
+            isArchived: item.isArchived ?? false,
         }));
     }
 
     private buildWhere(query?: any): any {
         const where: any = {};
+
+        // Exclude archived sessions by default
+        where.isArchived = false;
 
         if (query?.subjectCode) {
             where.subjectCode = query.subjectCode;
@@ -259,8 +271,17 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             openCode: found.openCode,
             status: found.status,
             examType: found.examType as string[],
+            semester: found.semester,
+            note: found.note,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
+            roomNumber: null,
+            proctorName: null,
+            hallInvigilatorName: null,
+            maxRows: null,
+            maxColumns: null,
+            totalSeats: null,
+            isArchived: found.isArchived ?? false,
         });
     }
 
@@ -314,6 +335,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 AND: [
                     { examOpenTime: { lt: endTime } },
                     { examCloseTime: { gt: startTime } },
+                    { isArchived: false },
                 ],
                 OR: orConditions,
             },
@@ -331,8 +353,11 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             openCode: item.openCode,
             status: item.status,
             examType: item.examType as string[],
+            semester: item.semester,
+            note: item.note,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
+            isArchived: item.isArchived ?? false,
         }));
     }
 }

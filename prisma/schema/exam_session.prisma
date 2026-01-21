@@ -21,6 +21,9 @@ model ExamSession {
   openCode      String?
   status        ExamSessionStatus @default(Scheduled)
   examType      ExamType[]
+  semester      String?
+  note          String?
+  isArchived    Boolean @default(false)
 
   /// Attendance/registration list for this session
   studentExams StudentExam[]

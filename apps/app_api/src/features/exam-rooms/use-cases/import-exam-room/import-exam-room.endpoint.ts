@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { Multer } from 'multer';
 import { RoleType } from '@app/users';
 import { Roles } from '../../../../common/decorators';
 import { RolesGuard, JwtAuthGuard } from '../../../../common/guards';

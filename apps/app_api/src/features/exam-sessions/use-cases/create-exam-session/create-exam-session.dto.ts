@@ -53,4 +53,14 @@ export class CreateExamSessionDto {
     @IsOptional()
     @IsEnum(['Ongoing', 'Ended', 'Scheduled'])
     status?: string;
+
+    @ApiProperty({ required: false, nullable: true })
+    @IsOptional()
+    @IsString()
+    semester?: string | null;
+
+    @ApiProperty({ required: false, nullable: true })
+    @IsOptional()
+    @IsString()
+    note?: string | null;
 }
