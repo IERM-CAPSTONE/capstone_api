@@ -41,6 +41,13 @@ export class FirebaseLoginEndpoint {
         // Set cookies
         this.tokenService.setCookies(res, accessToken, refreshToken);
 
+        console.log('DEBUG: User Login Response Data:', {
+            id: user.id,
+            email: user.email?.value,
+            code: user.code?.value,
+            avatar: user.avatarUrl
+        });
+
         // Send response
         res.json({
             message: 'Successfully authenticated',
@@ -49,6 +56,8 @@ export class FirebaseLoginEndpoint {
                 email: user.email.value,
                 fullName: user.fullName,
                 role: user.role?.value,
+                code: user.code?.value,
+                avatarUrl: user.avatarUrl,
             },
             accessToken: accessToken,
             refreshToken: refreshToken,

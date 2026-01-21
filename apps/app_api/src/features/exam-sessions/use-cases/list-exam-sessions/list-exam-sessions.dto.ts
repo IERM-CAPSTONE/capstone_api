@@ -71,4 +71,9 @@ export class ListExamSessionsDto {
     @IsOptional()
     @IsString()
     proctorId?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    studentId?: string;
 }

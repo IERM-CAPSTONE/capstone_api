@@ -20,7 +20,9 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "types": [
-      "node"
+      "node",
+      "express",
+      "multer"
     ],
     "paths": {
       "@app/queue": [

@@ -20,7 +20,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
-    await this.$connect();
+    try {
+      await this.$connect();
+      console.log('Prisma connected successfully to:', process.env.DATABASE_URL?.split('@')[1]);
+    } catch (error) {
+      console.error('Prisma connection failed:', error);
+      throw error;
+    }
   }
 
   // call this after app boot to gracefully shut down when Prisma fires beforeExit
