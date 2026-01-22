@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
-import { Multer } from 'multer';
+import type { Express } from 'express';
 import { RoleType } from '@app/users';
 import { Roles } from '../../../../common/decorators';
 import { RolesGuard, JwtAuthGuard } from '../../../../common/guards';
@@ -16,7 +16,7 @@ import { ImportExamRoomHandler } from './import-exam-room.handler';
 
 @ApiTags('ExamRooms')
 @ApiBearerAuth('JWT-auth')
-@Controller('rooms')
+@Controller('exam-rooms')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ImportExamRoomEndpoint {
     constructor(private readonly handler: ImportExamRoomHandler) { }

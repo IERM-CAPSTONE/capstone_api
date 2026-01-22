@@ -13,7 +13,7 @@ import { DeleteExamRoomHandler } from './delete-exam-room.handler';
 
 @ApiTags('ExamRooms')
 @ApiBearerAuth('JWT-auth')
-@Controller('rooms')
+@Controller('exam-rooms')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DeleteExamRoomEndpoint {
     constructor(private readonly handler: DeleteExamRoomHandler) { }
