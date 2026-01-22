@@ -2,11 +2,13 @@
 // Generator and Datasource settings
 
 generator client {
-  provider   = "prisma-client-js"
-  engineType = "binary"
+  provider        = "prisma-client-js"
+  engineType      = "binary"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider     = "postgresql"
   relationMode = "prisma"
+  extensions   = [vector]
 }

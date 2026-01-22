@@ -2,9 +2,9 @@
 
 /// Stores identity verification info (CCCD images + extracted OCR + face embedding)
 model Identity {
-  id     String @id @default(uuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id])
+  id        String @id @default(uuid())
+  studentId String @unique
+  user      User   @relation(fields: [studentId], references: [id])
 
   /// Optional raw images (can be stored in Cloudinary/S3 URL)
   faceImage String?
@@ -17,8 +17,9 @@ model Identity {
   /// Is identity verified by exam officer/admin
   isValid Boolean @default(false)
 
-  /// Active face embedding used for recognition
-  activeVector Json?
+  /// Face embedding vector (512 dimensions for ONNX ArcFace model)
+  /// Stored using pgvector extension - Python worker will insert this directly
+  faceVector Unsupported("vector(512)")?
 
   /// Enrollment history (multi-enroll support)
   enrollments FaceEnrollment[]

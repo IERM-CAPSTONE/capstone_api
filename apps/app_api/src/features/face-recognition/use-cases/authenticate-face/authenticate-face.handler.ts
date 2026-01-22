@@ -1,0 +1,112 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { ConfigService } from '@nestjs/config';
+import { lastValueFrom, timeout } from 'rxjs';
+import {
+  RABBITMQ_CLIENTS,
+  MESSAGE_PATTERNS,
+} from '@app/queue/queue.constants';
+import { EncryptionUtils } from '@app/queue/encryption.utils';
+import { AuthenticateFaceDto } from './authenticate-face.dto';
+
+export interface AuthenticateFaceResponse {
+  status: 'success' | 'error';
+  message: string;
+  data?: {
+    uid?: number;
+    studentId?: string;
+    confidence?: number;
+  };
+}
+
+@Injectable()
+export class AuthenticateFaceHandler {
+  private readonly logger = new Logger(AuthenticateFaceHandler.name);
+  private readonly encryptionKey: string;
+  private readonly requestTimeout = 30000; // 30 seconds
+
+  constructor(
+    @Inject(RABBITMQ_CLIENTS.FACE_RECOGNITION_SERVICE)
+    private readonly faceClient: ClientProxy,
+    private readonly configService: ConfigService,
+  ) {
+    // Get encryption key from environment
+    this.encryptionKey = this.configService.get<string>(
+      'FACE_ENCRYPTION_KEY',
+      'MySecureKey12345678901234567890', // Must be 32 chars, same as Flutter
+    );
+
+    if (this.encryptionKey.length !== 32) {
+      this.logger.error('FACE_ENCRYPTION_KEY must be exactly 32 characters!');
+    }
+  }
+
+  async execute(dto: AuthenticateFaceDto): Promise<AuthenticateFaceResponse> {
+    this.logger.log('Processing face authentication');
+
+    try {
+      // Validation
+      if (!dto.encryptedImage || dto.encryptedImage.trim() === '') {
+        throw new Error('Image is required');
+      }
+
+      // Decrypt image if encrypted
+      let imageBuffer: Buffer;
+
+      if (dto.isEncrypted) {
+        imageBuffer = EncryptionUtils.decryptImage(
+          dto.encryptedImage,
+          this.encryptionKey,
+        );
+
+        // Verify hash if provided
+        if (dto.imageHash) {
+          const isValid = EncryptionUtils.verifyHash(
+            imageBuffer,
+            dto.imageHash,
+          );
+          if (!isValid) {
+            throw new Error('Hash verification failed');
+          }
+        }
+
+        this.logger.debug('Image decrypted successfully');
+      } else {
+        imageBuffer = Buffer.from(dto.encryptedImage, 'base64');
+      }
+
+      // Convert to base64 for RabbitMQ transmission
+      const base64Image = imageBuffer.toString('base64');
+
+      // Send to RabbitMQ (Python worker)
+      const payload = {
+        image: base64Image,
+        timestamp: new Date().toISOString(),
+      };
+
+      this.logger.log('Sending authentication request to RabbitMQ');
+
+      // Send message and wait for response
+      const result$ = this.faceClient
+        .send(MESSAGE_PATTERNS.FACE.AUTHENTICATE, payload)
+        .pipe(timeout(this.requestTimeout));
+
+      const result = await lastValueFrom(result$);
+
+      this.logger.log('Authentication completed');
+      
+      return {
+        status: 'success',
+        message: 'Face authenticated successfully',
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error('Face authentication failed:', error);
+      
+      return {
+        status: 'error',
+        message: error.message || 'Face authentication failed',
+      };
+    }
+  }
+}

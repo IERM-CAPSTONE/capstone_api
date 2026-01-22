@@ -10,6 +10,9 @@ export const QUEUE_NAMES = {
 
     /** Queue xử lý exam */
     EXAM: 'exam_queue',
+
+    /** Queue xử lý face recognition */
+    FACE_RECOGNITION: 'face_recognition_queue',
 } as const;
 
 /**
@@ -39,6 +42,15 @@ export const MESSAGE_PATTERNS = {
         IMPORT_EXAMCODE: 'exam.import.examcode',
         /** Thông báo import hoàn tất */
         IMPORT_FINISHED: 'exam.import.finished',
+    },
+    // Face Recognition Patterns
+    FACE: {
+        /** Đăng ký khuôn mặt */
+        REGISTER: 'face.register',
+        /** Xác thực khuôn mặt */
+        AUTHENTICATE: 'face.authenticate',
+        /** Kết quả xử lý từ Python worker */
+        RESULT: 'face.result',
     },
 } as const;
 
@@ -72,4 +84,5 @@ export const RABBITMQ_CLIENTS = {
     USER_SERVICE: 'USER_SERVICE',
     API_EVENT_SERVICE: 'API_EVENT_SERVICE',
     EXAM_SERVICE: 'EXAM_SERVICE',
+    FACE_RECOGNITION_SERVICE: 'FACE_RECOGNITION_SERVICE',
 } as const;
