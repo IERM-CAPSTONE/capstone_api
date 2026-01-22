@@ -7,6 +7,7 @@ import {
   MESSAGE_PATTERNS,
 } from '@app/queue/queue.constants';
 import { EncryptionUtils } from '@app/queue/encryption.utils';
+import { IUserRepository, USER_REPOSITORY } from '@app/users';
 import { AuthenticateFaceDto } from './authenticate-face.dto';
 
 export interface AuthenticateFaceResponse {
@@ -15,6 +16,8 @@ export interface AuthenticateFaceResponse {
   data?: {
     uid?: number;
     studentId?: string;
+    studentCode?: string;
+    studentName?: string;
     confidence?: number;
   };
 }
@@ -28,6 +31,7 @@ export class AuthenticateFaceHandler {
   constructor(
     @Inject(RABBITMQ_CLIENTS.FACE_RECOGNITION_SERVICE)
     private readonly faceClient: ClientProxy,
+    @Inject(USER_REPOSITORY) private readonly userRepository: IUserRepository,
     private readonly configService: ConfigService,
   ) {
     // Get encryption key from environment
@@ -46,7 +50,7 @@ export class AuthenticateFaceHandler {
 
     try {
       // Validation
-      if (!dto.encryptedImage || dto.encryptedImage.trim() === '') {
+      if (!dto.image || dto.image.trim() === '') {
         throw new Error('Image is required');
       }
 
@@ -55,7 +59,7 @@ export class AuthenticateFaceHandler {
 
       if (dto.isEncrypted) {
         imageBuffer = EncryptionUtils.decryptImage(
-          dto.encryptedImage,
+          dto.image,
           this.encryptionKey,
         );
 
@@ -72,7 +76,7 @@ export class AuthenticateFaceHandler {
 
         this.logger.debug('Image decrypted successfully');
       } else {
-        imageBuffer = Buffer.from(dto.encryptedImage, 'base64');
+        imageBuffer = Buffer.from(dto.image, 'base64');
       }
 
       // Convert to base64 for RabbitMQ transmission
@@ -94,15 +98,40 @@ export class AuthenticateFaceHandler {
       const result = await lastValueFrom(result$);
 
       this.logger.log('Authentication completed');
-      
+
+      // Fetch additional user info if studentId is present
+      let studentCode: string | undefined;
+      let studentName: string | undefined;
+
+      if (result && result.student_id) {
+        try {
+          const user = await this.userRepository.findOne({ id: result.student_id });
+          if (user) {
+            studentCode = user.code?.value;
+            studentName = user.fullName || undefined;
+            this.logger.log(`User identified: ${studentName} (${studentCode})`);
+          } else {
+            this.logger.warn(`Student ID ${result.student_id} returned by AI not found in database`);
+          }
+        } catch (e) {
+          this.logger.error(`Failed to fetch user info for ID ${result.student_id}:`, e);
+        }
+      } else {
+        this.logger.warn('Face authentication completed but no studentId was matched');
+      }
+
       return {
         status: 'success',
         message: 'Face authenticated successfully',
-        data: result,
+        data: {
+          ...result,
+          studentCode,
+          studentName,
+        },
       };
     } catch (error) {
       this.logger.error('Face authentication failed:', error);
-      
+
       return {
         status: 'error',
         message: error.message || 'Face authentication failed',
