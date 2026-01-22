@@ -117,6 +117,33 @@ export class ExamSession {
         );
     }
 
+    static mapFromPrisma(found: any): ExamSession {
+        return ExamSession.reconstitute({
+            id: found.id,
+            subjectCode: found.subjectCode,
+            examRoomId: found.examRoomId,
+            proctorId: found.proctorId,
+            hallInvigilatorId: found.hallInvigilatorId,
+            examOpenTime: found.examOpenTime,
+            examCloseTime: found.examCloseTime,
+            examCode: found.examCode,
+            openCode: found.openCode,
+            status: found.status,
+            examType: found.examType as string[],
+            semester: found.semester,
+            note: found.note,
+            createdAt: found.createdAt,
+            updatedAt: found.updatedAt,
+            roomNumber: found.examRoom?.roomNumber,
+            proctorName: found.proctor?.fullName,
+            hallInvigilatorName: found.hallInvigilator?.fullName,
+            maxRows: found.examRoom?.max_rows,
+            maxColumns: found.examRoom?.max_columns,
+            totalSeats: found.examRoom?.total_seats,
+            isArchived: found.isArchived ?? false,
+        });
+    }
+
     update(props: {
         examRoomId?: string | null;
         proctorId?: string | null;

@@ -1,5 +1,13 @@
--- AlterEnum
-ALTER TYPE "ExamType" ADD VALUE 'RE';
+-- AlterEnum - Add RE only if it doesn't exist
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_enum 
+    WHERE enumlabel = 'RE' 
+    AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'ExamType')
+  ) THEN
+    ALTER TYPE "ExamType" ADD VALUE 'RE';
+  END IF;
+END $$;
 
 -- AlterTable
 ALTER TABLE "ExamSession" ADD COLUMN     "note" TEXT,

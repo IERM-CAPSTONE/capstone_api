@@ -82,6 +82,20 @@ export class ExamRoom {
         );
     }
 
+    static mapFromPrisma(found: any): ExamRoom {
+        return ExamRoom.reconstitute({
+            id: found.id,
+            roomNumber: found.roomNumber,
+            capacity: found.capacity,
+            status: found.status,
+            maxRows: found.max_rows,
+            maxColumns: found.max_columns,
+            totalSeats: found.total_seats,
+            createdAt: found.createdAt,
+            updatedAt: found.updatedAt,
+        });
+    }
+
     /**
      * Update exam room details
      */

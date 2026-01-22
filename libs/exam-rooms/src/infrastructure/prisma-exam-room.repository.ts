@@ -29,30 +29,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
                 createdAt: examRoom.createdAt,
             },
             update: data,
-            select: {
-                id: true,
-                roomNumber: true,
-                capacity: true,
-                status: true,
-                max_rows: true,
-                max_columns: true,
-                total_seats: true,
-                createdAt: true,
-                updatedAt: true,
-            },
         });
 
-        return ExamRoom.reconstitute({
-            id: saved.id,
-            roomNumber: saved.roomNumber,
-            capacity: saved.capacity,
-            status: saved.status,
-            maxRows: saved.max_rows,
-            maxColumns: saved.max_columns,
-            totalSeats: saved.total_seats,
-            createdAt: saved.createdAt,
-            updatedAt: saved.updatedAt,
-        });
+        return ExamRoom.mapFromPrisma(saved);
     }
 
     async findById(id: string): Promise<ExamRoom | null> {
@@ -62,17 +41,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
 
         if (!found) return null;
 
-        return ExamRoom.reconstitute({
-            id: found.id,
-            roomNumber: found.roomNumber,
-            capacity: found.capacity,
-            status: found.status,
-            maxRows: found.max_rows,
-            maxColumns: found.max_columns,
-            totalSeats: found.total_seats,
-            createdAt: found.createdAt,
-            updatedAt: found.updatedAt,
-        });
+        return ExamRoom.mapFromPrisma(found);
     }
 
     async findMany(query?: {
@@ -91,32 +60,9 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             skip: query?.skip,
             take: query?.take,
             orderBy: { createdAt: 'desc' },
-            select: {
-                id: true,
-                roomNumber: true,
-                capacity: true,
-                status: true,
-                max_rows: true,
-                max_columns: true,
-                total_seats: true,
-                createdAt: true,
-                updatedAt: true,
-            },
         });
 
-        return found.map((item) =>
-            ExamRoom.reconstitute({
-                id: item.id,
-                roomNumber: item.roomNumber,
-                capacity: item.capacity,
-                status: item.status,
-                maxRows: item.max_rows,
-                maxColumns: item.max_columns,
-                totalSeats: item.total_seats,
-                createdAt: item.createdAt,
-                updatedAt: item.updatedAt,
-            }),
-        );
+        return found.map((item) => ExamRoom.mapFromPrisma(item));
     }
 
     async findOne(query: { roomNumber: string }): Promise<ExamRoom | null> {
@@ -126,17 +72,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
 
         if (!found) return null;
 
-        return ExamRoom.reconstitute({
-            id: found.id,
-            roomNumber: found.roomNumber,
-            capacity: found.capacity,
-            status: found.status,
-            maxRows: found.max_rows,
-            maxColumns: found.max_columns,
-            totalSeats: found.total_seats,
-            createdAt: found.createdAt,
-            updatedAt: found.updatedAt,
-        });
+        return ExamRoom.mapFromPrisma(found);
     }
 
     async exists(query: { id?: string; roomNumber?: string }): Promise<boolean> {

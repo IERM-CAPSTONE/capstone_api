@@ -46,30 +46,12 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             },
             include: {
                 examRoom: true,
+                proctor: true,
+                hallInvigilator: true,
             }
         });
 
-        return ExamSession.reconstitute({
-            id: saved.id,
-            subjectCode: saved.subjectCode,
-            examRoomId: saved.examRoomId,
-            proctorId: saved.proctorId,
-            hallInvigilatorId: saved.hallInvigilatorId,
-            examOpenTime: saved.examOpenTime,
-            examCloseTime: saved.examCloseTime,
-            examCode: saved.examCode,
-            openCode: saved.openCode,
-            status: saved.status,
-            examType: saved.examType as string[],
-            semester: saved.semester,
-            note: saved.note,
-            createdAt: saved.createdAt,
-            updatedAt: saved.updatedAt,
-            roomNumber: saved.examRoom?.roomNumber,
-            maxRows: saved.examRoom?.max_rows,
-            maxColumns: saved.examRoom?.max_columns,
-            totalSeats: saved.examRoom?.total_seats,
-        });
+        return ExamSession.mapFromPrisma(saved);
     }
 
     async findById(id: string): Promise<ExamSession | null> {
@@ -83,29 +65,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         });
         if (!found) return null;
 
-        return ExamSession.reconstitute({
-            id: found.id,
-            subjectCode: found.subjectCode,
-            examRoomId: found.examRoomId,
-            proctorId: found.proctorId,
-            hallInvigilatorId: found.hallInvigilatorId,
-            examOpenTime: found.examOpenTime,
-            examCloseTime: found.examCloseTime,
-            examCode: found.examCode,
-            openCode: found.openCode,
-            status: found.status,
-            examType: found.examType as string[],
-            semester: found.semester,
-            note: found.note,
-            createdAt: found.createdAt,
-            updatedAt: found.updatedAt,
-            roomNumber: found.examRoom?.roomNumber,
-            proctorName: found.proctor?.fullName,
-            hallInvigilatorName: found.hallInvigilator?.fullName,
-            maxRows: found.examRoom?.max_rows,
-            maxColumns: found.examRoom?.max_columns,
-            totalSeats: found.examRoom?.total_seats,
-        });
+        return ExamSession.mapFromPrisma(found);
     }
 
     async findMany(query?: {
@@ -138,30 +98,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             }
         });
 
-        return found.map(item => ExamSession.reconstitute({
-            id: item.id,
-            subjectCode: item.subjectCode,
-            examRoomId: item.examRoomId,
-            proctorId: item.proctorId,
-            hallInvigilatorId: item.hallInvigilatorId,
-            examOpenTime: item.examOpenTime,
-            examCloseTime: item.examCloseTime,
-            examCode: item.examCode,
-            openCode: item.openCode,
-            status: item.status,
-            examType: item.examType as string[],
-            semester: item.semester,
-            note: item.note,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            roomNumber: item.examRoom?.roomNumber,
-            proctorName: item.proctor?.fullName,
-            hallInvigilatorName: item.hallInvigilator?.fullName,
-            maxRows: item.examRoom?.max_rows,
-            maxColumns: item.examRoom?.max_columns,
-            totalSeats: item.examRoom?.total_seats,
-            isArchived: item.isArchived ?? false,
-        }));
+        return found.map(item => ExamSession.mapFromPrisma(item));
     }
 
     private buildWhere(query?: any): any {
@@ -264,49 +201,16 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
         const found = await this.prisma.examSession.findFirst({
             where,
-            select: {
-                id: true,
-                subjectCode: true,
-                examRoomId: true,
-                proctorId: true,
-                hallInvigilatorId: true,
-                examOpenTime: true,
-                examCloseTime: true,
-                examCode: true,
-                openCode: true,
-                status: true,
-                examType: true,
-                createdAt: true,
-                updatedAt: true,
+            include: {
+                examRoom: true,
+                proctor: true,
+                hallInvigilator: true,
             },
         });
 
         if (!found) return null;
 
-        return ExamSession.reconstitute({
-            id: found.id,
-            subjectCode: found.subjectCode,
-            examRoomId: found.examRoomId,
-            proctorId: found.proctorId,
-            hallInvigilatorId: found.hallInvigilatorId,
-            examOpenTime: found.examOpenTime,
-            examCloseTime: found.examCloseTime,
-            examCode: found.examCode,
-            openCode: found.openCode,
-            status: found.status,
-            examType: found.examType as string[],
-            semester: found.semester,
-            note: found.note,
-            createdAt: found.createdAt,
-            updatedAt: found.updatedAt,
-            roomNumber: null,
-            proctorName: null,
-            hallInvigilatorName: null,
-            maxRows: null,
-            maxColumns: null,
-            totalSeats: null,
-            isArchived: found.isArchived ?? false,
-        });
+        return ExamSession.mapFromPrisma(found);
     }
 
     async exists(id: string): Promise<boolean> {
@@ -363,40 +267,13 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 ],
                 OR: orConditions,
             },
-            select: {
-                id: true,
-                subjectCode: true,
-                examRoomId: true,
-                proctorId: true,
-                hallInvigilatorId: true,
-                examOpenTime: true,
-                examCloseTime: true,
-                examCode: true,
-                openCode: true,
-                status: true,
-                examType: true,
-                createdAt: true,
-                updatedAt: true,
+            include: {
+                examRoom: true,
+                proctor: true,
+                hallInvigilator: true,
             },
         });
 
-        return overlapping.map(item => ExamSession.reconstitute({
-            id: item.id,
-            subjectCode: item.subjectCode,
-            examRoomId: item.examRoomId,
-            proctorId: item.proctorId,
-            hallInvigilatorId: item.hallInvigilatorId,
-            examOpenTime: item.examOpenTime,
-            examCloseTime: item.examCloseTime,
-            examCode: item.examCode,
-            openCode: item.openCode,
-            status: item.status,
-            examType: item.examType as string[],
-            semester: item.semester,
-            note: item.note,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            isArchived: item.isArchived ?? false,
-        }));
+        return overlapping.map(item => ExamSession.mapFromPrisma(item));
     }
 }
