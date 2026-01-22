@@ -38,6 +38,8 @@ export class AuthResponseDto {
         email: string;
         fullName: string;
         role: string;
+        code: string;
+        avatarUrl: string;
     };
 
     @ApiProperty({
