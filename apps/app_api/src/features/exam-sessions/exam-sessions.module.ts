@@ -9,6 +9,7 @@ import { ListExamSessionsHandler, ListExamSessionsEndpoint } from './use-cases/l
 import { ImportScheduleHandler, ImportScheduleEndpoint } from './use-cases/import-schedule';
 import { ImportProctorHandler, ImportProctorEndpoint } from './use-cases/import-proctor';
 import { ImportExamCodeHandler, ImportExamCodeEndpoint } from './use-cases/import-exam-code';
+import { ArchiveExamSessionHandler, ArchiveExamSessionEndpoint } from './use-cases/archive-exam-session';
 
 @Module({
     imports: [ExamSessionsCoreModule],
@@ -21,6 +22,7 @@ import { ImportExamCodeHandler, ImportExamCodeEndpoint } from './use-cases/impor
         ImportScheduleEndpoint,
         ImportProctorEndpoint,
         ImportExamCodeEndpoint,
+        ArchiveExamSessionEndpoint,
     ],
     providers: [
         CreateExamSessionHandler,
@@ -31,6 +33,7 @@ import { ImportExamCodeHandler, ImportExamCodeEndpoint } from './use-cases/impor
         ImportScheduleHandler,
         ImportProctorHandler,
         ImportExamCodeHandler,
+        ArchiveExamSessionHandler,
     ],
 })
 export class ExamSessionsModule { }

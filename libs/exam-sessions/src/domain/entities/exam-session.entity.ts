@@ -13,6 +13,8 @@ export class ExamSession {
         public readonly openCode: string | null,
         public readonly status: string,
         public readonly examType: string[],
+        public readonly semester: string | null,
+        public readonly note: string | null,
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
         // Display names (populated by repository if needed)
@@ -22,6 +24,7 @@ export class ExamSession {
         public readonly maxRows: number | null = null,
         public readonly maxColumns: number | null = null,
         public readonly totalSeats: number | null = null,
+        public readonly isArchived: boolean = false,
     ) { }
 
     static create(props: {
@@ -36,6 +39,9 @@ export class ExamSession {
         openCode?: string | null;
         status?: string;
         examType?: string[];
+        semester?: string | null;
+        note?: string | null;
+        isArchived?: boolean;
     }): ExamSession {
         return new ExamSession(
             props.id,
@@ -48,8 +54,17 @@ export class ExamSession {
             props.openCode ?? null,
             props.status ?? 'Scheduled',
             props.examType ?? [],
+            props.semester ?? null,
+            props.note ?? null,
             new Date(),
             new Date(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            props.isArchived ?? false,
         );
     }
 
@@ -65,6 +80,8 @@ export class ExamSession {
         openCode: string | null;
         status: string;
         examType: string[];
+        semester: string | null;
+        note: string | null;
         createdAt: Date;
         updatedAt: Date;
         roomNumber?: string | null;
@@ -73,6 +90,7 @@ export class ExamSession {
         maxRows?: number | null;
         maxColumns?: number | null;
         totalSeats?: number | null;
+        isArchived?: boolean;
     }): ExamSession {
         return new ExamSession(
             props.id,
@@ -85,6 +103,8 @@ export class ExamSession {
             props.openCode,
             props.status,
             props.examType,
+            props.semester,
+            props.note,
             props.createdAt,
             props.updatedAt,
             props.roomNumber,
@@ -93,6 +113,7 @@ export class ExamSession {
             props.maxRows,
             props.maxColumns,
             props.totalSeats,
+            props.isArchived ?? false,
         );
     }
 
@@ -107,6 +128,8 @@ export class ExamSession {
         openCode?: string | null;
         status?: string;
         examType?: string[];
+        semester?: string | null;
+        note?: string | null;
     }): ExamSession {
         return new ExamSession(
             this.id,
@@ -122,6 +145,8 @@ export class ExamSession {
             props.openCode !== undefined ? props.openCode : this.openCode,
             props.status !== undefined ? props.status : this.status,
             props.examType !== undefined ? props.examType : this.examType,
+            props.semester !== undefined ? props.semester : this.semester,
+            props.note !== undefined ? props.note : this.note,
             this.createdAt,
             new Date(),
             this.roomNumber,

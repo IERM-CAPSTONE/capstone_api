@@ -35,6 +35,12 @@ export class ExamSessionResponse {
     @ApiProperty({ example: ['L', 'R'] })
     examType: string[];
 
+    @ApiProperty({ nullable: true })
+    semester: string | null;
+
+    @ApiProperty({ nullable: true })
+    note: string | null;
+
     @ApiProperty()
     createdAt: Date;
 
@@ -58,6 +64,9 @@ export class ExamSessionResponse {
 
     @ApiProperty({ nullable: true })
     totalSeats: number | null;
+
+    @ApiProperty({ description: 'Archive flag', default: false })
+    isArchived: boolean;
 }
 
 export function toExamSessionResponse(session: ExamSession): ExamSessionResponse {
@@ -73,6 +82,8 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         examCloseTime: session.examTime.closeTime,
         status: session.status,
         examType: session.examType,
+        semester: session.semester,
+        note: session.note,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
         roomNumber: session.roomNumber,
@@ -81,6 +92,7 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         maxRows: session.maxRows,
         maxColumns: session.maxColumns,
         totalSeats: session.totalSeats,
+        isArchived: session.isArchived ?? false,
     };
 }
 
