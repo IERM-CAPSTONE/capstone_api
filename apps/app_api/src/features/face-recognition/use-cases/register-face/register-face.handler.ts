@@ -8,6 +8,7 @@ import {
 } from '@app/queue/queue.constants';
 import { EncryptionUtils } from '@app/queue/encryption.utils';
 import { RegisterFaceDto } from './register-face.dto';
+import { NotificationGateway } from '../../../../common/gateways';
 
 export interface RegisterFaceResponse {
   status: 'success' | 'error';
@@ -28,6 +29,7 @@ export class RegisterFaceHandler {
     @Inject(RABBITMQ_CLIENTS.FACE_RECOGNITION_SERVICE)
     private readonly faceClient: ClientProxy,
     private readonly configService: ConfigService,
+    private readonly notificationGateway: NotificationGateway,
   ) {
     // Get encryption key from environment
     this.encryptionKey = this.configService.get<string>(
@@ -112,7 +114,14 @@ export class RegisterFaceHandler {
       const result = await lastValueFrom(result$);
 
       this.logger.log(`Registration completed for student: ${dto.studentId}`);
-      
+
+      // Emit event via Socket.IO
+      this.notificationGateway.sendToAll('face_registered', {
+        studentId: dto.studentId,
+        status: 'success',
+        timestamp: new Date().toISOString(),
+      });
+
       return {
         status: 'success',
         message: 'Face registered successfully',
@@ -120,7 +129,7 @@ export class RegisterFaceHandler {
       };
     } catch (error) {
       this.logger.error('Face registration failed:', error);
-      
+
       return {
         status: 'error',
         message: error.message || 'Face registration failed',

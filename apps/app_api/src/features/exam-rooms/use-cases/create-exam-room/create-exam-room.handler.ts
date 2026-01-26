@@ -30,6 +30,8 @@ export class CreateExamRoomHandler {
             id: uuidv4(),
             roomNumber: dto.roomNumber,
             capacity: dto.capacity,
+            maxRows: dto.maxRows,
+            maxColumns: dto.maxColumns,
         });
 
         // Persist

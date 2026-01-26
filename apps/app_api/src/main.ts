@@ -23,6 +23,11 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppApiModule);
 
+  // Increase payload limit for face registration images
+  const express = require('express');
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
   app.use(cookieParser());
 
   // Use global exception filter
