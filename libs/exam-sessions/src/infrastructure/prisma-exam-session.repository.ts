@@ -103,9 +103,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
     private buildWhere(query?: any): any {
         const where: any = {};
-
-        // Exclude archived sessions by default
-        where.isArchived = false;
+        const andConditions: any[] = [];
 
         if (query?.subjectCode) {
             where.subjectCode = query.subjectCode;
@@ -121,14 +119,12 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         if (query?.status) {
             const now = new Date();
             if (query.status === 'Upcoming') {
-                where.examOpenTime = { gt: now };
+                andConditions.push({ examOpenTime: { gt: now } });
             } else if (query.status === 'Ongoing') {
-                where.AND = [
-                    { examOpenTime: { lte: now } },
-                    { examCloseTime: { gte: now } }
-                ];
+                andConditions.push({ examOpenTime: { lte: now } });
+                andConditions.push({ examCloseTime: { gte: now } });
             } else if (query.status === 'Completed') {
-                where.examCloseTime = { lt: now };
+                andConditions.push({ examCloseTime: { lt: now } });
             } else {
                 where.status = query.status;
             }
@@ -153,26 +149,21 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 }
             }
 
-            where.examOpenTime = { ...where.examOpenTime, ...dateConditions };
+            andConditions.push({ examOpenTime: dateConditions });
         }
 
         // Time filtering (simplified for now as it's hard to filter time-only in Prisma)
-        // If fromDate == toDate (single day), we can combine with time
-        if (query?.startTime || query?.endTime) {
-            // This logic is simplified to "occurs after startTime" and "occurs before endTime" 
-            // naturally relative to the date filter already applied.
-            if (query.startTime && query.fromDate) {
-                const [h, m] = query.startTime.split(':').map(Number);
-                const start = new Date(query.fromDate);
-                start.setHours(h, m, 0, 0);
-                where.examOpenTime = { ...where.examOpenTime, gte: start };
-            }
-            if (query.endTime && (query.toDate || query.fromDate)) {
-                const [h, m] = query.endTime.split(':').map(Number);
-                const end = new Date(query.toDate || query.fromDate);
-                end.setHours(h, m, 59, 999);
-                where.examCloseTime = { ...where.examCloseTime, lte: end };
-            }
+        if (query?.startTime && query.fromDate) {
+            const [h, m] = query.startTime.split(':').map(Number);
+            const start = new Date(query.fromDate);
+            start.setHours(h, m, 0, 0);
+            andConditions.push({ examOpenTime: { gte: start } });
+        }
+        if (query?.endTime && (query.toDate || query.fromDate)) {
+            const [h, m] = query.endTime.split(':').map(Number);
+            const end = new Date(query.toDate || query.fromDate);
+            end.setHours(h, m, 59, 999);
+            andConditions.push({ examCloseTime: { lte: end } });
         }
 
         if (query?.examRoomId) where.examRoomId = query.examRoomId;
@@ -184,6 +175,26 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                     studentId: query.studentId
                 }
             };
+        }
+
+        // If we have AND conditions, we need to combine them
+        // If we also have direct properties, we need to wrap them all in AND
+        if (andConditions.length > 0) {
+            if (Object.keys(where).length > 0) {
+                // We have both direct properties and AND conditions
+                // Convert direct properties to AND conditions
+                Object.keys(where).forEach(key => {
+                    andConditions.push({ [key]: where[key] });
+                });
+                return { AND: andConditions };
+            } else {
+                // Only AND conditions
+                if (andConditions.length === 1) {
+                    return andConditions[0];
+                } else {
+                    return { AND: andConditions };
+                }
+            }
         }
 
         return where;
@@ -230,6 +241,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         endTime?: string;
         examRoomId?: string;
         proctorId?: string;
+        studentId?: string;
     }): Promise<number> {
         const where = this.buildWhere(query);
         return this.prisma.examSession.count({ where });
