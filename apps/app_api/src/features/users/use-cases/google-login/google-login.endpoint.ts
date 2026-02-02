@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
-import { TokenService } from '@app/users';
+import { TokenService, RoleType } from '@app/users';
 import { GoogleLoginHandler } from './google-login.handler';
 
 @ApiTags('Auth')
@@ -40,6 +40,19 @@ export class GoogleLoginEndpoint {
 
         // Redirect back to frontend
         const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3001');
-        res.redirect(`${frontendUrl}/dashboard`);
+        const locale = 'en'; // Default locale
+        
+        if (user.role.value === RoleType.ADMIN) {
+            return res.redirect(`${frontendUrl}/${locale}/admin`);
+        }
+        else if (user.role.value === RoleType.PROCTOR) {
+            return res.redirect(`${frontendUrl}/${locale}/proctor`);
+        }
+        else if (user.role.value === RoleType.EXAM_OFFICER) {
+            return res.redirect(`${frontendUrl}/${locale}/exam-officer/exam-schedules`);
+        }
+        else {
+            return res.redirect(`${frontendUrl}/${locale}/auth/login`);
+        }
     }
 }

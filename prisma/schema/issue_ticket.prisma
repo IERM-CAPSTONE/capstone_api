@@ -1,30 +1,20 @@
-// Prisma IssueTicket Model
-
 /// Ticket/issue reports raised during exam operations
 model IssueTicket {
-  id        String @id @default(uuid())
-  issueName String
-
-  reporterId String
-  reporter   User   @relation("reporter", fields: [reporterId], references: [id])
-
-  assigneeId String?
-  assignee   User?   @relation("assignee", fields: [assigneeId], references: [id])
-
-  issueType   String?
-  description String?
-
-  sessionId String?
-  session   ExamSession? @relation(fields: [sessionId], references: [id])
-
-  status IssueStatus @default(PENDING)
-
+  id                String            @id @default(uuid())
+  issueName         String
+  reporterId        String
+  assigneeId        String?
+  issueType         String?
+  description       String?
+  sessionId         String?
+  status            IssueStatus       @default(PENDING)
   /// Attachment URL (evidence for the ticket)
-  attachment String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  attachment        String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  reporter          User              @relation("reporter", fields: [reporterId], references: [id])
+  assignee          User?             @relation("assignee", fields: [assigneeId], references: [id])
+  session           ExamSession?      @relation(fields: [sessionId], references: [id])
   activityHistories ActivityHistory[]
 
   @@index([reporterId])

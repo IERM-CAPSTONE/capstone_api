@@ -66,6 +66,12 @@
       ],
       "@app/cache/*": [
         "libs/cache/src/*"
+      ],
+      "@app/proctor-applications": [
+        "libs/proctor-applications/src"
+      ],
+      "@app/proctor-applications/*": [
+        "libs/proctor-applications/src/*"
       ]
     }
   },

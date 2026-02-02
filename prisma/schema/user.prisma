@@ -1,48 +1,27 @@
-// Prisma User Model
-
 /// Stores user accounts for all actors in the system (Admin/ExamOfficer/Proctor/Student)
 model User {
-  id        String  @id @default(uuid())
-  email     String? @unique
-  campus    Campus?
-  fullName  String?
-  username  String? @unique
-  code      String? @unique // MSSV or teacher's code
-  avatarUrl String?
-  isActive  Boolean @default(true)
-  role      Role?
-
-  /// 1-1 identity profile (CCCD + face enrollment summary)
-  identities Identity?
-
-  /// Student's exam registrations/attendance
-  studentExams StudentExam[]
-
-  /// Ticketing
-  reportedTickets IssueTicket[] @relation("reporter")
-  assignedTickets IssueTicket[] @relation("assignee")
-
-  /// Proctor application (teacher registers preferred shifts)
-  proctorApplications ProctorApplication[] @relation("teacherApplications")
-
-  /// Proctor được phân công coi thi
-  proctorAssignments ProctorAssignment[] @relation("proctorAssignments")
-
-  /// Notifications sent by this user
-  notificationsSent Notification[] @relation("notificationFrom")
-
-  /// Exam session assignments
-  proctorSessions         ExamSession[] @relation("proctor")
-  hallInvigilatorSessions ExamSession[] @relation("hallInvigilator")
-
-  /// Device registration (admin who registered device)
-  registeredDevices Device[] @relation("deviceRegisteredBy")
-
-  /// Assignment history audit
-  proctorAssignmentsMade ProctorAssignment[] @relation("assignmentCreator")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                      String               @id @default(uuid())
+  email                   String?              @unique
+  fullName                String?
+  code                    String?              @unique
+  avatarUrl               String?
+  isActive                Boolean              @default(true)
+  role                    Role?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  campus                  Campus?
+  username                String?              @unique
+  identities              Identity?
+  studentExams            StudentExam[]
+  reportedTickets         IssueTicket[]        @relation("reporter")
+  assignedTickets         IssueTicket[]        @relation("assignee")
+  proctorApplications     ProctorApplication[] @relation("teacherApplications")
+  proctorAssignments      ProctorAssignment[]  @relation("proctorAssignments")
+  notificationsSent       Notification[]       @relation("notificationFrom")
+  proctorSessions         ExamSession[]        @relation("proctor")
+  hallInvigilatorSessions ExamSession[]        @relation("hallInvigilator")
+  registeredDevices       Device[]             @relation("deviceRegisteredBy")
+  proctorAssignmentsMade  ProctorAssignment[]  @relation("assignmentCreator")
 
   @@index([role])
   @@index([campus])

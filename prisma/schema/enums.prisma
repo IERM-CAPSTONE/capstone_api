@@ -1,6 +1,3 @@
-// Prisma Enums
-// All enum definitions for the IERM system
-
 /// User roles in the system
 enum Role {
   ADMIN
@@ -93,7 +90,6 @@ enum ExamType {
   R
   W
   FE
-  RE
   GV
   MC
 }
