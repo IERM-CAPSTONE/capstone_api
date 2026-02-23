@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { ExamSession, IExamSessionRepository, EXAM_SESSION_REPOSITORY } from '@app/exam-sessions';
+import { IExamSeatRepository } from '@app/exam-seats';
+import { PrismaService } from '@app/prisma';
+import { ExamSeat } from '@app/exam-seats';
 import { ExamSessionResponse, toExamSessionResponse } from '../../shared/exam-session.response';
 import { CreateExamSessionDto } from './create-exam-session.dto';
 
@@ -9,6 +12,9 @@ export class CreateExamSessionHandler {
     constructor(
         @Inject(EXAM_SESSION_REPOSITORY)
         private readonly repository: IExamSessionRepository,
+        @Inject('EXAM_SEAT_REPOSITORY')
+        private readonly seatRepository: IExamSeatRepository,
+        private readonly prisma: PrismaService,
     ) { }
 
     async execute(dto: CreateExamSessionDto): Promise<ExamSessionResponse> {
@@ -48,6 +54,36 @@ export class CreateExamSessionHandler {
         });
 
         const saved = await this.repository.save(session);
+
+        // 4. Auto-initialize exam seats if room is assigned
+        if (saved.examRoomId) {
+            const room = await this.prisma.examRoom.findUnique({
+                where: { id: saved.examRoomId }
+            });
+
+            if (room && room.max_rows && room.max_columns) {
+                const seatsToCreate: ExamSeat[] = [];
+                
+                for (let row = 1; row <= room.max_rows; row++) {
+                    for (let col = 1; col <= room.max_columns; col++) {
+                        seatsToCreate.push(
+                            ExamSeat.create({
+                                id: uuidv4(),
+                                examSessionId: saved.id,
+                                row,
+                                col,
+                                status: 'Available',
+                            })
+                        );
+                    }
+                }
+
+                if (seatsToCreate.length > 0) {
+                    await this.seatRepository.saveMany(seatsToCreate);
+                }
+            }
+        }
+
         return toExamSessionResponse(saved);
     }
 }

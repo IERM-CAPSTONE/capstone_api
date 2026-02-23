@@ -9,6 +9,7 @@ import { UsersModule } from './features/users';
 import { ExamRoomsModule } from './features/exam-rooms';
 import { ExamSessionsModule } from './features/exam-sessions';
 import { StudentExamsModule } from './features/student-exams';
+import { AppExamSeatsModule } from './features/exam-seats/exam-seats.module';
 import { FaceRecognitionModule } from './features/face-recognition';
 import { AppCacheModule } from '@app/cache';
 
@@ -33,6 +34,7 @@ import { AppCacheModule } from '@app/cache';
     ExamRoomsModule,
     ExamSessionsModule,
     StudentExamsModule,
+    AppExamSeatsModule,
     FaceRecognitionModule,
   ],
   providers: [],

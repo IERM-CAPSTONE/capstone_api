@@ -19,6 +19,7 @@ export class UpdateStudentExamHandler {
 
         const updated = studentExam.update({
             seatNumber: dto.seatNumber,
+            seatPosition: dto.seatPosition,
             status: dto.status,
             currentLocation: dto.currentLocation,
             identityId: dto.identityId,

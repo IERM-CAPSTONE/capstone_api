@@ -28,6 +28,12 @@ model ExamSession {
   /// Attendance/registration list for this session
   studentExams StudentExam[]
 
+  /// Seat layout for this session
+  examSeats ExamSeat[]
+
+  /// Locks layout editing after import
+  hasStudentsImported Boolean @default(false)
+
   /// Related tickets/issues during this session
   tickets IssueTicket[]
 

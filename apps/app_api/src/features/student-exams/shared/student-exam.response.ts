@@ -13,6 +13,9 @@ export class StudentExamResponse {
     @ApiProperty({ nullable: true })
     seatNumber: string | null;
 
+    @ApiProperty({ nullable: true })
+    seatPosition: string | null;
+
     @ApiProperty()
     status: string;
 
@@ -70,6 +73,7 @@ export function toStudentExamResponse(studentExam: any): StudentExamResponse {
         examSessionId: studentExam.examSessionId,
         studentId: studentExam.studentId,
         seatNumber: studentExam.seatNumber,
+        seatPosition: studentExam.seatPosition ?? null,
         status: studentExam.status,
         currentLocation: studentExam.currentLocation,
         identityId: studentExam.identityId,

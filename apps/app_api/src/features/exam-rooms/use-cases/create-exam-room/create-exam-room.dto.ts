@@ -27,6 +27,12 @@ export class CreateExamRoomDto {
     @Min(1)
     maxColumns?: number;
 
+    @ApiProperty({ example: 30, description: 'Total seats', required: false })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    totalSeats?: number;
+
     @ApiProperty({ example: 'Available', enum: ['Available', 'Occupied', 'Maintenance', 'Exam_Ongoing', 'For_Exam'], description: 'Room status', required: false })
     @IsOptional()
     @IsEnum(['Available', 'Occupied', 'Maintenance', 'Exam_Ongoing', 'For_Exam'])

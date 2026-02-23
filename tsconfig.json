@@ -61,6 +61,12 @@
       "@app/student-exams/*": [
         "libs/student-exams/src/*"
       ],
+      "@app/exam-seats": [
+        "libs/exam-seats/src"
+      ],
+      "@app/exam-seats/*": [
+        "libs/exam-seats/src/*"
+      ],
       "@app/cache": [
         "libs/cache/src"
       ],

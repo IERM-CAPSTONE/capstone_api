@@ -4,6 +4,7 @@ import { MESSAGE_PATTERNS, ExamImportJobData, BaseJobResult, RABBITMQ_CLIENTS, E
 import { IExamRoomRepository, EXAM_ROOM_REPOSITORY, ExamRoom } from '@app/exam-rooms';
 import { IExamSessionRepository, EXAM_SESSION_REPOSITORY, ExamSession } from '@app/exam-sessions';
 import { IUserRepository, USER_REPOSITORY } from '@app/users';
+import { IExamSeatRepository, ExamSeat } from '@app/exam-seats';
 import { CACHE_SERVICE, ICacheService } from '@app/cache';
 import { PrismaService } from '@app/prisma';
 import { ExamType } from '@prisma/client';
@@ -21,6 +22,8 @@ export class ExamImportProcessor {
         private readonly examSessionRepository: IExamSessionRepository,
         @Inject(USER_REPOSITORY)
         private readonly userRepository: IUserRepository,
+        @Inject('EXAM_SEAT_REPOSITORY')
+        private readonly examSeatRepository: IExamSeatRepository,
         @Inject(RABBITMQ_CLIENTS.API_EVENT_SERVICE)
         private readonly apiEventClient: ClientProxy,
         @Inject(CACHE_SERVICE)
@@ -267,10 +270,49 @@ export class ExamImportProcessor {
                         throw new Error(`Student count (${students.length}) exceeds room capacity (${session.examRoom.total_seats}) for session ${sessionStr}`);
                     }
 
-                    // Generate Random Seats (Front-row-first)
-                    const allPossibleSeats = this.generateSeats(session.examRoom.max_rows, session.examRoom.max_columns);
-                    const availableSeats = allPossibleSeats.slice(0, students.length);
+                    // Phase 2: Fetch or Create ExamSeats for this session
+                    let examSeats = await this.prisma.examSeat.findMany({
+                        where: { examSessionId: finalSessionId },
+                    });
+
+                    // If no seats exist, create them (should be auto-initialized in CreateExamSession, but handle edge case)
+                    if (examSeats.length === 0) {
+                        const seatRecords = [];
+                        for (let row = 1; row <= session.examRoom.max_rows; row++) {
+                            for (let col = 1; col <= session.examRoom.max_columns; col++) {
+                                seatRecords.push({
+                                    id: uuidv4(),
+                                    examSessionId: finalSessionId,
+                                    row,
+                                    col,
+                                    status: 'Available' as const,
+                                    createdAt: new Date(),
+                                    updatedAt: new Date(),
+                                });
+                            }
+                        }
+                        await this.prisma.examSeat.createMany({ data: seatRecords });
+                        examSeats = seatRecords;
+                    }
+
+                    // Get available seats (not Locked)
+                    const availableSeats = examSeats
+                        .filter(seat => seat.status === 'Available')
+                        .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
+
+                    // Validate sufficient available seats
+                    if (availableSeats.length < students.length) {
+                        throw new Error(
+                            `Not enough Available seats: ${availableSeats.length} available, ${students.length} students. ` +
+                            `Lock some available seats before importing students.`
+                        );
+                    }
+
+                    // Shuffle available seats for random assignment
                     this.shuffleArray(availableSeats);
+
+                    // Use raw seat coordinates as fallback for seatNumber
+                    const allPossibleSeats = this.generateSeats(session.examRoom.max_rows, session.examRoom.max_columns);
 
                     for (let i = 0; i < students.length; i++) {
                         const st = students[i];
@@ -294,15 +336,23 @@ export class ExamImportProcessor {
                                 throw new Error(`Student ${st.studentCode} already exists in session ${sessionStr}`);
                             }
 
+                            // Assign physical seat (seatPosition) and ordered seat number (seatNumber)
+                            const assignedPhysicalSeat = availableSeats[i];
+                            const seatNumberString = allPossibleSeats[i]; // "1-1", "1-2", etc.
+
+                            // Create StudentExam WITHOUT seat assignment (deferred until seat layout is finalized)
                             studentExam = await this.prisma.studentExam.create({
                                 data: {
                                     id: uuidv4(),
                                     examSessionId: finalSessionId,
                                     studentId: user.id,
                                     stt: st.stt ? Number(st.stt) : null,
-                                    seatNumber: availableSeats[i]
+                                    seatNumber: seatNumberString, // Ordered list (1-1, 1-2, etc.)
+                                    seatPosition: null, // ✅ NOT assigned yet - will be assigned when layout finalized
                                 }
                             });
+
+                            // DON'T update ExamSeat status yet - seats remain Available for editing
 
                             // Process Exam Parts
                             const parts = st.examPart.split(',').map(p => p.trim());
@@ -330,6 +380,9 @@ export class ExamImportProcessor {
                             errors.push({ type: 'student', data: st, message: stErr.message });
                         }
                     }
+
+                    // DON'T mark import as complete yet - allow seat layout editing
+                    // hasStudentsImported will be set to true when seats are finalized via separate endpoint
 
                     // --- NEW: Aggregate Exam Types for the Session ---
                     const sessionParts = new Set<string>();
