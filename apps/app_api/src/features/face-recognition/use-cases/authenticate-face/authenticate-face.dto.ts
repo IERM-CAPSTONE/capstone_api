@@ -15,4 +15,9 @@ export class AuthenticateFaceDto {
   @IsOptional()
   @IsString()
   imageHash?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  examSessionId?: string;
 }

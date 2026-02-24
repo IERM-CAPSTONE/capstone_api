@@ -8,7 +8,9 @@ import {
 } from '@app/queue/queue.constants';
 import { EncryptionUtils } from '@app/queue/encryption.utils';
 import { IUserRepository, USER_REPOSITORY } from '@app/users';
+import { IStudentExamRepository, STUDENT_EXAM_REPOSITORY } from '@app/student-exams';
 import { AuthenticateFaceDto } from './authenticate-face.dto';
+import { NotificationGateway } from '../../../../common/gateways';
 
 export interface AuthenticateFaceResponse {
   status: 'success' | 'error';
@@ -19,6 +21,7 @@ export interface AuthenticateFaceResponse {
     studentCode?: string;
     studentName?: string;
     confidence?: number;
+    isCorrectRoom?: boolean;
   };
 }
 
@@ -32,7 +35,9 @@ export class AuthenticateFaceHandler {
     @Inject(RABBITMQ_CLIENTS.FACE_RECOGNITION_SERVICE)
     private readonly faceClient: ClientProxy,
     @Inject(USER_REPOSITORY) private readonly userRepository: IUserRepository,
+    @Inject(STUDENT_EXAM_REPOSITORY) private readonly studentExamRepository: IStudentExamRepository,
     private readonly configService: ConfigService,
+    private readonly notificationGateway: NotificationGateway,
   ) {
     // Get encryption key from environment
     this.encryptionKey = this.configService.get<string>(
@@ -102,9 +107,11 @@ export class AuthenticateFaceHandler {
       // Fetch additional user info if studentId is present
       let studentCode: string | undefined;
       let studentName: string | undefined;
+      let isCorrectRoom = true;
 
       if (result && result.student_id) {
         try {
+          // 1. Identify student
           const user = await this.userRepository.findOne({ id: result.student_id });
           if (user) {
             studentCode = user.code?.value;
@@ -113,6 +120,18 @@ export class AuthenticateFaceHandler {
           } else {
             this.logger.warn(`Student ID ${result.student_id} returned by AI not found in database`);
           }
+
+          // 2. Check if student belongs to the session (if session provided)
+          if (dto.examSessionId) {
+            isCorrectRoom = await this.studentExamRepository.exists({
+              examSessionId: dto.examSessionId,
+              studentId: result.student_id,
+            });
+
+            if (!isCorrectRoom) {
+              this.logger.warn(`Student ${studentCode} identified but is NOT in session ${dto.examSessionId}`);
+            }
+          }
         } catch (e) {
           this.logger.error(`Failed to fetch user info for ID ${result.student_id}:`, e);
         }
@@ -120,15 +139,44 @@ export class AuthenticateFaceHandler {
         this.logger.warn('Face authentication completed but no studentId was matched');
       }
 
-      return {
+      if (!isCorrectRoom && studentCode) {
+        return {
+          status: 'error',
+          message: `Student ${studentName} (${studentCode}) does not belong to this exam room!`,
+          data: {
+            ...result,
+            studentCode,
+            studentName,
+            isCorrectRoom,
+          },
+        };
+      }
+
+      const response: AuthenticateFaceResponse = {
         status: 'success',
         message: 'Face authenticated successfully',
         data: {
           ...result,
           studentCode,
           studentName,
+          isCorrectRoom,
         },
       };
+
+      // Emit socket event for successful authentication
+      if (result && result.student_id && isCorrectRoom) {
+        this.notificationGateway.sendToAll('face_authenticated', {
+          studentId: result.student_id,
+          studentCode,
+          studentName,
+          confidence: result.confidence,
+          isCorrectRoom,
+          status: 'success',
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      return response;
     } catch (error) {
       this.logger.error('Face authentication failed:', error);
 
