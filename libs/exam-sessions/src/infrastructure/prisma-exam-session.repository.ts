@@ -80,6 +80,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         endTime?: string;
         examRoomId?: string;
         proctorId?: string;
+        semester?: string;
         studentId?: string;
         skip?: number;
         take?: number;
@@ -168,6 +169,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
         if (query?.examRoomId) where.examRoomId = query.examRoomId;
         if (query?.proctorId) where.proctorId = query.proctorId;
+        if (query?.semester) where.semester = query.semester;
 
         if (query?.studentId) {
             where.studentExams = {

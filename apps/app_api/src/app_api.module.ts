@@ -10,6 +10,7 @@ import { ExamRoomsModule } from './features/exam-rooms';
 import { ExamSessionsModule } from './features/exam-sessions';
 import { StudentExamsModule } from './features/student-exams';
 import { FaceRecognitionModule } from './features/face-recognition';
+import { ProctorApplicationsModule } from './features/proctor-applications';
 import { AppCacheModule } from '@app/cache';
 
 @Module({
@@ -34,6 +35,7 @@ import { AppCacheModule } from '@app/cache';
     ExamSessionsModule,
     StudentExamsModule,
     FaceRecognitionModule,
+    ProctorApplicationsModule,
   ],
   providers: [],
   exports: [],
