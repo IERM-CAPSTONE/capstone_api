@@ -211,4 +211,37 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
         });
         return count > 0;
     }
+
+    async checkIn(studentId: string, examSessionId: string): Promise<void> {
+        const studentExam = await this.prisma.studentExam.findUnique({
+            where: {
+                examSessionId_studentId: {
+                    examSessionId,
+                    studentId,
+                },
+            },
+        });
+
+        if (!studentExam) return;
+
+        const now = new Date();
+
+        await this.prisma.$transaction([
+            this.prisma.studentExam.update({
+                where: { id: studentExam.id },
+                data: {
+                    checkinTime: now,
+                    status: 'CHECKEDIN',
+                    isMatched: true,
+                },
+            }),
+            this.prisma.studentExamPart.updateMany({
+                where: { studentExamId: studentExam.id },
+                data: {
+                    isCheckedIn: true,
+                    checkInTime: now,
+                },
+            }),
+        ]);
+    }
 }

@@ -51,7 +51,7 @@ export class AuthenticateFaceHandler {
   }
 
   async execute(dto: AuthenticateFaceDto): Promise<AuthenticateFaceResponse> {
-    this.logger.log('Processing face authentication');
+    this.logger.log(`Processing face authentication. Request DTO: ${JSON.stringify({ ...dto, image: dto.image?.substring(0, 20) + '...' })}`);
 
     try {
       // Validation
@@ -101,6 +101,7 @@ export class AuthenticateFaceHandler {
         .pipe(timeout(this.requestTimeout));
 
       const result = await lastValueFrom(result$);
+      this.logger.log(`AI result received: ${JSON.stringify(result)}`);
 
       this.logger.log('Authentication completed');
 
@@ -130,6 +131,10 @@ export class AuthenticateFaceHandler {
 
             if (!isCorrectRoom) {
               this.logger.warn(`Student ${studentCode} identified but is NOT in session ${dto.examSessionId}`);
+            } else {
+              // 3. Update check-in status if correct room
+              this.logger.log(`Student ${studentCode} confirmed for session. Updating check-in status...`);
+              await this.studentExamRepository.checkIn(result.student_id, dto.examSessionId);
             }
           }
         } catch (e) {
@@ -145,6 +150,7 @@ export class AuthenticateFaceHandler {
           message: `Student ${studentName} (${studentCode}) does not belong to this exam room!`,
           data: {
             ...result,
+            status: 'error',
             studentCode,
             studentName,
             isCorrectRoom,
@@ -163,6 +169,8 @@ export class AuthenticateFaceHandler {
         },
       };
 
+      this.logger.log(`Final Response: ${JSON.stringify(response)}`);
+
       // Emit socket event for successful authentication
       if (result && result.student_id && isCorrectRoom) {
         this.notificationGateway.sendToAll('face_authenticated', {
@@ -180,10 +188,12 @@ export class AuthenticateFaceHandler {
     } catch (error) {
       this.logger.error('Face authentication failed:', error);
 
-      return {
+      const errorResponse: AuthenticateFaceResponse = {
         status: 'error',
         message: error.message || 'Face authentication failed',
       };
+      this.logger.error(`Authentication failed: ${JSON.stringify(errorResponse)}`);
+      return errorResponse;
     }
   }
 }
