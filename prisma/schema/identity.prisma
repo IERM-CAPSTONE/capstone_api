@@ -6,6 +6,9 @@ model Identity {
   studentId String @unique
   user      User   @relation(fields: [studentId], references: [id])
 
+  /// Citizen ID number (CCCD)
+  citizenId String? @unique
+
   /// Optional raw images (can be stored in Cloudinary/S3 URL)
   faceImage String?
   frontCCCD String?
@@ -19,7 +22,7 @@ model Identity {
 
   /// Face embedding vector (512 dimensions for ONNX ArcFace model)
   /// Stored using pgvector extension - Python worker will insert this directly
-  faceVector Unsupported("vector(512)")?
+  // faceVector Unsupported("vector(512)")?
 
   /// Enrollment history (multi-enroll support)
   enrollments FaceEnrollment[]

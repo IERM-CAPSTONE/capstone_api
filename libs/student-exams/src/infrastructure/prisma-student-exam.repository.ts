@@ -7,6 +7,30 @@ import { IStudentExamRepository } from '../domain/repositories';
 export class PrismaStudentExamRepository implements IStudentExamRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private async loadCitizenIdMap(studentIds: string[]): Promise<Map<string, string>> {
+        if (!studentIds.length) return new Map();
+
+        try {
+            const rows = await this.prisma.$queryRawUnsafe<Array<{ userId: string; citizenId: string | null }>>(
+                `
+                SELECT "userId", "citizenId"
+                FROM "Identity"
+                WHERE "userId" = ANY($1::text[])
+                  AND "citizenId" IS NOT NULL
+                `,
+                studentIds,
+            );
+
+            return new Map(
+                rows
+                    .filter((item) => !!item.userId && !!item.citizenId)
+                    .map((item) => [item.userId, item.citizenId as string]),
+            );
+        } catch {
+            return new Map();
+        }
+    }
+
     async save(studentExam: StudentExam): Promise<StudentExam> {
         const data = {
             examSessionId: studentExam.examSessionId,
@@ -72,6 +96,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
 
         if (!found) return null;
 
+        const citizenIdMap = await this.loadCitizenIdMap([found.studentId]);
+
         return StudentExam.reconstitute({
             id: found.id,
             examSessionId: found.examSessionId,
@@ -88,6 +114,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             updatedAt: found.updatedAt,
             studentName: found.student?.fullName,
             studentCode: found.student?.code,
+            studentAvatarUrl: found.student?.avatarUrl,
+            citizenId: citizenIdMap.get(found.studentId) ?? null,
         });
     }
 
@@ -97,6 +125,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             include: { student: true },
         });
 
+        const citizenIdMap = await this.loadCitizenIdMap(results.map((item) => item.studentId));
+
         return results.map(item => StudentExam.reconstitute({
             id: item.id,
             examSessionId: item.examSessionId,
@@ -113,6 +143,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             updatedAt: item.updatedAt,
             studentName: item.student?.fullName,
             studentCode: item.student?.code,
+            studentAvatarUrl: item.student?.avatarUrl,
+            citizenId: citizenIdMap.get(item.studentId) ?? null,
         }));
     }
 
@@ -122,6 +154,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             include: { student: true },
         });
 
+        const citizenIdMap = await this.loadCitizenIdMap(results.map((item) => item.studentId));
+
         return results.map(item => StudentExam.reconstitute({
             id: item.id,
             examSessionId: item.examSessionId,
@@ -138,6 +172,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             updatedAt: item.updatedAt,
             studentName: item.student?.fullName,
             studentCode: item.student?.code,
+            studentAvatarUrl: item.student?.avatarUrl,
+            citizenId: citizenIdMap.get(item.studentId) ?? null,
         }));
     }
 
@@ -168,6 +204,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             this.prisma.studentExam.count({ where }),
         ]);
 
+        const citizenIdMap = await this.loadCitizenIdMap(results.map((item) => item.studentId));
+
         const data = results.map(item => StudentExam.reconstitute({
             id: item.id,
             examSessionId: item.examSessionId,
@@ -184,6 +222,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             updatedAt: item.updatedAt,
             studentName: item.student?.fullName,
             studentCode: item.student?.code,
+            studentAvatarUrl: item.student?.avatarUrl,
+            citizenId: citizenIdMap.get(item.studentId) ?? null,
         }));
 
         return { data, total };

@@ -19,6 +19,8 @@ export class StudentExam {
         public readonly updatedAt: Date,
         public readonly studentName: string | null = null,
         public readonly studentCode: string | null = null,
+        public readonly studentAvatarUrl: string | null = null,
+        public readonly citizenId: string | null = null,
     ) { }
 
     static create(props: {
@@ -67,6 +69,8 @@ export class StudentExam {
         updatedAt: Date;
         studentName?: string | null;
         studentCode?: string | null;
+        studentAvatarUrl?: string | null;
+        citizenId?: string | null;
     }): StudentExam {
         return new StudentExam(
             props.id,
@@ -84,6 +88,8 @@ export class StudentExam {
             props.updatedAt,
             props.studentName,
             props.studentCode,
+            props.studentAvatarUrl,
+            props.citizenId,
         );
     }
 
@@ -113,6 +119,8 @@ export class StudentExam {
             new Date(),
             this.studentName,
             this.studentCode,
+            this.studentAvatarUrl,
+            this.citizenId,
         );
     }
 }

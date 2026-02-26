@@ -45,6 +45,12 @@ export class StudentExamResponse {
 
     @ApiProperty({ nullable: true })
     studentCode: string | null;
+
+    @ApiProperty({ nullable: true })
+    studentAvatarUrl: string | null;
+
+    @ApiProperty({ nullable: true })
+    citizenId: string | null;
 }
 
 export class PaginatedStudentExamResponse {
@@ -81,5 +87,7 @@ export function toStudentExamResponse(studentExam: any): StudentExamResponse {
         updatedAt: studentExam.updatedAt,
         studentName: studentExam.studentName,
         studentCode: studentExam.studentCode,
+        studentAvatarUrl: studentExam.studentAvatarUrl,
+        citizenId: studentExam.citizenId,
     };
 }
