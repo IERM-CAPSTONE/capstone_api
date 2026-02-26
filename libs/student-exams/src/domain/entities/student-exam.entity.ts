@@ -8,6 +8,7 @@ export class StudentExam {
         public readonly examSessionId: string,
         public readonly studentId: string,
         public readonly seatNumber: string | null,
+        public readonly seatPosition: string | null,
         public readonly status: string,
         public readonly currentLocation: string | null,
         public readonly identityId: string | null,
@@ -26,6 +27,7 @@ export class StudentExam {
         examSessionId: string;
         studentId: string;
         seatNumber?: string | null;
+        seatPosition?: string | null;
         status?: string;
         currentLocation?: string | null;
         identityId?: string | null;
@@ -39,6 +41,7 @@ export class StudentExam {
             props.examSessionId,
             props.studentId,
             props.seatNumber ?? null,
+            props.seatPosition ?? null,
             props.status ?? 'REGISTERED',
             props.currentLocation ?? null,
             props.identityId ?? null,
@@ -56,6 +59,7 @@ export class StudentExam {
         examSessionId: string;
         studentId: string;
         seatNumber: string | null;
+        seatPosition: string | null;
         status: string;
         currentLocation: string | null;
         identityId: string | null;
@@ -73,6 +77,7 @@ export class StudentExam {
             props.examSessionId,
             props.studentId,
             props.seatNumber,
+            props.seatPosition,
             props.status,
             props.currentLocation,
             props.identityId,
@@ -89,6 +94,7 @@ export class StudentExam {
 
     update(props: {
         seatNumber?: string | null;
+        seatPosition?: string | null;
         status?: string;
         currentLocation?: string | null;
         identityId?: string | null;
@@ -102,6 +108,7 @@ export class StudentExam {
             this.examSessionId,
             this.studentId,
             props.seatNumber !== undefined ? props.seatNumber : this.seatNumber,
+            props.seatPosition !== undefined ? props.seatPosition : this.seatPosition,
             props.status !== undefined ? props.status : this.status,
             props.currentLocation !== undefined ? props.currentLocation : this.currentLocation,
             props.identityId !== undefined ? props.identityId : this.identityId,

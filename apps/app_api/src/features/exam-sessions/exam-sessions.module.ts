@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ExamSessionsCoreModule } from '@app/exam-sessions';
+import { ExamSeatsModule } from '@app/exam-seats';
 
 import { CreateExamSessionHandler, CreateExamSessionEndpoint } from './use-cases/create-exam-session';
 import { UpdateExamSessionHandler, UpdateExamSessionEndpoint } from './use-cases/update-exam-session';
@@ -10,9 +11,10 @@ import { ImportScheduleHandler, ImportScheduleEndpoint } from './use-cases/impor
 import { ImportProctorHandler, ImportProctorEndpoint } from './use-cases/import-proctor';
 import { ImportExamCodeHandler, ImportExamCodeEndpoint } from './use-cases/import-exam-code';
 import { ArchiveExamSessionHandler, ArchiveExamSessionEndpoint } from './use-cases/archive-exam-session';
+import { FinalizeSeatAssignmentsHandler, FinalizeSeatAssignmentsEndpoint } from './use-cases/finalize-seats';
 
 @Module({
-    imports: [ExamSessionsCoreModule],
+    imports: [ExamSessionsCoreModule, ExamSeatsModule],
     controllers: [
         CreateExamSessionEndpoint,
         UpdateExamSessionEndpoint,
@@ -23,6 +25,7 @@ import { ArchiveExamSessionHandler, ArchiveExamSessionEndpoint } from './use-cas
         ImportProctorEndpoint,
         ImportExamCodeEndpoint,
         ArchiveExamSessionEndpoint,
+        FinalizeSeatAssignmentsEndpoint,
     ],
     providers: [
         CreateExamSessionHandler,
@@ -34,6 +37,7 @@ import { ArchiveExamSessionHandler, ArchiveExamSessionEndpoint } from './use-cas
         ImportProctorHandler,
         ImportExamCodeHandler,
         ArchiveExamSessionHandler,
+        FinalizeSeatAssignmentsHandler,
     ],
 })
 export class ExamSessionsModule { }

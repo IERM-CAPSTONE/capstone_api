@@ -79,6 +79,16 @@ enum ExamSessionStatus {
 enum ActivityType {
   CHECKED_IN
   MOVED
+  SEAT_MOVED
+}
+
+/// Exam seat status
+enum ExamSeatStatus {
+  Available
+  Locked
+  Assigned
+  Present
+  Absent
 }
 
 /// Type of exam part

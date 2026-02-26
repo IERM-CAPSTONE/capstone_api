@@ -25,6 +25,7 @@ export class ExamSession {
         public readonly maxColumns: number | null = null,
         public readonly totalSeats: number | null = null,
         public readonly isArchived: boolean = false,
+        public readonly hasStudentsImported: boolean = false,
     ) { }
 
     static create(props: {
@@ -42,6 +43,7 @@ export class ExamSession {
         semester?: string | null;
         note?: string | null;
         isArchived?: boolean;
+        hasStudentsImported?: boolean;
     }): ExamSession {
         return new ExamSession(
             props.id,
@@ -65,6 +67,7 @@ export class ExamSession {
             null,
             null,
             props.isArchived ?? false,
+            props.hasStudentsImported ?? false,
         );
     }
 
@@ -91,6 +94,7 @@ export class ExamSession {
         maxColumns?: number | null;
         totalSeats?: number | null;
         isArchived?: boolean;
+        hasStudentsImported?: boolean;
     }): ExamSession {
         return new ExamSession(
             props.id,
@@ -114,6 +118,7 @@ export class ExamSession {
             props.maxColumns,
             props.totalSeats,
             props.isArchived ?? false,
+            props.hasStudentsImported ?? false,
         );
     }
 
@@ -141,6 +146,7 @@ export class ExamSession {
             maxColumns: found.examRoom?.max_columns,
             totalSeats: found.examRoom?.total_seats,
             isArchived: found.isArchived ?? false,
+            hasStudentsImported: found.hasStudentsImported ?? false,
         });
     }
 

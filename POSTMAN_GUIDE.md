@@ -21,10 +21,11 @@
 1. [Authentication APIs](#-authentication-apis)
 2. [Exam Rooms APIs](#-exam-rooms-apis)
 3. [Exam Sessions APIs](#-exam-sessions-apis)
-4. [Student Exams APIs](#-student-exams-apis)
-5. [Users APIs](#-users-apis)
-6. [Testing Workflow](#-testing-workflow)
-7. [Common Issues & Solutions](#-common-issues--solutions)
+4. [Exam Seats APIs](#-exam-seats-apis)
+5. [Student Exams APIs](#-student-exams-apis)
+6. [Users APIs](#-users-apis)
+7. [Testing Workflow](#-testing-workflow)
+8. [Common Issues & Solutions](#-common-issues--solutions)
 
 ---
 
@@ -592,6 +593,168 @@ Content-Type: multipart/form-data
 |----------|----------|----------|----------|----------|----------|----------|
 | subjectCode | examRoomId | proctorId | hallInvigilatorId | examOpenTime | examCloseTime | status |
 | CS101 | room-1 | proctor-1 | hall-1 | 2026-01-20T08:00:00Z | 2026-01-20T10:00:00Z | Scheduled |
+
+---
+
+## 🪑 Exam Seats APIs
+
+### 1. Get All Exam Seats
+**Purpose**: Retrieve all exam seats across all sessions
+
+| Property | Value |
+|----------|-------|
+| **Location** | `apps/app_api/src/features/exam-seats/use-cases/get-all-exam-seats/` |
+| **Method** | `GET` |
+| **URL** | `{{base_url}}/api/exam-seats` |
+| **Auth** | Bearer Token (Required) |
+
+**Request Headers**:
+```
+Authorization: Bearer {{accessToken}}
+```
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": "seat-uuid-1",
+    "examSessionId": "session-uuid-1",
+    "row": 1,
+    "col": 1,
+    "status": "Available",
+    "createdAt": "2026-02-05T10:00:00Z",
+    "updatedAt": "2026-02-05T10:00:00Z"
+  },
+  {
+    "id": "seat-uuid-2",
+    "examSessionId": "session-uuid-1",
+    "row": 1,
+    "col": 2,
+    "status": "Locked",
+    "createdAt": "2026-02-05T10:00:00Z",
+    "updatedAt": "2026-02-05T11:00:00Z"
+  }
+]
+```
+
+---
+
+### 2. Get Exam Seats by Session
+**Purpose**: Retrieve all seats for a specific exam session with optional status filter
+
+| Property | Value |
+|----------|-------|
+| **Location** | `apps/app_api/src/features/exam-seats/use-cases/get-exam-seats-by-session/` |
+| **Method** | `GET` |
+| **URL** | `{{base_url}}/api/exam-seats/session/{sessionId}?status={status}` |
+| **Auth** | Bearer Token (Required) |
+
+**Path Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sessionId` | UUID | Yes | Exam session ID |
+
+**Query Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | String | No | Filter by seat status: `Available`, `Locked`, `Assigned`, `Present`, `Absent` |
+
+**Request Headers**:
+```
+Authorization: Bearer {{accessToken}}
+```
+
+**Example URLs**:
+```
+GET {{base_url}}/api/exam-seats/session/session-uuid-1
+GET {{base_url}}/api/exam-seats/session/session-uuid-1?status=Available
+GET {{base_url}}/api/exam-seats/session/session-uuid-1?status=Locked
+```
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": "seat-uuid-1",
+    "examSessionId": "session-uuid-1",
+    "row": 1,
+    "col": 1,
+    "status": "Available",
+    "createdAt": "2026-02-05T10:00:00Z",
+    "updatedAt": "2026-02-05T10:00:00Z"
+  },
+  {
+    "id": "seat-uuid-2",
+    "examSessionId": "session-uuid-1",
+    "row": 1,
+    "col": 2,
+    "status": "Available",
+    "createdAt": "2026-02-05T10:00:00Z",
+    "updatedAt": "2026-02-05T10:00:00Z"
+  }
+]
+```
+
+**Error Response** (404 Not Found):
+```json
+{
+  "statusCode": 404,
+  "message": "Exam session with ID session-uuid-1 not found"
+}
+```
+
+---
+
+### 3. Change Seat Status (Lock/Unlock, Check-in, No-show)
+**Purpose**: Update physical seat status based on role rules
+
+| Property | Value |
+|----------|-------|
+| **Location** | `apps/app_api/src/features/exam-seats/use-cases/change-seat-status/` |
+| **Method** | `PATCH` |
+| **URL** | `{{base_url}}/api/exam-seats/{id}/status` |
+| **Auth** | Bearer Token (Required) |
+
+**Request Headers**:
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+
+**Request Body** (JSON):
+```json
+{
+  "status": "Locked"
+}
+```
+
+**Status Options**:
+- `Available` - Seat is open
+- `Locked` - Seat locked by exam officer
+- `Assigned` - Student imported, awaiting check-in
+- `Present` - Student checked in
+- `Absent` - Student no-show
+
+**Role Rules**:
+- **EXAM_OFFICER**: `Available` ↔ `Locked` only (pre-import)
+- **PROCTOR**: `Assigned` → `Present`, `Present` → `Absent`
+
+**Response** (200 OK):
+```json
+{
+  "id": "seat-id-1",
+  "examSessionId": "session-id-1",
+  "row": 1,
+  "col": 3,
+  "status": "Locked",
+  "createdAt": "2026-02-05T10:00:00.000Z",
+  "updatedAt": "2026-02-05T10:05:00.000Z"
+}
+```
+
+**Error Responses**:
+- `403 Forbidden` if layout is locked after import (`hasStudentsImported = true`)
+- `403 Forbidden` for invalid role transition
 
 ---
 
@@ -1207,6 +1370,51 @@ Body: { "status": "Maintenance", "capacity": 40 }
 Response: { "id": "room-id-123", "status": "Maintenance", ... }
 ```
 
+### Quick Seat Lock/Unlock Test
+**Step 6: List All Seats**
+```
+GET http://localhost:3001/api/exam-seats
+Authorization: Bearer {{adminToken}}
+Response: [{ "id": "seat-uuid-1", "examSessionId": "session-uuid-1", "row": 1, "col": 1, "status": "Available" }, ...]
+```
+
+**Step 7: List Seats by Session**
+```
+GET http://localhost:3001/api/exam-seats/session/session-uuid-1?status=Available
+Authorization: Bearer {{adminToken}}
+Response: [{ "id": "seat-uuid-1", "examSessionId": "session-uuid-1", "row": 1, "col": 1, "status": "Available" }, ...]
+```
+
+**Step 8: Get Exam Officer Token**
+```
+POST http://localhost:3001/api/auth/test-token
+Body: { "role": "EXAM_OFFICER", "userId": "exam-officer-id-123" }
+```
+
+**Step 9: Lock a Seat (Available → Locked)**
+```
+PATCH http://localhost:3001/api/exam-seats/{seatId}/status
+Authorization: Bearer {{accessToken}}
+Body: { "status": "Locked" }
+```
+
+**Step 10: Unlock a Seat (Locked → Available)**
+```
+PATCH http://localhost:3001/api/exam-seats/{seatId}/status
+Authorization: Bearer {{accessToken}}
+Body: { "status": "Available" }
+```
+
+**Step 11: Proctor Check-in (Assigned → Present)**
+```
+POST http://localhost:3001/api/auth/test-token
+Body: { "role": "PROCTOR", "userId": "proctor-id-123" }
+
+PATCH http://localhost:3001/api/exam-seats/{seatId}/status
+Authorization: Bearer {{accessToken}}
+Body: { "status": "Present" }
+```
+
 ---
 
 ## 🔧 Common Issues & Solutions
@@ -1299,6 +1507,9 @@ if (jsonData.accessToken) {
 | Create Session | POST | `/api/exam-sessions` | Yes | ADMIN, EXAM_OFFICER |
 | Update Session | PUT | `/api/exam-sessions/{id}` | Yes | ADMIN, EXAM_OFFICER |
 | Delete Session | DELETE | `/api/exam-sessions/{id}` | Yes | ADMIN |
+| Get All Seats | GET | `/api/exam-seats` | Yes | Any |
+| Get Seats by Session | GET | `/api/exam-seats/session/{id}` | Yes | Any |
+| Change Seat Status | PATCH | `/api/exam-seats/{id}/status` | Yes | EXAM_OFFICER, PROCTOR |
 | List Users | GET | `/api/users` | Yes | ADMIN, EXAM_OFFICER |
 | Create User | POST | `/api/users` | Yes | ADMIN |
 | Update User | PUT | `/api/users/{id}` | Yes | ADMIN, Self |
@@ -1313,4 +1524,4 @@ if (jsonData.accessToken) {
 - **API Documentation**: Run API and visit `http://localhost:3001/api` for Swagger UI
 - **Database Seed**: Pre-loaded with test data from `prisma/seed.ts`
 
-**Last Updated**: January 14, 2026
+**Last Updated**: February 5, 2026
