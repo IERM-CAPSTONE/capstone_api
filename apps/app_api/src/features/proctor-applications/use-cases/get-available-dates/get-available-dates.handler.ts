@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IExamSessionRepository, EXAM_SESSION_REPOSITORY } from '@app/exam-sessions';
+import { PrismaService } from '@app/prisma';
 
 export interface AvailableDateResponse {
     date: string; // ISO date string (YYYY-MM-DD)
@@ -11,6 +12,7 @@ export class GetAvailableDatesHandler {
     constructor(
         @Inject(EXAM_SESSION_REPOSITORY)
         private readonly examSessionRepository: IExamSessionRepository,
+        private readonly prisma: PrismaService,
     ) { }
 
     /**
@@ -34,9 +36,18 @@ export class GetAvailableDatesHandler {
         // Use provided semester or auto-calculate current semester
         const semester = semesterCode || this.getCurrentSemester();
 
-        // Get exam sessions filtered by semester
+        // Find semesterId by code
+        const semEntity = await this.prisma.semester.findFirst({
+            where: { code: semester }
+        });
+
+        if (!semEntity) {
+            return [];
+        }
+
+        // Get exam sessions filtered by semesterId
         const examSessions = await this.examSessionRepository.findMany({
-            semester: semester,
+            semesterId: semEntity.id,
         });
 
         // Group by date

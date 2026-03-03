@@ -15,8 +15,9 @@ export interface IExamSessionRepository {
         endTime?: string;
         examRoomId?: string;
         proctorId?: string;
+        hallInvigilatorId?: string;
         studentId?: string;
-        semester?: string;
+        semesterId?: string;
         skip?: number;
         take?: number;
     }): Promise<ExamSession[]>;

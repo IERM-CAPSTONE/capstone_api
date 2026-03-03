@@ -1,19 +1,22 @@
 /// Junction table: which student belongs to which exam session part
 model StudentExamPart {
-  id            String       @id @default(uuid())
+  id            String    @id @default(uuid())
   studentExamId String
-  isInRoom      Boolean      @default(false)
-  isCheckedIn   Boolean      @default(false)
+  isInRoom      Boolean   @default(false)
+  isCheckedIn   Boolean   @default(false)
   checkInTime   DateTime?
-  examType      ExamType
-  isSubmit      Boolean      @default(false)
+  examTypeId    String?
+  isSubmit      Boolean   @default(false)
   submitTime    DateTime?
-  isSign        Boolean      @default(false)
+  isSign        Boolean   @default(false)
   signTime      DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  studentExam   StudentExam? @relation(fields: [studentExamId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  @@unique([studentExamId, examType])
+  studentExam StudentExam? @relation(fields: [studentExamId], references: [id])
+  examType    ExamType?    @relation(fields: [examTypeId], references: [id])
+
+  @@unique([studentExamId, examTypeId])
   @@index([studentExamId])
+  @@index([examTypeId])
 }

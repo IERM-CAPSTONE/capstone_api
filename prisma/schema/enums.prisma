@@ -90,16 +90,3 @@ enum ExamSeatStatus {
   Present
   Absent
 }
-
-/// Type of exam part
-enum ExamType {
-  PE
-  TE
-  S
-  L
-  R
-  W
-  FE
-  GV
-  MC
-}

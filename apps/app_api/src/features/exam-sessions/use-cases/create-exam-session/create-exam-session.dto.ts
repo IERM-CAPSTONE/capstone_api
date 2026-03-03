@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ExamType } from '@prisma/client';
 import { IsString, IsOptional, IsDateString, IsUUID, IsEnum, IsArray } from 'class-validator';
 
 export class CreateExamSessionDto {
@@ -43,11 +42,11 @@ export class CreateExamSessionDto {
     @IsString()
     openCode?: string | null;
 
-    @ApiProperty({ required: false, nullable: true, enum: ExamType, isArray: true })
+    @ApiProperty({ required: false, nullable: true, type: [String] })
     @IsOptional()
     @IsArray()
-    @IsEnum(ExamType, { each: true })
-    examType?: ExamType[];
+    @IsString({ each: true })
+    examType?: string[];
 
     @ApiProperty({ example: 'Scheduled', enum: ['Ongoing', 'Ended', 'Scheduled'], description: 'Session status', required: false })
     @IsOptional()

@@ -1,0 +1,13 @@
+/// Represents a dynamic exam type (e.g., Multiple Choice, Listening)
+model ExamType {
+    id          String   @id @default(uuid())
+    code        String   @unique // e.g., MC, L, R, W, S, GV
+    name        String? // Full name
+    description String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    subjectParts     SubjectPart[]
+    studentExamParts StudentExamPart[]
+    examSessions     ExamSession[]
+}

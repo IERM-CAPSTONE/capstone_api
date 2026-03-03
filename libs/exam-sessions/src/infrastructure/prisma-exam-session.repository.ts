@@ -16,7 +16,6 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             openCode: session.openCode,
             status: session.status as any,
             examType: session.examType as any,
-            semester: session.semester,
             note: session.note,
             updatedAt: session.updatedAt,
         };
@@ -25,11 +24,13 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         if (session.examRoomId) createRelationData.examRoom = { connect: { id: session.examRoomId } };
         if (session.proctorId) createRelationData.proctor = { connect: { id: session.proctorId } };
         if (session.hallInvigilatorId) createRelationData.hallInvigilator = { connect: { id: session.hallInvigilatorId } };
+        if (session.semesterId) createRelationData.semester = { connect: { id: session.semesterId } };
 
         const updateRelationData = {
             examRoom: session.examRoomId ? { connect: { id: session.examRoomId } } : { disconnect: true },
             proctor: session.proctorId ? { connect: { id: session.proctorId } } : { disconnect: true },
             hallInvigilator: session.hallInvigilatorId ? { connect: { id: session.hallInvigilatorId } } : { disconnect: true },
+            semester: session.semesterId ? { connect: { id: session.semesterId } } : { disconnect: true },
         };
 
         const saved = await this.prisma.examSession.upsert({
@@ -80,7 +81,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         endTime?: string;
         examRoomId?: string;
         proctorId?: string;
-        semester?: string;
+        semesterId?: string;
         studentId?: string;
         skip?: number;
         take?: number;
@@ -169,7 +170,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
         if (query?.examRoomId) where.examRoomId = query.examRoomId;
         if (query?.proctorId) where.proctorId = query.proctorId;
-        if (query?.semester) where.semester = query.semester;
+        if (query?.semesterId) where.semesterId = query.semesterId;
 
         if (query?.studentId) {
             where.studentExams = {

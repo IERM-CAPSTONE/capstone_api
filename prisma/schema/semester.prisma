@@ -1,0 +1,15 @@
+/// Represents an academic semester (e.g., Summer 2025 - SU25)
+model Semester {
+    id        String   @id @default(uuid())
+    code      String   @unique // e.g., SU25, FA25, SP25
+    name      String? // e.g., Summer 2025
+    startDate DateTime
+    endDate   DateTime
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    subjects     Subject[]
+    examSessions ExamSession[]
+
+    @@index([code])
+}

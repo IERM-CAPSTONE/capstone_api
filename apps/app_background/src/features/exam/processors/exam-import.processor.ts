@@ -356,20 +356,24 @@ export class ExamImportProcessor {
 
                             // Process Exam Parts
                             const parts = st.examPart.split(',').map(p => p.trim());
+                            const allExamTypes = await this.prisma.examType.findMany();
+
                             for (const partType of parts) {
+                                const et = allExamTypes.find(t => t.code === partType || t.name === partType);
+                                if (!et) continue;
 
                                 await this.prisma.studentExamPart.upsert({
                                     where: {
-                                        studentExamId_examType: {
+                                        studentExamId_examTypeId: {
                                             studentExamId: studentExam.id,
-                                            examType: partType as any
+                                            examTypeId: et.id
                                         }
                                     },
                                     update: {}, // No update for now
                                     create: {
                                         id: uuidv4(),
                                         studentExamId: studentExam.id,
-                                        examType: partType as any,
+                                        examTypeId: et.id,
                                         isInRoom: false,
                                         isCheckedIn: false
                                     }
@@ -385,30 +389,33 @@ export class ExamImportProcessor {
                     // hasStudentsImported will be set to true when seats are finalized via separate endpoint
 
                     // --- NEW: Aggregate Exam Types for the Session ---
-                    const sessionParts = new Set<string>();
+                    const sessionPartTypes: string[] = [];
                     for (const st of students) {
                         st.examPart.split(',').forEach(p => {
                             const trimmed = p.trim();
-                            if (trimmed && Object.values(ExamType).includes(trimmed as ExamType)) {
-                                sessionParts.add(trimmed);
-                            }
+                            if (trimmed) sessionPartTypes.push(trimmed);
                         });
                     }
 
-                    if (sessionParts.size > 0) {
-                        const currentSession = await this.prisma.examSession.findUnique({
-                            where: { id: finalSessionId },
-                            select: { examType: true }
-                        });
+                    if (sessionPartTypes.length > 0) {
+                        const allExamTypes = await this.prisma.examType.findMany();
+                        const sessionTypeIds = new Set<string>();
 
-                        const existingTypes = currentSession?.examType || [];
-                        const newTypes = Array.from(sessionParts) as ExamType[];
-                        const mergedTypes = Array.from(new Set([...existingTypes, ...newTypes]));
+                        for (const partType of sessionPartTypes) {
+                            const et = allExamTypes.find(t => t.code === partType || t.name === partType);
+                            if (et) sessionTypeIds.add(et.id);
+                        }
 
-                        await this.prisma.examSession.update({
-                            where: { id: finalSessionId },
-                            data: { examType: mergedTypes }
-                        });
+                        if (sessionTypeIds.size > 0) {
+                            await this.prisma.examSession.update({
+                                where: { id: finalSessionId },
+                                data: {
+                                    examType: {
+                                        set: Array.from(sessionTypeIds).map(id => ({ id }))
+                                    }
+                                }
+                            });
+                        }
                     }
                     // ------------------------------------------------
                     // ------------------------------------------------
@@ -588,6 +595,186 @@ export class ExamImportProcessor {
             channel.nack(originalMsg, false, false);
             return this.failResult(originalMsg, startTime, error.message);
         }
+    }
+
+    @MessagePattern(MESSAGE_PATTERNS.EXAM.IMPORT_SUBJECTS)
+    async handleImportSubjects(
+        @Payload() data: ExamImportJobData,
+        @Ctx() context: RmqContext,
+    ): Promise<BaseJobResult> {
+        const channel = context.getChannelRef();
+        const originalMsg = context.getMessage();
+        const startTime = Date.now();
+
+        this.logger.log(`Processing subject import from file: ${data.fileName}`);
+
+        try {
+            const buffer = Buffer.from(data.fileContent, 'base64');
+            const workbook = xlsx.read(buffer, { type: 'buffer' });
+
+            let totalSuccess = 0;
+            let totalError = 0;
+            const examTypes = await this.prisma.examType.findMany();
+
+            for (const sheetName of workbook.SheetNames) {
+                const worksheet = workbook.Sheets[sheetName];
+                const items: any[] = xlsx.utils.sheet_to_json(worksheet, { defval: null });
+                this.logger.log(`Processing sheet "${sheetName}" with ${items.length} rows.`);
+
+                for (const item of items) {
+                    try {
+                        const keys = Object.keys(item);
+                        const findValue = (keywords: string[]) => {
+                            const foundKey = keys.find(k => keywords.some(kw => k.toUpperCase().includes(kw.toUpperCase())));
+                            return foundKey ? item[foundKey] : null;
+                        };
+
+                        const code = findValue(['MÃ MÔN', 'CODE']);
+                        if (!code) continue;
+
+                        const name = findValue(['TÊN MÔN', 'NAME']) ? String(findValue(['TÊN MÔN', 'NAME'])).replace(/\r\n/g, ' ') : null;
+                        const semester = sheetName; // Use sheet name as semester
+                        const department = findValue(['BỘ MÔN', 'DEPARTMENT']) || null;
+                        const detailsStr = findValue(['CHI TIẾT', 'DETAILS', 'DETAIL']) || '';
+                        const totalDuration = parseInt(String(findValue(['TỔNG THỜI LƯỢNG', 'DURATION']))) || null;
+
+                        // Find Semester ID by code or name
+                        let semesterId: string | null = null;
+                        if (semester) {
+                            const semStr = String(semester);
+                            const semEntity = await this.prisma.semester.findFirst({
+                                where: {
+                                    OR: [
+                                        { code: semStr },
+                                        { name: semStr }
+                                    ]
+                                }
+                            });
+                            if (semEntity) {
+                                semesterId = semEntity.id;
+                            }
+                        }
+
+                        // Upsert Subject
+                        const subject = await this.prisma.subject.upsert({
+                            where: { code: String(code) },
+                            update: {
+                                name: name ? String(name) : undefined,
+                                semesterId: semesterId || undefined,
+                                department: department ? String(department) : undefined,
+                            },
+                            create: {
+                                id: uuidv4(),
+                                code: String(code),
+                                name: name ? String(name) : null,
+                                semesterId: semesterId,
+                                department: department ? String(department) : null,
+                            }
+                        });
+
+                        // Parse parts from details string
+                        const parts = this.parseSubjectParts(String(detailsStr), examTypes);
+
+                        // Re-create parts for this subject
+                        if (parts.length > 0) {
+                            await this.prisma.subjectPart.deleteMany({
+                                where: { subjectId: subject.id }
+                            });
+
+                            for (const part of parts) {
+                                await this.prisma.subjectPart.create({
+                                    data: {
+                                        id: uuidv4(),
+                                        subjectId: subject.id,
+                                        examTypeId: part.examTypeId,
+                                        duration: part.duration,
+                                    }
+                                });
+                            }
+                        } else if (totalDuration) {
+                            // Fallback to single part if totalDuration exists but no parts parsed
+                            const defaultType = examTypes.find(t => t.code === 'MC') || examTypes[0];
+                            if (defaultType) {
+                                await this.prisma.subjectPart.upsert({
+                                    where: {
+                                        subjectId_examTypeId: {
+                                            subjectId: subject.id,
+                                            examTypeId: defaultType.id
+                                        }
+                                    },
+                                    update: {
+                                        duration: totalDuration
+                                    },
+                                    create: {
+                                        id: uuidv4(),
+                                        subjectId: subject.id,
+                                        examTypeId: defaultType.id,
+                                        duration: totalDuration,
+                                    }
+                                });
+                            }
+                        }
+                        totalSuccess++;
+                    } catch (err) {
+                        this.logger.error(`Error processing subject at row in sheet ${sheetName}: ${err.message}`);
+                        totalError++;
+                    }
+                }
+            }
+
+            this.emitFinished('subjects', data.fileName, totalSuccess, totalError);
+            channel.ack(originalMsg);
+
+            return {
+                jobId: originalMsg.properties.messageId || 'unknown',
+                success: true,
+                processingTime: Date.now() - startTime,
+                completedAt: new Date(),
+            };
+        } catch (error) {
+            this.logger.error(`Critical error during subject import: ${error.message}`);
+            channel.nack(originalMsg, false, false);
+            return this.failResult(originalMsg, startTime, error.message);
+        }
+    }
+
+    private parseSubjectParts(details: string, examTypes: ExamType[]): { examTypeId: string; duration: number }[] {
+        if (!details) return [];
+
+        const results: { examTypeId: string; duration: number }[] = [];
+        // Regex to find "N.Name: Duration ph" patterns
+        // E.g. "1.Đọc: 40ph"
+        const regex = /(\d+)\.\s*([^:]+):\s*(\d+)(?:\s*(?:ph|phút|min))?/gi;
+        let match;
+
+        while ((match = regex.exec(details)) !== null) {
+            const partName = match[2].trim().toLowerCase();
+            const duration = parseInt(match[3]);
+
+            // Map partName to ExamType
+            // We'll look for code or name containing the part name
+            let examType = examTypes.find(t =>
+                t.name.toLowerCase().includes(partName) ||
+                t.code.toLowerCase().includes(partName)
+            );
+
+            // Special mappings based on common Vietnamese terms in provided Excel
+            if (!examType) {
+                if (partName.includes('đọc')) examType = examTypes.find(t => t.code === 'R');
+                else if (partName.includes('nghe')) examType = examTypes.find(t => t.code === 'L');
+                else if (partName.includes('viết')) examType = examTypes.find(t => t.code === 'W');
+                else if (partName.includes('nói')) examType = examTypes.find(t => t.code === 'S');
+            }
+
+            if (examType) {
+                results.push({
+                    examTypeId: examType.id,
+                    duration
+                });
+            }
+        }
+
+        return results;
     }
 
     @MessagePattern(MESSAGE_PATTERNS.EXAM.IMPORT_EXAMCODE)
@@ -776,7 +963,7 @@ export class ExamImportProcessor {
     }
 
     private emitFinished(
-        action: 'rooms' | 'schedule' | 'proctor' | 'examcode',
+        action: 'rooms' | 'schedule' | 'proctor' | 'examcode' | 'subjects',
         fileName: string,
         successCount: number,
         errorCount: number,

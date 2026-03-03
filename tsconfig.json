@@ -78,6 +78,24 @@
       ],
       "@app/proctor-applications/*": [
         "libs/proctor-applications/src/*"
+      ],
+      "@app/exam-types": [
+        "libs/exam-types/src"
+      ],
+      "@app/exam-types/*": [
+        "libs/exam-types/src/*"
+      ],
+      "@app/subjects": [
+        "libs/subjects/src"
+      ],
+      "@app/subjects/*": [
+        "libs/subjects/src/*"
+      ],
+      "@app/semesters": [
+        "libs/semesters/src"
+      ],
+      "@app/semesters/*": [
+        "libs/semesters/src/*"
       ]
     }
   },

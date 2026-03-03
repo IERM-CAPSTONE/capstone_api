@@ -82,7 +82,7 @@ export interface ExamImportJobData {
 }
 
 export interface ExamImportFinishedData {
-    action: 'rooms' | 'schedule' | 'proctor' | 'examcode';
+    action: 'rooms' | 'schedule' | 'proctor' | 'examcode' | 'subjects';
     fileName?: string;
     successCount: number;
     errorCount: number;

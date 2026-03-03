@@ -36,7 +36,7 @@ export class ExamSessionResponse {
     examType: string[];
 
     @ApiProperty({ nullable: true })
-    semester: string | null;
+    semesterId: string | null;
 
     @ApiProperty({ nullable: true })
     note: string | null;
@@ -82,7 +82,7 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         examCloseTime: session.examTime.closeTime,
         status: session.status,
         examType: session.examType,
-        semester: session.semester,
+        semesterId: session.semesterId,
         note: session.note,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,

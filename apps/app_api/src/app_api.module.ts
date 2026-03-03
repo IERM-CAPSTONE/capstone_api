@@ -12,6 +12,9 @@ import { StudentExamsModule } from './features/student-exams';
 import { AppExamSeatsModule } from './features/exam-seats/exam-seats.module';
 import { FaceRecognitionModule } from './features/face-recognition';
 import { ProctorApplicationsModule } from './features/proctor-applications';
+import { AppExamTypesModule } from './features/exam-types';
+import { AppSubjectsModule } from './features/subjects';
+import { SemestersModule } from './features/semesters/semesters.module';
 import { AppCacheModule } from '@app/cache';
 
 @Module({
@@ -38,6 +41,9 @@ import { AppCacheModule } from '@app/cache';
     AppExamSeatsModule,
     FaceRecognitionModule,
     ProctorApplicationsModule,
+    AppExamTypesModule,
+    AppSubjectsModule,
+    SemestersModule,
   ],
   providers: [],
   exports: [],

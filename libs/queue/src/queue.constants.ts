@@ -40,6 +40,8 @@ export const MESSAGE_PATTERNS = {
         IMPORT_PROCTORS: 'exam.import.proctors',
         /** Import mã đề và mã mở đề */
         IMPORT_EXAMCODE: 'exam.import.examcode',
+        /** Import danh sách môn học */
+        IMPORT_SUBJECTS: 'exam.import.subjects',
         /** Thông báo import hoàn tất */
         IMPORT_FINISHED: 'exam.import.finished',
     },
