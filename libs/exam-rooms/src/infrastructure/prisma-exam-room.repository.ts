@@ -11,7 +11,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
     constructor(private readonly prisma: PrismaService) { }
 
     async save(examRoom: ExamRoom): Promise<ExamRoom> {
-        const data = {
+        const data: any = {
             roomNumber: examRoom.roomNumber.value,
             capacity: examRoom.capacity?.value ?? null,
             status: examRoom.status as any,
@@ -19,6 +19,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             max_columns: examRoom.maxColumns,
             total_seats: examRoom.totalSeats,
             updatedAt: examRoom.updatedAt,
+            campus: examRoom.campus as any,
         };
 
         const saved = await this.prisma.examRoom.upsert({
@@ -46,6 +47,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
 
     async findMany(query?: {
         roomNumber?: string;
+        campus?: string;
         skip?: number;
         take?: number;
     }): Promise<ExamRoom[]> {
@@ -55,19 +57,29 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             where.roomNumber = query.roomNumber;
         }
 
+        if (query?.campus !== undefined) {
+            where.campus = query.campus as any;
+        }
+
+        const skipVal = isNaN(query?.skip) || query?.skip < 0 ? 0 : Math.floor(query.skip);
+        const takeVal = isNaN(query?.take) || query?.take <= 0 ? undefined : Math.floor(query.take);
+
         const found = await this.prisma.examRoom.findMany({
             where,
-            skip: query?.skip,
-            take: query?.take,
+            skip: skipVal,
+            take: takeVal,
             orderBy: { createdAt: 'desc' },
         });
 
         return found.map((item) => ExamRoom.mapFromPrisma(item));
     }
 
-    async findOne(query: { roomNumber: string }): Promise<ExamRoom | null> {
+    async findOne(query: { roomNumber: string; campus?: string }): Promise<ExamRoom | null> {
+        const where: any = { roomNumber: query.roomNumber };
+        if (query.campus) where.campus = query.campus as any;
+
         const found = await this.prisma.examRoom.findFirst({
-            where: { roomNumber: query.roomNumber },
+            where,
         });
 
         if (!found) return null;
@@ -75,21 +87,26 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
         return ExamRoom.mapFromPrisma(found);
     }
 
-    async exists(query: { id?: string; roomNumber?: string }): Promise<boolean> {
+    async exists(query: { id?: string; roomNumber?: string; campus?: string }): Promise<boolean> {
         const where: any = {};
 
         if (query.id) where.id = query.id;
         if (query.roomNumber !== undefined) where.roomNumber = query.roomNumber;
+        if (query.campus !== undefined) where.campus = query.campus as any;
 
         const count = await this.prisma.examRoom.count({ where });
         return count > 0;
     }
 
-    async count(query?: { roomNumber?: string }): Promise<number> {
+    async count(query?: { roomNumber?: string; campus?: string }): Promise<number> {
         const where: any = {};
 
         if (query?.roomNumber !== undefined) {
             where.roomNumber = query.roomNumber;
+        }
+
+        if (query?.campus !== undefined) {
+            where.campus = query.campus as any;
         }
 
         return this.prisma.examRoom.count({ where });

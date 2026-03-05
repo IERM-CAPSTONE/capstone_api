@@ -31,6 +31,9 @@ export class ExamRoomResponse {
 
     @ApiProperty({ example: '2024-01-01T00:00:00.000Z', description: 'Last update timestamp' })
     updatedAt: Date;
+
+    @ApiProperty({ example: 'HCM', enum: ['HCM', 'HN', 'DN', 'QN', 'CT'], description: 'Campus', nullable: true })
+    campus: string | null;
 }
 
 /**
@@ -47,6 +50,7 @@ export function toExamRoomResponse(examRoom: ExamRoom): ExamRoomResponse {
         totalSeats: examRoom.totalSeats ?? null,
         createdAt: examRoom.createdAt,
         updatedAt: examRoom.updatedAt,
+        campus: examRoom.campus,
     };
 }
 

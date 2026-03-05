@@ -24,4 +24,9 @@ export class ListExamRoomsDto {
     @IsOptional()
     @IsString()
     roomNumber?: string;
+
+    @ApiProperty({ example: 'HCM', description: 'Filter by campus', required: false })
+    @IsOptional()
+    @IsString()
+    campus?: string;
 }

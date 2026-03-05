@@ -20,6 +20,7 @@ export interface IExamRoomRepository {
      */
     findMany(query?: {
         roomNumber?: string;
+        campus?: string;
         skip?: number;
         take?: number;
     }): Promise<ExamRoom[]>;
@@ -27,17 +28,17 @@ export interface IExamRoomRepository {
     /**
      * Find a single exam room by criteria
      */
-    findOne(query: { roomNumber: string }): Promise<ExamRoom | null>;
+    findOne(query: { roomNumber: string; campus?: string }): Promise<ExamRoom | null>;
 
     /**
      * Check if an exam room exists
      */
-    exists(query: { id?: string; roomNumber?: string }): Promise<boolean>;
+    exists(query: { id?: string; roomNumber?: string; campus?: string }): Promise<boolean>;
 
     /**
      * Count exam rooms
      */
-    count(query?: { roomNumber?: string }): Promise<number>;
+    count(query?: { roomNumber?: string; campus?: string }): Promise<number>;
 
     /**
      * Delete an exam room by ID

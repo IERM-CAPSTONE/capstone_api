@@ -79,6 +79,9 @@ export interface ExamImportJobData {
 
     /** Mime type */
     mimeType: string;
+
+    /** Semester ID (optional) */
+    semesterId?: string;
 }
 
 export interface ExamImportFinishedData {

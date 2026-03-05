@@ -35,6 +35,13 @@ export class SubjectResponse {
     @ApiProperty({ required: false, nullable: true })
     department: string | null;
 
+    @ApiProperty({ required: false, nullable: true })
+    semester?: {
+        id: string;
+        code: string;
+        name: string;
+    } | null;
+
     @ApiProperty({ type: [SubjectPartResponse] })
     parts: SubjectPartResponse[];
 
@@ -68,6 +75,11 @@ export function toSubjectResponse(subject: Subject): SubjectResponse {
         code: subject.code,
         name: subject.name,
         semesterId: subject.semesterId,
+        semester: subject.semester ? {
+            id: subject.semester.id,
+            code: subject.semester.code,
+            name: subject.semester.name,
+        } : null,
         department: subject.department,
         parts: subject.parts.map(p => ({
             id: p.id,

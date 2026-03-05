@@ -13,6 +13,7 @@ export class Subject {
         public readonly parts: SubjectPart[],
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
+        public readonly semester?: { id: string; code: string; name: string } | null,
     ) { }
 
     static create(props: {
@@ -48,6 +49,7 @@ export class Subject {
         parts: SubjectPart[];
         createdAt: Date;
         updatedAt: Date;
+        semester?: { id: string; code: string; name: string } | null;
     }): Subject {
         return new Subject(
             props.id,
@@ -58,6 +60,7 @@ export class Subject {
             props.parts,
             props.createdAt,
             props.updatedAt,
+            props.semester,
         );
     }
 
@@ -83,6 +86,11 @@ export class Subject {
             parts,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
+            semester: found.semester ? {
+                id: found.semester.id,
+                code: found.semester.code,
+                name: found.semester.name,
+            } : null,
         });
     }
 

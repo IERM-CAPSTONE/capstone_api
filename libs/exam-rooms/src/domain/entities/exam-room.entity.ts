@@ -16,6 +16,8 @@ export class ExamRoom {
         public readonly totalSeats: number,
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
+        public readonly proctorSessionsCount: number | null = null,
+        public readonly campus: string | null = null,
     ) { }
 
     /**
@@ -32,6 +34,7 @@ export class ExamRoom {
         maxRows?: number;
         maxColumns?: number;
         totalSeats?: number;
+        campus?: string | null;
     }): ExamRoom {
         const roomNumber = RoomNumber.create(props.roomNumber);
         const capacity = props.capacity ? Capacity.create(props.capacity) : null;
@@ -46,6 +49,8 @@ export class ExamRoom {
             props.totalSeats ?? 30,
             new Date(),
             new Date(),
+            null,
+            props.campus ?? null,
         );
     }
 
@@ -65,6 +70,7 @@ export class ExamRoom {
         totalSeats: number;
         createdAt: Date;
         updatedAt: Date;
+        campus?: string | null;
     }): ExamRoom {
         const roomNumber = RoomNumber.create(props.roomNumber);
         const capacity = props.capacity ? Capacity.create(props.capacity) : null;
@@ -79,6 +85,8 @@ export class ExamRoom {
             props.totalSeats,
             props.createdAt,
             props.updatedAt,
+            null,
+            props.campus ?? null,
         );
     }
 
@@ -93,6 +101,7 @@ export class ExamRoom {
             totalSeats: found.total_seats,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
+            campus: found.campus,
         });
     }
 
@@ -109,6 +118,7 @@ export class ExamRoom {
         maxRows?: number;
         maxColumns?: number;
         totalSeats?: number;
+        campus?: string | null;
     }): ExamRoom {
         const roomNumber = props.roomNumber !== undefined
             ? RoomNumber.create(props.roomNumber)
@@ -122,6 +132,7 @@ export class ExamRoom {
         const maxRows = props.maxRows !== undefined ? props.maxRows : this.maxRows;
         const maxColumns = props.maxColumns !== undefined ? props.maxColumns : this.maxColumns;
         const totalSeats = props.totalSeats !== undefined ? props.totalSeats : this.totalSeats;
+        const campus = props.campus !== undefined ? props.campus : this.campus;
 
         return new ExamRoom(
             this.id,
@@ -133,6 +144,8 @@ export class ExamRoom {
             totalSeats,
             this.createdAt,
             new Date(),
+            this.proctorSessionsCount,
+            campus,
         );
     }
 }

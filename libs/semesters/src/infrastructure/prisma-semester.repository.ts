@@ -44,13 +44,21 @@ export class PrismaSemesterRepository implements ISemesterRepository {
         return result ? Semester.mapFromPrisma(result) : null;
     }
 
-    async findAll(query?: { search?: string }): Promise<Semester[]> {
+    async findAll(query?: { search?: string, fromDate?: Date, toDate?: Date }): Promise<Semester[]> {
         const where: any = {};
         if (query?.search) {
             where.OR = [
                 { code: { contains: query.search, mode: 'insensitive' } },
                 { name: { contains: query.search, mode: 'insensitive' } },
             ];
+        }
+
+        if (query?.fromDate) {
+            where.endDate = { gte: query.fromDate };
+        }
+
+        if (query?.toDate) {
+            where.startDate = { lte: query.toDate };
         }
 
         const results = await this.prisma.semester.findMany({
@@ -65,8 +73,10 @@ export class PrismaSemesterRepository implements ISemesterRepository {
         page: number;
         limit: number;
         search?: string;
+        fromDate?: Date;
+        toDate?: Date;
     }): Promise<{ items: Semester[]; total: number }> {
-        const { page, limit, search } = query;
+        const { page, limit, search, fromDate, toDate } = query;
         const skip = (page - 1) * limit;
 
         const where: any = {};
@@ -77,11 +87,22 @@ export class PrismaSemesterRepository implements ISemesterRepository {
             ];
         }
 
+        if (fromDate) {
+            where.endDate = { gte: fromDate };
+        }
+
+        if (toDate) {
+            where.startDate = { lte: toDate };
+        }
+
+        const skipVal = isNaN(skip) || skip < 0 ? 0 : Math.floor(skip);
+        const limitVal = isNaN(limit) || limit <= 0 ? 10 : Math.floor(limit);
+
         const [results, total] = await Promise.all([
             this.prisma.semester.findMany({
                 where,
-                skip,
-                take: limit,
+                skip: skipVal,
+                take: limitVal,
                 orderBy: { startDate: 'desc' },
             }),
             this.prisma.semester.count({ where }),

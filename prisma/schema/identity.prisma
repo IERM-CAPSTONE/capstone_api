@@ -1,8 +1,6 @@
 /// Stores identity verification info (CCCD images + extracted OCR + face embedding)
 model Identity {
   id            String           @id @default(uuid())
-  userId        String?          @unique
-  studentId     String           @unique
   /// Optional raw images (can be stored in Cloudinary/S3 URL)
   faceImage     String?
   frontCCCD     String?
@@ -11,9 +9,11 @@ model Identity {
   extractedData Json?
   /// Is identity verified by exam officer/admin
   isValid       Boolean          @default(false)
-  activeVector  Json?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+  studentId     String           @unique
+  activeVector  Json?
+  userId        String?          @unique
   user          User?            @relation(fields: [userId], references: [id])
   enrollments   FaceEnrollment[]
 }

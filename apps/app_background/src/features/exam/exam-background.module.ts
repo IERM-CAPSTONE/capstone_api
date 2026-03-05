@@ -4,6 +4,7 @@ import { ExamRoomsCoreModule } from '@app/exam-rooms';
 import { ExamSessionsCoreModule } from '@app/exam-sessions';
 import { ExamSeatsModule } from '@app/exam-seats';
 import { ExamImportProcessor } from './processors/exam-import.processor';
+import { AutoGenerateScheduleProcessor } from './processors/auto-generate-schedule.processor';
 
 @Module({
     imports: [
@@ -14,6 +15,7 @@ import { ExamImportProcessor } from './processors/exam-import.processor';
     ],
     controllers: [
         ExamImportProcessor,
+        AutoGenerateScheduleProcessor,
     ],
     providers: [],
 })

@@ -143,6 +143,9 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
             }
         }
 
+        const skipVal = isNaN(skip) || skip < 0 ? 0 : Math.floor(skip);
+        const limitVal = isNaN(limit) || limit <= 0 ? 10 : Math.floor(limit);
+
         const [results, total] = await Promise.all([
             this.prisma.proctorApplication.findMany({
                 where,
@@ -154,8 +157,8 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
                         },
                     },
                 },
-                skip,
-                take: limit,
+                skip: skipVal,
+                take: limitVal,
                 orderBy: { createdAt: 'desc' },
             }),
             this.prisma.proctorApplication.count({ where }),

@@ -42,6 +42,8 @@ export const MESSAGE_PATTERNS = {
         IMPORT_EXAMCODE: 'exam.import.examcode',
         /** Import danh sách môn học */
         IMPORT_SUBJECTS: 'exam.import.subjects',
+        /** Tạo lịch thi tự động */
+        AUTO_GENERATE_SCHEDULE: 'exam.auto_generate.schedule',
         /** Thông báo import hoàn tất */
         IMPORT_FINISHED: 'exam.import.finished',
     },

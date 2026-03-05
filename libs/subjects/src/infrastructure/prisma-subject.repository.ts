@@ -23,7 +23,10 @@ export class PrismaSubjectRepository implements ISubjectRepository {
                 ...data,
                 createdAt: subject.createdAt,
             },
-            include: { parts: { include: { examType: true } } },
+            include: {
+                parts: { include: { examType: true } },
+                semester: true
+            },
         });
 
         return Subject.mapFromPrisma(result);
@@ -32,7 +35,10 @@ export class PrismaSubjectRepository implements ISubjectRepository {
     async findById(id: string): Promise<Subject | null> {
         const result = await this.prisma.subject.findUnique({
             where: { id },
-            include: { parts: { include: { examType: true } } },
+            include: {
+                parts: { include: { examType: true } },
+                semester: true
+            },
         });
 
         return result ? Subject.mapFromPrisma(result) : null;
@@ -41,7 +47,10 @@ export class PrismaSubjectRepository implements ISubjectRepository {
     async findByCode(code: string): Promise<Subject | null> {
         const result = await this.prisma.subject.findUnique({
             where: { code },
-            include: { parts: { include: { examType: true } } },
+            include: {
+                parts: { include: { examType: true } },
+                semester: true
+            },
         });
 
         return result ? Subject.mapFromPrisma(result) : null;
@@ -53,7 +62,10 @@ export class PrismaSubjectRepository implements ISubjectRepository {
                 semesterId: query?.semesterId,
                 department: query?.department,
             },
-            include: { parts: { include: { examType: true } } },
+            include: {
+                parts: { include: { examType: true } },
+                semester: true
+            },
             orderBy: { code: 'asc' },
         });
 
@@ -82,12 +94,18 @@ export class PrismaSubjectRepository implements ISubjectRepository {
             ];
         }
 
+        const skipVal = isNaN(skip) || skip < 0 ? 0 : Math.floor(skip);
+        const limitVal = isNaN(limit) || limit <= 0 ? 10 : Math.floor(limit);
+
         const [results, total] = await Promise.all([
             this.prisma.subject.findMany({
                 where,
-                include: { parts: { include: { examType: true } } },
-                skip,
-                take: limit,
+                include: {
+                    parts: { include: { examType: true } },
+                    semester: true
+                },
+                skip: skipVal,
+                take: limitVal,
                 orderBy: { code: 'asc' },
             }),
             this.prisma.subject.count({ where }),

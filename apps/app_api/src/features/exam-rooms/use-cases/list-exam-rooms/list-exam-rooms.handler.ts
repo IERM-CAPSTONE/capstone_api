@@ -18,7 +18,7 @@ export class ListExamRoomsHandler {
         const limit = parseInt(String(dto.limit || 10), 10);
         const skip = (page - 1) * limit;
 
-        const cacheKey = `exam-rooms:list:p${page}:l${limit}:rn${dto.roomNumber ?? 'all'}`;
+        const cacheKey = `exam-rooms:list:p${page}:l${limit}:rn${dto.roomNumber ?? 'all'}:c${dto.campus ?? 'all'}`;
         const cached = await this.cacheService.get<PaginatedExamRoomResponse>(cacheKey);
         if (cached) return cached;
 
@@ -31,11 +31,16 @@ export class ListExamRoomsHandler {
             query.roomNumber = dto.roomNumber;
         }
 
+        if (dto.campus !== undefined) {
+            query.campus = dto.campus;
+        }
+
         const [examRooms, total] = await Promise.all([
             this.examRoomRepository.findMany(query),
-            this.examRoomRepository.count(
-                dto.roomNumber !== undefined ? { roomNumber: dto.roomNumber } : undefined,
-            ),
+            this.examRoomRepository.count({
+                roomNumber: dto.roomNumber,
+                campus: dto.campus,
+            }),
         ]);
 
         const response = {

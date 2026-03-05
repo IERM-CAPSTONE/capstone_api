@@ -1,33 +1,31 @@
 /// Represents a subject in the system
 model Subject {
-    id         String   @id @default(uuid())
-    code       String   @unique // Mã môn
-    name       String? // Tên môn
-    semesterId String?
-    department String? // Bộ môn
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+  id         String        @id @default(uuid())
+  code       String        @unique
+  name       String?
+  department String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  semesterId String?
+  semester   Semester?     @relation(fields: [semesterId], references: [id])
+  parts      SubjectPart[]
 
-    semester Semester?     @relation(fields: [semesterId], references: [id])
-    parts    SubjectPart[]
-
-    @@index([code])
-    @@index([semesterId])
+  @@index([code])
+  @@index([semesterId])
 }
 
 /// Represents a specific part/type of an exam for a subject (e.g., Oral, Writing)
 model SubjectPart {
-    id         String   @id @default(uuid())
-    subjectId  String
-    examTypeId String
-    duration   Int? // Duration in minutes
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+  id         String   @id @default(uuid())
+  subjectId  String
+  examTypeId String
+  duration   Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  subject    Subject  @relation(fields: [subjectId], references: [id])
+  examType   ExamType @relation(fields: [examTypeId], references: [id])
 
-    subject  Subject  @relation(fields: [subjectId], references: [id])
-    examType ExamType @relation(fields: [examTypeId], references: [id])
-
-    @@unique([subjectId, examTypeId])
-    @@index([subjectId])
-    @@index([examTypeId])
+  @@unique([subjectId, examTypeId])
+  @@index([subjectId])
+  @@index([examTypeId])
 }

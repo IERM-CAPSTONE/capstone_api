@@ -88,10 +88,13 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
     }): Promise<ExamSession[]> {
         const where = this.buildWhere(query);
 
+        const skipVal = isNaN(query?.skip) || query?.skip < 0 ? 0 : Math.floor(query.skip);
+        const takeVal = isNaN(query?.take) || query?.take <= 0 ? undefined : Math.floor(query.take);
+
         const found = await this.prisma.examSession.findMany({
             where,
-            skip: query?.skip,
-            take: query?.take,
+            skip: skipVal,
+            take: takeVal,
             orderBy: { createdAt: 'desc' },
             include: {
                 examRoom: true,

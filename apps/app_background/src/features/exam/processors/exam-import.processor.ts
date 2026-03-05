@@ -1,4 +1,4 @@
-import { Controller, Logger, Inject } from '@nestjs/common';
+import { Controller, Injectable, Logger, Inject } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext, ClientProxy } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS, ExamImportJobData, BaseJobResult, RABBITMQ_CLIENTS, ExamImportFinishedData, ImportScheduleJobData, ImportProctorJobData, ImportExamCodeJobData } from '@app/queue';
 import { IExamRoomRepository, EXAM_ROOM_REPOSITORY, ExamRoom } from '@app/exam-rooms';
@@ -7,11 +7,12 @@ import { IUserRepository, USER_REPOSITORY } from '@app/users';
 import { IExamSeatRepository, ExamSeat } from '@app/exam-seats';
 import { CACHE_SERVICE, ICacheService } from '@app/cache';
 import { PrismaService } from '@app/prisma';
-import { ExamType } from '@prisma/client';
+import { ExamType, Campus } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 
 @Controller()
+@Injectable()
 export class ExamImportProcessor {
     private readonly logger = new Logger(ExamImportProcessor.name);
 
@@ -56,7 +57,7 @@ export class ExamImportProcessor {
 
             for (const item of items) {
                 try {
-                    const { RoomNumber, Capacity } = item;
+                    const { RoomNumber, Capacity, Campus } = item;
 
                     if (RoomNumber === undefined) {
                         this.logger.warn(`Skipping row missing RoomNumber: ${JSON.stringify(item)}`);
@@ -64,17 +65,27 @@ export class ExamImportProcessor {
                         continue;
                     }
 
+                    const campusStr = Campus ? String(Campus).trim().toUpperCase() : undefined;
+
                     // Check if exists
-                    const existing = await this.examRoomRepository.findOne({ roomNumber: String(RoomNumber) });
+                    const existing = await this.examRoomRepository.findOne({
+                        roomNumber: String(RoomNumber),
+                        campus: campusStr as Campus
+                    });
+
                     if (existing) {
-                        this.logger.debug(`Room ${RoomNumber} already exists, updating...`);
-                        const updated = existing.update({ capacity: Capacity ? Number(Capacity) : undefined });
+                        this.logger.debug(`Room ${RoomNumber} at campus ${campusStr || 'default'} already exists, updating...`);
+                        const updated = existing.update({
+                            capacity: Capacity ? Number(Capacity) : undefined,
+                            campus: campusStr as Campus
+                        });
                         await this.examRoomRepository.save(updated);
                     } else {
                         const room = ExamRoom.create({
                             id: uuidv4(),
                             roomNumber: String(RoomNumber),
                             capacity: Capacity ? Number(Capacity) : undefined,
+                            campus: campusStr as Campus
                         });
                         await this.examRoomRepository.save(room);
                     }
@@ -638,9 +649,9 @@ export class ExamImportProcessor {
                         const detailsStr = findValue(['CHI TIẾT', 'DETAILS', 'DETAIL']) || '';
                         const totalDuration = parseInt(String(findValue(['TỔNG THỜI LƯỢNG', 'DURATION']))) || null;
 
-                        // Find Semester ID by code or name
-                        let semesterId: string | null = null;
-                        if (semester) {
+                        // Find Semester ID by data.semesterId or lookup by sheet name
+                        let semesterId: string | null = data.semesterId || null;
+                        if (!semesterId && semester) {
                             const semStr = String(semester);
                             const semEntity = await this.prisma.semester.findFirst({
                                 where: {

@@ -12,13 +12,14 @@ export class ImportSubjectsHandler {
         private readonly examServiceClient: ClientProxy,
     ) { }
 
-    async handle(file: Express.Multer.File): Promise<{ message: string }> {
-        this.logger.log(`📤 Sending import-subjects job for file: ${file.originalname}`);
+    async handle(file: Express.Multer.File, semesterId?: string): Promise<{ message: string }> {
+        this.logger.log(`📤 Sending import-subjects job for file: ${file.originalname}, semesterId: ${semesterId}`);
 
         const jobData: ExamImportJobData = {
             fileName: file.originalname,
             fileContent: file.buffer.toString('base64'),
             mimeType: file.mimetype,
+            semesterId: semesterId,
         };
 
         // Emit message to RabbitMQ

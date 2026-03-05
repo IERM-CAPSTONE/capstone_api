@@ -16,11 +16,15 @@ export class ListSemestersHandler {
         page: number;
         limit: number;
         search?: string;
+        fromDate?: string;
+        toDate?: string;
     }): Promise<SemesterPaginationResponse> {
         const { items, total } = await this.semesterRepository.findAllWithPagination({
             page: Number(query.page),
             limit: Number(query.limit),
             search: query.search,
+            fromDate: query.fromDate ? new Date(query.fromDate) : undefined,
+            toDate: query.toDate ? new Date(query.toDate) : undefined,
         });
 
         return {

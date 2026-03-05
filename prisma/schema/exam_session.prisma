@@ -1,51 +1,39 @@
 /// Represents a concrete exam session for a subject in a room at a given time
 model ExamSession {
-  id                String  @id @default(uuid())
-  examRoomId        String?
+  id                  String              @id @default(uuid())
+  examRoomId          String?
   /// Assigned staff
-  proctorId         String?
-  hallInvigilatorId String?
-
-  subjectCode   String?
-  examOpenTime  DateTime?
-  examCloseTime DateTime?
-  examCode      String?
-  openCode      String?
-  status        ExamSessionStatus @default(Scheduled)
-  examType      ExamType[]
-  semesterId    String?
-  note          String?
-  isArchived    Boolean           @default(false)
-
-  semester Semester? @relation(fields: [semesterId], references: [id])
-
-  /// Attendance/registration list for this session
-  studentExams StudentExam[]
-
-  /// Seat layout for this session
-  examSeats ExamSeat[]
-
-  /// Relations
-  examRoom        ExamRoom? @relation(fields: [examRoomId], references: [id])
-  proctor         User?     @relation("proctor", fields: [proctorId], references: [id])
-  hallInvigilator User?     @relation("hallInvigilator", fields: [hallInvigilatorId], references: [id])
-
+  proctorId           String?
+  hallInvigilatorId   String?
+  subjectCode         String?
+  examOpenTime        DateTime?
+  examCloseTime       DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  status              ExamSessionStatus   @default(Scheduled)
+  examCode            String?
+  openCode            String?
+  note                String?
+  isArchived          Boolean             @default(false)
   /// Locks layout editing after import
-  hasStudentsImported Boolean @default(false)
-
-  /// Related tickets/issues during this session
-  tickets IssueTicket[]
-
-  /// Assignment history/audit
-  assignments ProctorAssignment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  hasStudentsImported Boolean             @default(false)
+  semesterId          String?
+  campus              Campus?
+  examType            ExamType[]
+  semester            Semester?           @relation(fields: [semesterId], references: [id])
+  studentExams        StudentExam[]
+  examSeats           ExamSeat[]
+  examRoom            ExamRoom?           @relation(fields: [examRoomId], references: [id])
+  proctor             User?               @relation("proctor", fields: [proctorId], references: [id])
+  hallInvigilator     User?               @relation("hallInvigilator", fields: [hallInvigilatorId], references: [id])
+  tickets             IssueTicket[]
+  assignments         ProctorAssignment[]
 
   @@index([examRoomId])
   @@index([proctorId])
   @@index([hallInvigilatorId])
   @@index([subjectCode])
   @@index([semesterId])
+  @@index([campus])
   @@index([examOpenTime, examCloseTime])
 }

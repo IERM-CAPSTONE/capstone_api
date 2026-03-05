@@ -20,9 +20,9 @@ export class CreateExamRoomHandler {
             throw new Error('Room number must not be empty');
         }
 
-        // Check room number uniqueness
-        if (await this.examRoomRepository.exists({ roomNumber: dto.roomNumber })) {
-            throw new Error(`Room number '${dto.roomNumber}' already exists`);
+        // Check room number uniqueness within campus
+        if (await this.examRoomRepository.exists({ roomNumber: dto.roomNumber, campus: dto.campus })) {
+            throw new Error(`Room number '${dto.roomNumber}' already exists in campus '${dto.campus || 'default'}'`);
         }
 
         // Create aggregate using factory
@@ -32,6 +32,7 @@ export class CreateExamRoomHandler {
             capacity: dto.capacity,
             maxRows: dto.maxRows,
             maxColumns: dto.maxColumns,
+            campus: dto.campus,
         });
 
         // Persist

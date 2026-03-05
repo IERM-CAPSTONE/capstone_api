@@ -9,6 +9,9 @@ model ExamRoom {
   max_columns   Int?
   max_rows      Int?
   total_seats   Int?
+  campus        Campus?
   examSessions  ExamSession[]
   notifications Notification[]
+
+  @@index([campus])
 }
