@@ -96,6 +96,12 @@
       ],
       "@app/semesters/*": [
         "libs/semesters/src/*"
+      ],
+      "@app/tickets": [
+        "libs/tickets/src"
+      ],
+      "@app/tickets/*": [
+        "libs/tickets/src/*"
       ]
     }
   },

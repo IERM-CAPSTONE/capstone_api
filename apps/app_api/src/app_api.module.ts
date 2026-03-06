@@ -16,6 +16,8 @@ import { AppExamTypesModule } from './features/exam-types';
 import { AppSubjectsModule } from './features/subjects';
 import { SemestersModule } from './features/semesters/semesters.module';
 import { AppCacheModule } from '@app/cache';
+import { TicketsCoreModule } from '@app/tickets';
+import { TicketsModule } from './features/tickets/tickets.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { AppCacheModule } from '@app/cache';
     AppExamTypesModule,
     AppSubjectsModule,
     SemestersModule,
+    TicketsCoreModule,
+    TicketsModule,
   ],
   providers: [],
   exports: [],

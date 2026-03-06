@@ -6,6 +6,8 @@ model IssueTicket {
   assigneeId        String?
   issueType         String?
   description       String?
+  priority          String?           @default("Medium")
+  resolveNote       String?
   sessionId         String?
   status            IssueStatus       @default(PENDING)
   /// Attachment URL (evidence for the ticket)
