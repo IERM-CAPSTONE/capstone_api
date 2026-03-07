@@ -3,6 +3,9 @@ import {
     WebSocketServer,
     OnGatewayConnection,
     OnGatewayDisconnect,
+    SubscribeMessage,
+    MessageBody,
+    ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
@@ -25,6 +28,21 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
 
     handleDisconnect(client: Socket) {
         this.logger.log(`Client disconnected: ${client.id}`);
+    }
+
+    /**
+     * Client gửi event 'join_room' với userId sau khi connect
+     * để backend có thể sendToUser() đúng người
+     */
+    @SubscribeMessage('join_room')
+    handleJoinRoom(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() userId: string,
+    ) {
+        if (userId) {
+            client.join(userId);
+            this.logger.log(`Client ${client.id} joined room: ${userId}`);
+        }
     }
 
     /**

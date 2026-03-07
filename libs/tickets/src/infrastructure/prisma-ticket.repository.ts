@@ -38,11 +38,12 @@ export class PrismaTicketRepository implements ITicketRepository {
                 reporterId: data.reporterId,
                 sessionId: data.sessionId ?? null,
                 attachment: data.attachment ?? null,
-            },
+                studentCode: data.studentCode ?? null,
+            } as any,
             include: {
                 reporter: true,
                 assignee: true,
-                session: true,
+                session: { include: { examRoom: true } },
             },
         });
     }
@@ -53,7 +54,7 @@ export class PrismaTicketRepository implements ITicketRepository {
             include: {
                 reporter: { select: { id: true, fullName: true, email: true, role: true } },
                 assignee: { select: { id: true, fullName: true, email: true, role: true } },
-                session: { select: { id: true, subjectCode: true, examCode: true } },
+                session: { include: { examRoom: { select: { id: true, roomNumber: true } } } },
                 activityHistories: {
                     orderBy: { createdAt: 'asc' },
                 },
@@ -80,7 +81,7 @@ export class PrismaTicketRepository implements ITicketRepository {
             include: {
                 reporter: { select: { id: true, fullName: true, email: true, role: true } },
                 assignee: { select: { id: true, fullName: true, email: true, role: true } },
-                session: { select: { id: true, subjectCode: true, examCode: true } },
+                session: { include: { examRoom: { select: { id: true, roomNumber: true } } } },
             },
         });
     }

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '@app/prisma';
 import { TICKET_REPOSITORY, ITicketRepository } from '@app/tickets';
 import { ProcessTicketDto, ProcessAction } from './process-ticket.dto';
+import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
 
 @Injectable()
 export class ProcessTicketHandler {
@@ -10,6 +11,7 @@ export class ProcessTicketHandler {
         @Inject(TICKET_REPOSITORY)
         private readonly ticketRepository: ITicketRepository,
         private readonly prisma: PrismaService,
+        private readonly notificationGateway: NotificationGateway,
     ) { }
 
     async execute(ticketId: string, dto: ProcessTicketDto, officerId: string): Promise<any> {
@@ -34,6 +36,7 @@ export class ProcessTicketHandler {
             where: { id: officerId },
             select: { fullName: true },
         });
+        const officerName = officer?.fullName ?? 'Exam Officer';
 
         // 3. Send notifications based on action
         if (dto.action === ProcessAction.RESOLVE) {
@@ -44,23 +47,43 @@ export class ProcessTicketHandler {
                     toUserId: ticket.reporterId,
                     fromId: officerId,
                     title: `✅ Ticket Resolved: ${ticket.issueName}`,
-                    message: `Your ticket has been resolved by ${officer?.fullName ?? 'Exam Officer'}. Note: ${dto.resolveNote}`,
+                    message: `Your ticket has been resolved by ${officerName}. Note: ${dto.resolveNote}`,
                     channel: 'IN_APP',
                     meta: { ticketId, resolveNote: dto.resolveNote },
                 },
             });
+
+            // Emit real-time to reporter
+            this.notificationGateway.sendToAll('ticket:resolved', {
+                ticketId,
+                issueName: ticket.issueName,
+                studentCode: (ticket as any).studentCode ?? null,
+                resolveNote: dto.resolveNote,
+                officerName,
+                reporterId: ticket.reporterId,
+            });
         } else {
-            // Notify the assignee
+            // Notify the assignee (DB)
             await this.prisma.notification.create({
                 data: {
                     id: uuidv4(),
                     toUserId: dto.assigneeId!,
                     fromId: officerId,
                     title: `📋 Ticket Assigned to You: ${ticket.issueName}`,
-                    message: `${officer?.fullName ?? 'Exam Officer'} assigned you a ticket. Note: ${dto.resolveNote}`,
+                    message: `${officerName} assigned you a ticket. Note: ${dto.resolveNote}`,
                     channel: 'IN_APP',
                     meta: { ticketId, note: dto.resolveNote },
                 },
+            });
+
+            // Emit real-time socket event - broadcast, client filters by assigneeId
+            this.notificationGateway.sendToAll('ticket:assigned', {
+                ticketId,
+                assigneeId: dto.assigneeId!,
+                issueName: ticket.issueName,
+                studentCode: (ticket as any).studentCode ?? null,
+                officerName,
+                reporterId: ticket.reporterId,
             });
         }
 

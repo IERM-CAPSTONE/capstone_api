@@ -43,4 +43,9 @@ export class CreateTicketDto {
     @IsOptional()
     @IsString()
     attachment?: string;
+
+    @ApiPropertyOptional({ example: 'SE140001', description: 'MSSV of the student involved in the incident' })
+    @IsOptional()
+    @IsString()
+    studentCode?: string;
 }

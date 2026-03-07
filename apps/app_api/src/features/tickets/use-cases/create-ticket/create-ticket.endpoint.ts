@@ -19,7 +19,7 @@ export class CreateTicketEndpoint {
     @ApiResponse({ status: 201, description: 'Ticket created and Exam Officers notified.' })
     async handle(@Body() dto: CreateTicketDto, @Request() req: any): Promise<any> {
         try {
-            return await this.handler.execute(dto, req.user.id);
+            return await this.handler.execute(dto, req.user.userId);
         } catch (error) {
             throw new BadRequestException(error.message);
         }

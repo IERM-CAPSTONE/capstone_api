@@ -29,9 +29,14 @@ export class ListTicketsEndpoint {
     ): Promise<any[]> {
         const user = req.user;
 
-        // Proctors/IT/HI only see their own tickets
-        if ([RoleType.PROCTOR, RoleType.IT_SUPPORT, RoleType.HALL_INVIGILATOR].includes(user.role)) {
-            return this.handler.execute({ status, issueType, reporterId: user.id });
+        // Hall Invigilator / IT Support → tickets assigned to them
+        if ([RoleType.IT_SUPPORT, RoleType.HALL_INVIGILATOR].includes(user.role)) {
+            return this.handler.execute({ status, issueType, assigneeId: user.userId });
+        }
+
+        // Proctor → tickets they reported
+        if (user.role === RoleType.PROCTOR) {
+            return this.handler.execute({ status, issueType, reporterId: user.userId });
         }
 
         // Exam Officers see all

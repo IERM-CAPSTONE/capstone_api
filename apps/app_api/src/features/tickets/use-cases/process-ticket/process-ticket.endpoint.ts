@@ -14,7 +14,7 @@ export class ProcessTicketEndpoint {
     constructor(private readonly handler: ProcessTicketHandler) { }
 
     @Patch(':id/process')
-    @Roles(RoleType.EXAM_OFFICER)
+    @Roles(RoleType.EXAM_OFFICER, RoleType.HALL_INVIGILATOR, RoleType.IT_SUPPORT)
     @ApiOperation({ summary: 'Process a ticket: resolve (notify reporter) or assign (notify staff)' })
     async handle(
         @Param('id') id: string,
@@ -22,7 +22,7 @@ export class ProcessTicketEndpoint {
         @Request() req: any,
     ): Promise<any> {
         try {
-            return await this.handler.execute(id, dto, req.user.id);
+            return await this.handler.execute(id, dto, req.user.userId);
         } catch (error) {
             throw new BadRequestException(error.message);
         }
