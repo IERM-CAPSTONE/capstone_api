@@ -23,10 +23,6 @@ export class FinalizeSeatAssignmentsHandler {
             throw new BadRequestException('Exam session not found');
         }
 
-        if (session.hasStudentsImported) {
-            throw new BadRequestException('Seats already finalized for this session');
-        }
-
         // 2. Get students without seat assignments
         const students = await this.prisma.studentExam.findMany({
             where: {
@@ -57,14 +53,32 @@ export class FinalizeSeatAssignmentsHandler {
             );
         }
 
-        // 5. Shuffle for random assignment
-        this.shuffleArray(availableSeats);
+        // 5. Select spaced-out seats to maximize distance between students
+        // availableSeats is already ordered by row/col from step 3.
+        const seatCount = availableSeats.length;
+        const studentCount = students.length;
+        const step = seatCount / studentCount;
 
-        // 6. Assign seats in transaction
+        // Randomize the starting position if there's extra space to keep it unpredictable
+        const maxOffset = Math.floor(step);
+        const startOffset = maxOffset > 1 ? Math.floor(Math.random() * maxOffset) : 0;
+
+        const selectedSeats = [];
+        for (let i = 0; i < studentCount; i++) {
+            // Pick seats at regular intervals starting from the offset
+            const index = Math.min(Math.floor(i * step) + startOffset, seatCount - 1);
+            selectedSeats.push(availableSeats[index]);
+        }
+
+        // 6. Shuffle students to ensure a random assignment to these spaced-out seats
+        // This ensures integrity while keeping the "spaced" positions
+        this.shuffleArray(students);
+
+        // 7. Assign seats in transaction
         await this.prisma.$transaction(async (tx) => {
             for (let i = 0; i < students.length; i++) {
                 const student = students[i];
-                const seat = availableSeats[i];
+                const seat = selectedSeats[i];
 
                 // Update StudentExam with physical seat
                 await tx.studentExam.update({
@@ -78,12 +92,6 @@ export class FinalizeSeatAssignmentsHandler {
                     data: { status: 'Assigned' }
                 });
             }
-
-            // Mark session as finalized - lock layout editing
-            await tx.examSession.update({
-                where: { id: examSessionId },
-                data: { hasStudentsImported: true }
-            });
         });
 
         this.logger.log(`Successfully assigned ${students.length} students to seats`);

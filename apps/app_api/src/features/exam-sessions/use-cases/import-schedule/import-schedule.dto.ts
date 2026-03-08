@@ -30,7 +30,7 @@ export class ScheduleItemDto {
 
     @IsOptional()
     @IsString()
-    examType?: string;
+    examPart?: string;
 }
 
 export class StudentItemDto {

@@ -7,7 +7,7 @@ import { IUserRepository, USER_REPOSITORY } from '@app/users';
 import { IExamSeatRepository, ExamSeat } from '@app/exam-seats';
 import { CACHE_SERVICE, ICacheService } from '@app/cache';
 import { PrismaService } from '@app/prisma';
-import { ExamType, Campus } from '@prisma/client';
+import { ExamPart, Campus } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -367,24 +367,24 @@ export class ExamImportProcessor {
 
                             // Process Exam Parts
                             const parts = st.examPart.split(',').map(p => p.trim());
-                            const allExamTypes = await this.prisma.examType.findMany();
+                            const allExamParts = await this.prisma.examPart.findMany();
 
                             for (const partType of parts) {
-                                const et = allExamTypes.find(t => t.code === partType || t.name === partType);
+                                const et = allExamParts.find(t => t.code === partType || t.name === partType);
                                 if (!et) continue;
 
                                 await this.prisma.studentExamPart.upsert({
                                     where: {
-                                        studentExamId_examTypeId: {
+                                        studentExamId_examPartId: {
                                             studentExamId: studentExam.id,
-                                            examTypeId: et.id
+                                            examPartId: et.id
                                         }
                                     },
                                     update: {}, // No update for now
                                     create: {
                                         id: uuidv4(),
                                         studentExamId: studentExam.id,
-                                        examTypeId: et.id,
+                                        examPartId: et.id,
                                         isInRoom: false,
                                         isCheckedIn: false
                                     }
@@ -409,11 +409,11 @@ export class ExamImportProcessor {
                     }
 
                     if (sessionPartTypes.length > 0) {
-                        const allExamTypes = await this.prisma.examType.findMany();
+                        const allExamParts = await this.prisma.examPart.findMany();
                         const sessionTypeIds = new Set<string>();
 
                         for (const partType of sessionPartTypes) {
-                            const et = allExamTypes.find(t => t.code === partType || t.name === partType);
+                            const et = allExamParts.find(t => t.code === partType || t.name === partType);
                             if (et) sessionTypeIds.add(et.id);
                         }
 
@@ -421,7 +421,7 @@ export class ExamImportProcessor {
                             await this.prisma.examSession.update({
                                 where: { id: finalSessionId },
                                 data: {
-                                    examType: {
+                                    examParts: {
                                         set: Array.from(sessionTypeIds).map(id => ({ id }))
                                     }
                                 }
@@ -625,7 +625,7 @@ export class ExamImportProcessor {
 
             let totalSuccess = 0;
             let totalError = 0;
-            const examTypes = await this.prisma.examType.findMany();
+            const examParts = await this.prisma.examPart.findMany();
 
             for (const sheetName of workbook.SheetNames) {
                 const worksheet = workbook.Sheets[sheetName];
@@ -666,6 +666,9 @@ export class ExamImportProcessor {
                             }
                         }
 
+                        const isCoursera = !!findValue(['IS_COURSERA', 'isCoursera', 'COURSERA']);
+                        const isMajor = !!findValue(['IS_MAJOR', 'isMajor', 'MAJOR']);
+
                         // Upsert Subject
                         const subject = await this.prisma.subject.upsert({
                             where: { code: String(code) },
@@ -673,6 +676,8 @@ export class ExamImportProcessor {
                                 name: name ? String(name) : undefined,
                                 semesterId: semesterId || undefined,
                                 department: department ? String(department) : undefined,
+                                isCoursera,
+                                isMajor,
                             },
                             create: {
                                 id: uuidv4(),
@@ -680,11 +685,13 @@ export class ExamImportProcessor {
                                 name: name ? String(name) : null,
                                 semesterId: semesterId,
                                 department: department ? String(department) : null,
+                                isCoursera,
+                                isMajor,
                             }
                         });
 
                         // Parse parts from details string
-                        const parts = this.parseSubjectParts(String(detailsStr), examTypes);
+                        const parts = this.parseSubjectParts(String(detailsStr), examParts);
 
                         // Re-create parts for this subject
                         if (parts.length > 0) {
@@ -697,20 +704,20 @@ export class ExamImportProcessor {
                                     data: {
                                         id: uuidv4(),
                                         subjectId: subject.id,
-                                        examTypeId: part.examTypeId,
+                                        examPartId: part.examPartId,
                                         duration: part.duration,
                                     }
                                 });
                             }
                         } else if (totalDuration) {
                             // Fallback to single part if totalDuration exists but no parts parsed
-                            const defaultType = examTypes.find(t => t.code === 'MC') || examTypes[0];
+                            const defaultType = examParts.find(t => t.code === 'FE') || examParts.find(t => t.code === 'MC') || examParts[0];
                             if (defaultType) {
                                 await this.prisma.subjectPart.upsert({
                                     where: {
-                                        subjectId_examTypeId: {
+                                        subjectId_examPartId: {
                                             subjectId: subject.id,
-                                            examTypeId: defaultType.id
+                                            examPartId: defaultType.id
                                         }
                                     },
                                     update: {
@@ -719,7 +726,7 @@ export class ExamImportProcessor {
                                     create: {
                                         id: uuidv4(),
                                         subjectId: subject.id,
-                                        examTypeId: defaultType.id,
+                                        examPartId: defaultType.id,
                                         duration: totalDuration,
                                     }
                                 });
@@ -749,10 +756,10 @@ export class ExamImportProcessor {
         }
     }
 
-    private parseSubjectParts(details: string, examTypes: ExamType[]): { examTypeId: string; duration: number }[] {
+    private parseSubjectParts(details: string, examParts: ExamPart[]): { examPartId: string; duration: number }[] {
         if (!details) return [];
 
-        const results: { examTypeId: string; duration: number }[] = [];
+        const results: { examPartId: string; duration: number }[] = [];
         // Regex to find "N.Name: Duration ph" patterns
         // E.g. "1.Đọc: 40ph"
         const regex = /(\d+)\.\s*([^:]+):\s*(\d+)(?:\s*(?:ph|phút|min))?/gi;
@@ -762,24 +769,27 @@ export class ExamImportProcessor {
             const partName = match[2].trim().toLowerCase();
             const duration = parseInt(match[3]);
 
-            // Map partName to ExamType
+            // Map partName to ExamPart
             // We'll look for code or name containing the part name
-            let examType = examTypes.find(t =>
+            let examPart = examParts.find(t =>
                 t.name.toLowerCase().includes(partName) ||
                 t.code.toLowerCase().includes(partName)
             );
 
             // Special mappings based on common Vietnamese terms in provided Excel
-            if (!examType) {
-                if (partName.includes('đọc')) examType = examTypes.find(t => t.code === 'R');
-                else if (partName.includes('nghe')) examType = examTypes.find(t => t.code === 'L');
-                else if (partName.includes('viết')) examType = examTypes.find(t => t.code === 'W');
-                else if (partName.includes('nói')) examType = examTypes.find(t => t.code === 'S');
+            if (!examPart) {
+                if (partName.includes('đọc') || partName.includes('reading')) examPart = examParts.find(t => t.code === 'R');
+                else if (partName.includes('nghe') || partName.includes('listening')) examPart = examParts.find(t => t.code === 'L');
+                else if (partName.includes('viết') || partName.includes('writing')) examPart = examParts.find(t => t.code === 'W');
+                else if (partName.includes('nói') || partName.includes('speaking')) examPart = examParts.find(t => t.code === 'S');
+                else if (partName.includes('fe') || partName.includes('final')) examPart = examParts.find(t => t.code === 'FE');
+                else if (partName.includes('pe') || partName.includes('practical')) examPart = examParts.find(t => t.code === 'PE');
+                else if (partName.includes('te') || partName.includes('test')) examPart = examParts.find(t => t.code === 'TE');
             }
 
-            if (examType) {
+            if (examPart) {
                 results.push({
-                    examTypeId: examType.id,
+                    examPartId: examPart.id,
                     duration
                 });
             }

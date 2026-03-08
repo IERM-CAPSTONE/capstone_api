@@ -79,11 +79,11 @@
       "@app/proctor-applications/*": [
         "libs/proctor-applications/src/*"
       ],
-      "@app/exam-types": [
-        "libs/exam-types/src"
+      "@app/exam-parts": [
+        "libs/exam-parts/src"
       ],
-      "@app/exam-types/*": [
-        "libs/exam-types/src/*"
+      "@app/exam-parts/*": [
+        "libs/exam-parts/src/*"
       ],
       "@app/subjects": [
         "libs/subjects/src"

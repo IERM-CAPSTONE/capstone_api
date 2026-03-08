@@ -73,6 +73,7 @@ enum ExamSessionStatus {
   Ongoing
   Ended
   Scheduled
+  Draft
 }
 
 /// Activity types for auditing student exam actions
@@ -89,4 +90,11 @@ enum ExamSeatStatus {
   Assigned
   Present
   Absent
+}
+
+enum ExamType {
+  PE
+  FE
+  TE
+  RE
 }

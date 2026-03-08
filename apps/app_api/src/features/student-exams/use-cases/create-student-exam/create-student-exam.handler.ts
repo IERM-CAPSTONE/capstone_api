@@ -24,13 +24,6 @@ export class CreateStudentExamHandler {
             studentId: dto.studentId,
             seatNumber: dto.seatNumber,
             seatPosition: dto.seatPosition,
-            status: dto.status,
-            currentLocation: dto.currentLocation,
-            identityId: dto.identityId,
-            isMatched: dto.isMatched,
-            checkinTime: dto.checkinTime,
-            checkoutTime: dto.checkoutTime,
-            isValid: dto.isValid,
         });
 
         // Persist

@@ -127,7 +127,7 @@ async function main() {
       const firstName = firstNames[i % firstNames.length];
       const middleName = middleNames[i % middleNames.length];
       const lastName = lastNames[i % lastNames.length];
-      
+
       const student = await prisma.user.create({
         data: {
           email: `student${i}@exam.com`,
@@ -159,6 +159,7 @@ async function main() {
           max_rows: 6,
           max_columns: 5,
           total_seats: getRandomInt(28, 30),
+          campus: 'HCM',
         },
       });
       rooms.push(room);
@@ -174,6 +175,7 @@ async function main() {
           max_rows: 5,
           max_columns: 5,
           total_seats: getRandomInt(23, 25),
+          campus: 'HCM',
         },
       });
       rooms.push(room);
@@ -189,6 +191,7 @@ async function main() {
           max_rows: 5,
           max_columns: 4,
           total_seats: getRandomInt(18, 20),
+          campus: 'HCM',
         },
       });
       rooms.push(room);
@@ -219,7 +222,6 @@ async function main() {
           examOpenTime: startTime,
           examCloseTime: endTime,
           status: 'Ongoing',
-          hasStudentsImported: true,
         },
       });
       sessions.push(session);
@@ -259,7 +261,6 @@ async function main() {
           examOpenTime: startTime,
           examCloseTime: endTime,
           status: 'Scheduled',
-          hasStudentsImported: false,
         },
       });
       sessions.push(session);
@@ -299,7 +300,6 @@ async function main() {
           examOpenTime: startTime,
           examCloseTime: endTime,
           status: 'Ended',
-          hasStudentsImported: true,
         },
       });
       sessions.push(session);
@@ -348,7 +348,7 @@ async function main() {
 
       for (let i = 0; i < numStudents && studentIndex < studentsToAssign.length; i++) {
         const student = studentsToAssign[studentIndex];
-        
+
         // Get an available seat from this session
         const availableSeats = await prisma.examSeat.findMany({
           where: {
@@ -361,7 +361,7 @@ async function main() {
         let seatPosition = null;
         if (availableSeats.length > 0) {
           seatPosition = availableSeats[0].id;
-          
+
           // Update seat status to Assigned
           await prisma.examSeat.update({
             where: { id: seatPosition },
@@ -369,7 +369,7 @@ async function main() {
           });
         }
 
-        const status = session.status === 'Ongoing' 
+        const status = session.status === 'Ongoing'
           ? (getRandomInt(1, 10) > 2 ? 'CHECKEDIN' : 'REGISTERED')
           : 'REGISTERED';
 
@@ -380,9 +380,6 @@ async function main() {
             stt: i + 1,
             seatNumber: `${i + 1}`,
             seatPosition: seatPosition,
-            status: status,
-            isMatched: status === 'CHECKEDIN',
-            checkinTime: status === 'CHECKEDIN' ? new Date(session.examOpenTime.getTime() - 10 * 60 * 1000) : null,
           },
         });
 

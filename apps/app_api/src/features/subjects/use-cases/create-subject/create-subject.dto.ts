@@ -6,7 +6,7 @@ export class CreateSubjectPartDto {
     @ApiProperty({ example: 'uuid-exam-type', description: 'Exam type ID' })
     @IsString()
     @IsNotEmpty()
-    examTypeId: string;
+    examPartId: string;
 
     @ApiProperty({ example: 60, description: 'Duration in minutes', required: false })
     @IsOptional()

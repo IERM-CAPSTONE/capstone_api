@@ -3,9 +3,9 @@ DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_enum 
     WHERE enumlabel = 'RE' 
-    AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'ExamType')
+    AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'ExamPart')
   ) THEN
-    ALTER TYPE "ExamType" ADD VALUE 'RE';
+    ALTER TYPE "ExamPart" ADD VALUE 'RE';
   END IF;
 END $$;
 

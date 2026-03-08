@@ -5,13 +5,6 @@ model StudentExam {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   examSessionId     String
-  checkinTime       DateTime?
-  checkoutTime      DateTime?
-  currentLocation   String?
-  identityId        String?
-  isMatched         Boolean           @default(false)
-  isValid           Boolean           @default(true)
-  status            StudentExamStatus @default(REGISTERED)
   seatNumber        String?
   stt               Int?
   seatPosition      String?

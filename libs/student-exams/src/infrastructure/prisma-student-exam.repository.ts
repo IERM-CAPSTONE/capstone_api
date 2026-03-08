@@ -13,14 +13,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             studentId: studentExam.studentId,
             seatNumber: studentExam.seatNumber,
             seatPosition: studentExam.seatPosition,
-            status: studentExam.status as any,
-            currentLocation: studentExam.currentLocation,
-            identityId: studentExam.identityId,
-            isMatched: studentExam.isMatched,
-            checkinTime: studentExam.checkinTime,
-            checkoutTime: studentExam.checkoutTime,
-            isValid: studentExam.isValid,
             updatedAt: studentExam.updatedAt,
+            stt: studentExam.stt,
         };
 
         const saved = await this.prisma.studentExam.upsert({
@@ -37,13 +31,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
                 studentId: true,
                 seatNumber: true,
                 seatPosition: true,
-                status: true,
-                currentLocation: true,
-                identityId: true,
-                isMatched: true,
-                checkinTime: true,
-                checkoutTime: true,
-                isValid: true,
+                stt: true,
                 createdAt: true,
                 updatedAt: true,
             },
@@ -55,13 +43,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             studentId: saved.studentId,
             seatNumber: saved.seatNumber,
             seatPosition: saved.seatPosition,
-            status: saved.status,
-            currentLocation: saved.currentLocation,
-            identityId: saved.identityId,
-            isMatched: saved.isMatched,
-            checkinTime: saved.checkinTime,
-            checkoutTime: saved.checkoutTime,
-            isValid: saved.isValid,
+            stt: saved.stt,
             createdAt: saved.createdAt,
             updatedAt: saved.updatedAt,
         });
@@ -70,7 +52,10 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
     async findById(id: string): Promise<StudentExam | null> {
         const found = await this.prisma.studentExam.findUnique({
             where: { id },
-            include: { student: true },
+            include: {
+                student: true,
+                parts: { include: { examPart: true } }
+            },
         });
 
         if (!found) return null;
@@ -81,17 +66,12 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             studentId: found.studentId,
             seatNumber: found.seatNumber,
             seatPosition: found.seatPosition,
-            status: found.status,
-            currentLocation: found.currentLocation,
-            identityId: found.identityId,
-            isMatched: found.isMatched,
-            checkinTime: found.checkinTime,
-            checkoutTime: found.checkoutTime,
-            isValid: found.isValid,
+            stt: found.stt,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
             studentName: found.student?.fullName,
             studentCode: found.student?.code,
+            parts: (found as any).parts,
         });
     }
 
@@ -107,13 +87,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             studentId: item.studentId,
             seatNumber: item.seatNumber,
             seatPosition: item.seatPosition,
-            status: item.status,
-            currentLocation: item.currentLocation,
-            identityId: item.identityId,
-            isMatched: item.isMatched,
-            checkinTime: item.checkinTime,
-            checkoutTime: item.checkoutTime,
-            isValid: item.isValid,
+            stt: item.stt,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             studentName: item.student?.fullName,
@@ -133,13 +107,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             studentId: item.studentId,
             seatNumber: item.seatNumber,
             seatPosition: item.seatPosition,
-            status: item.status,
-            currentLocation: item.currentLocation,
-            identityId: item.identityId,
-            isMatched: item.isMatched,
-            checkinTime: item.checkinTime,
-            checkoutTime: item.checkoutTime,
-            isValid: item.isValid,
+            stt: item.stt,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             studentName: item.student?.fullName,
@@ -150,7 +118,6 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
     async findMany(criteria?: {
         examSessionId?: string;
         studentId?: string;
-        status?: string;
         page?: number;
         limit?: number;
     }): Promise<{ data: StudentExam[]; total: number }> {
@@ -161,15 +128,17 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
         const where: any = {};
         if (criteria?.examSessionId) where.examSessionId = criteria.examSessionId;
         if (criteria?.studentId) where.studentId = criteria.studentId;
-        if (criteria?.status) where.status = criteria.status;
 
         const [results, total] = await Promise.all([
             this.prisma.studentExam.findMany({
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' },
-                include: { student: true },
+                orderBy: [{ stt: 'asc' }, { createdAt: 'desc' }],
+                include: {
+                    student: true,
+                    parts: { include: { examPart: true } }
+                },
             }),
             this.prisma.studentExam.count({ where }),
         ]);
@@ -180,17 +149,12 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             studentId: item.studentId,
             seatNumber: item.seatNumber,
             seatPosition: item.seatPosition,
-            status: item.status,
-            currentLocation: item.currentLocation,
-            identityId: item.identityId,
-            isMatched: item.isMatched,
-            checkinTime: item.checkinTime,
-            checkoutTime: item.checkoutTime,
-            isValid: item.isValid,
+            stt: item.stt,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             studentName: item.student?.fullName,
             studentCode: item.student?.code,
+            parts: (item as any).parts,
         }));
 
         return { data, total };
@@ -213,35 +177,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
     }
 
     async checkIn(studentId: string, examSessionId: string): Promise<void> {
-        const studentExam = await this.prisma.studentExam.findUnique({
-            where: {
-                examSessionId_studentId: {
-                    examSessionId,
-                    studentId,
-                },
-            },
-        });
-
-        if (!studentExam) return;
-
-        const now = new Date();
-
-        await this.prisma.$transaction([
-            this.prisma.studentExam.update({
-                where: { id: studentExam.id },
-                data: {
-                    checkinTime: now,
-                    status: 'CHECKEDIN',
-                    isMatched: true,
-                },
-            }),
-            this.prisma.studentExamPart.updateMany({
-                where: { studentExamId: studentExam.id },
-                data: {
-                    isCheckedIn: true,
-                    checkInTime: now,
-                },
-            }),
-        ]);
+        // Method placeholder - checkIn logic needs to be redesigned based on the new schema
+        // since status and checkinTime were removed from StudentExam
     }
 }

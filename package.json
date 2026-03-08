@@ -140,7 +140,7 @@
       "^@app/users(|/.*)$": "<rootDir>/libs/users/src/$1",
       "^@app/prisma(|/.*)$": "<rootDir>/libs/prisma/$1",
       "^@app/queue(|/.*)$": "<rootDir>/libs/queue/src/$1",
-      "^@app/exam-types(|/.*)$": "<rootDir>/libs/exam-types/src/$1",
+      "^@app/exam-parts(|/.*)$": "<rootDir>/libs/exam-parts/src/$1",
       "^@app/subjects(|/.*)$": "<rootDir>/libs/subjects/src/$1"
     }
   }

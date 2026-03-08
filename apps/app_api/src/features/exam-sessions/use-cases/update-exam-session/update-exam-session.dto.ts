@@ -50,7 +50,7 @@ export class UpdateExamSessionDto {
     @ApiProperty({ required: false, nullable: true })
     @IsOptional()
     @IsArray()
-    examType?: string[];
+    examPart?: string[];
 
     @ApiProperty({ required: false, nullable: true })
     @IsOptional()

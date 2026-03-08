@@ -64,6 +64,31 @@ export class ImportFinishedProcessor {
         channel.ack(originalMsg);
     }
 
+    @MessagePattern(MESSAGE_PATTERNS.EXAM.AUTO_GENERATE_FINISHED)
+    async handleAutoGenerateFinished(
+        @Payload() data: any,
+        @Ctx() context: RmqContext
+    ) {
+        const channel = context.getChannelRef();
+        const originalMsg = context.getMessage();
+
+        this.logger.log(`Received auto-generate finished event for semester: ${data.semesterId}`);
+
+        // Push to WebSocket
+        this.notificationGateway.sendToAll('AUTO_GENERATE_COMPLETED', {
+            semesterId: data.semesterId,
+            message: `Auto-generation for semester completed!`,
+            sessionCount: data.sessionCount,
+            campuses: data.campuses,
+            timestamp: new Date().toISOString(),
+        });
+
+        this.logger.log(`Pushed auto-generate notification to WebSocket`);
+
+        // Manual acknowledge
+        channel.ack(originalMsg);
+    }
+
     @MessagePattern(MESSAGE_PATTERNS.USER.ACTIVITY_LOGGED)
     async handleActivityLogged(
         @Payload() data: any,

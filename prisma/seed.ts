@@ -250,8 +250,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession1.id } },
         student: { connect: { id: student1.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -259,8 +257,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession1.id } },
         student: { connect: { id: student2.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -268,8 +264,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession1.id } },
         student: { connect: { id: student3.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -277,8 +271,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession1.id } },
         student: { connect: { id: student4.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -286,8 +278,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession1.id } },
         student: { connect: { id: student5.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -296,8 +286,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession2.id } },
         student: { connect: { id: student2.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -305,8 +293,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession2.id } },
         student: { connect: { id: student3.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -314,8 +300,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession2.id } },
         student: { connect: { id: student6.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -323,8 +307,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession2.id } },
         student: { connect: { id: student7.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -333,8 +315,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession3.id } },
         student: { connect: { id: student1.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -342,8 +322,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession3.id } },
         student: { connect: { id: student4.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -351,8 +329,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession3.id } },
         student: { connect: { id: student8.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 

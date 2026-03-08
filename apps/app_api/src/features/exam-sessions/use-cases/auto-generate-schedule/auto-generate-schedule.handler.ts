@@ -13,7 +13,7 @@ export class AutoGenerateScheduleHandler {
     ) { }
 
     async execute(dto: AutoGenerateScheduleDto) {
-        this.logger.log(`Publishing auto-generate schedule job for semester ${dto.semesterId}, weeks ${dto.finalWeek}/${dto.retakeWeek}`);
+        this.logger.log(`Publishing auto-generate job | PE:${dto.practicalWeek ?? '-'} FE:${dto.finalWeek} RE:${dto.retakeWeek} Coursera:${dto.courseraWeek ?? '-'} CourseraRe:${dto.courseraRetakeWeek ?? '-'}`);
 
         this.examServiceClient.emit(MESSAGE_PATTERNS.EXAM.AUTO_GENERATE_SCHEDULE, dto);
 
@@ -25,6 +25,9 @@ export class AutoGenerateScheduleHandler {
                 campus: dto.campus,
                 finalWeek: dto.finalWeek,
                 retakeWeek: dto.retakeWeek,
+                practicalWeek: dto.practicalWeek,
+                courseraWeek: dto.courseraWeek,
+                courseraRetakeWeek: dto.courseraRetakeWeek,
                 roomsSelected: dto.roomIds.length
             }
         };

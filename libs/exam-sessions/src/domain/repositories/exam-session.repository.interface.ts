@@ -55,6 +55,9 @@ export interface IExamSessionRepository {
         excludeId?: string;
     }): Promise<ExamSession[]>;
 
+    updateStatusBulk(ids: string[], status: string): Promise<number>;
+    publishGeneratedDrafts(semesterId: string, campus: string): Promise<number>;
+
     delete(id: string): Promise<void>;
 }
 

@@ -11,11 +11,11 @@ model StudentExamPart {
   signTime      DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  examTypeId    String?
+  examPartId    String?
   studentExam   StudentExam? @relation(fields: [studentExamId], references: [id], onDelete: Cascade)
-  examType      ExamType?    @relation(fields: [examTypeId], references: [id])
+  examPart      ExamPart?    @relation(fields: [examPartId], references: [id])
 
-  @@unique([studentExamId, examTypeId])
+  @@unique([studentExamId, examPartId])
   @@index([studentExamId])
-  @@index([examTypeId])
+  @@index([examPartId])
 }

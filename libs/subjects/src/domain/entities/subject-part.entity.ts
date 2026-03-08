@@ -5,9 +5,9 @@ export class SubjectPart {
     private constructor(
         public readonly id: string,
         public readonly subjectId: string,
-        public readonly examTypeId: string,
+        public readonly examPartId: string,
         public readonly duration: number | null,
-        public readonly examType: any | null,
+        public readonly examPart: any | null,
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
     ) { }
@@ -15,16 +15,16 @@ export class SubjectPart {
     static create(props: {
         id: string;
         subjectId: string;
-        examTypeId: string;
+        examPartId: string;
         duration?: number | null;
-        examType?: any | null;
+        examPart?: any | null;
     }): SubjectPart {
         return new SubjectPart(
             props.id,
             props.subjectId,
-            props.examTypeId,
+            props.examPartId,
             props.duration ?? null,
-            props.examType ?? null,
+            props.examPart ?? null,
             new Date(),
             new Date(),
         );
@@ -33,18 +33,18 @@ export class SubjectPart {
     static reconstitute(props: {
         id: string;
         subjectId: string;
-        examTypeId: string;
+        examPartId: string;
         duration: number | null;
-        examType: any | null;
+        examPart: any | null;
         createdAt: Date;
         updatedAt: Date;
     }): SubjectPart {
         return new SubjectPart(
             props.id,
             props.subjectId,
-            props.examTypeId,
+            props.examPartId,
             props.duration,
-            props.examType,
+            props.examPart,
             props.createdAt,
             props.updatedAt,
         );

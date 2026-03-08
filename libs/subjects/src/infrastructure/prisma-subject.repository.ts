@@ -12,6 +12,7 @@ export class PrismaSubjectRepository implements ISubjectRepository {
             name: subject.name,
             semesterId: subject.semesterId,
             department: subject.department,
+            isCoursera: subject.isCoursera,
             updatedAt: new Date(),
         };
 
@@ -24,7 +25,7 @@ export class PrismaSubjectRepository implements ISubjectRepository {
                 createdAt: subject.createdAt,
             },
             include: {
-                parts: { include: { examType: true } },
+                parts: { include: { examPart: true } },
                 semester: true
             },
         });
@@ -36,7 +37,7 @@ export class PrismaSubjectRepository implements ISubjectRepository {
         const result = await this.prisma.subject.findUnique({
             where: { id },
             include: {
-                parts: { include: { examType: true } },
+                parts: { include: { examPart: true } },
                 semester: true
             },
         });
@@ -48,7 +49,7 @@ export class PrismaSubjectRepository implements ISubjectRepository {
         const result = await this.prisma.subject.findUnique({
             where: { code },
             include: {
-                parts: { include: { examType: true } },
+                parts: { include: { examPart: true } },
                 semester: true
             },
         });
@@ -63,7 +64,7 @@ export class PrismaSubjectRepository implements ISubjectRepository {
                 department: query?.department,
             },
             include: {
-                parts: { include: { examType: true } },
+                parts: { include: { examPart: true } },
                 semester: true
             },
             orderBy: { code: 'asc' },
@@ -101,7 +102,7 @@ export class PrismaSubjectRepository implements ISubjectRepository {
             this.prisma.subject.findMany({
                 where,
                 include: {
-                    parts: { include: { examType: true } },
+                    parts: { include: { examPart: true } },
                     semester: true
                 },
                 skip: skipVal,
@@ -146,7 +147,7 @@ export class PrismaSubjectRepository implements ISubjectRepository {
     async savePart(part: SubjectPart): Promise<SubjectPart> {
         const data = {
             subjectId: part.subjectId,
-            examTypeId: part.examTypeId,
+            examPartId: part.examPartId,
             duration: part.duration,
             updatedAt: new Date(),
         };
@@ -164,9 +165,9 @@ export class PrismaSubjectRepository implements ISubjectRepository {
         return SubjectPart.reconstitute({
             id: result.id,
             subjectId: result.subjectId,
-            examTypeId: result.examTypeId,
+            examPartId: result.examPartId,
             duration: result.duration,
-            examType: (result as any).examType || null,
+            examPart: (result as any).examPart || null,
             createdAt: result.createdAt,
             updatedAt: result.updatedAt,
         });

@@ -46,7 +46,7 @@ export class CreateExamSessionDto {
     @IsOptional()
     @IsArray()
     @IsString({ each: true })
-    examType?: string[];
+    examPart?: string[];
 
     @ApiProperty({ example: 'Scheduled', enum: ['Ongoing', 'Ended', 'Scheduled'], description: 'Session status', required: false })
     @IsOptional()

@@ -39,7 +39,7 @@ export class CreateSubjectHandler {
                 const part = SubjectPart.create({
                     id: uuidv4(),
                     subjectId: subjectId,
-                    examTypeId: partDto.examTypeId,
+                    examPartId: partDto.examPartId,
                     duration: partDto.duration,
                 });
                 await this.subjectRepository.savePart(part);

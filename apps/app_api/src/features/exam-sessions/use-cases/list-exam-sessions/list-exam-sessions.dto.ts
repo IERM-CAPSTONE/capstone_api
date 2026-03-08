@@ -76,4 +76,14 @@ export class ListExamSessionsDto {
     @IsOptional()
     @IsString()
     studentId?: string;
+
+    @ApiProperty({ required: false, enum: ['HCM', 'HN', 'DN', 'QN', 'CT'] })
+    @IsOptional()
+    @IsString()
+    campus?: string;
+
+    @ApiProperty({ required: false, enum: ['PE', 'FE', 'TE', 'RE'] })
+    @IsOptional()
+    @IsString()
+    examType?: string;
 }

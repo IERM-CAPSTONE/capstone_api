@@ -1,8 +1,8 @@
-model ExamSessionToExamType {
+model ExamSessionToExamPart {
   A String
   B String
 
-  @@id([A, B], map: "_ExamSessionToExamType_AB_pkey")
-  @@index([B], map: "_ExamSessionToExamType_B_index")
-  @@map("_ExamSessionToExamType")
+  @@id([A, B], map: "_ExamSessionToExamPart_AB_pkey")
+  @@index([B], map: "_ExamSessionToExamPart_B_index")
+  @@map("_ExamSessionToExamPart")
 }

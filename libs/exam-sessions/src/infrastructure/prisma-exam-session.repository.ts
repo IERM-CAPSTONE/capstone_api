@@ -15,6 +15,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examCode: session.examCode,
             openCode: session.openCode,
             status: session.status as any,
+            campus: session.campus as any,
             examType: session.examType as any,
             note: session.note,
             updatedAt: session.updatedAt,
@@ -40,15 +41,23 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 ...data,
                 ...createRelationData,
                 createdAt: session.createdAt,
+                examParts: {
+                    connect: session.examPart.map(code => ({ code }))
+                }
             },
             update: {
                 ...data,
                 ...updateRelationData,
+                examParts: {
+                    set: session.examPart.map(code => ({ code }))
+                }
             },
             include: {
                 examRoom: true,
                 proctor: true,
                 hallInvigilator: true,
+                semester: true,
+                examParts: true,
             }
         });
 
@@ -62,6 +71,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 examRoom: true,
                 proctor: true,
                 hallInvigilator: true,
+                semester: true,
+                examParts: true,
             }
         });
         if (!found) return null;
@@ -82,6 +93,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         examRoomId?: string;
         proctorId?: string;
         semesterId?: string;
+        campus?: string;
+        examType?: string;
         studentId?: string;
         skip?: number;
         take?: number;
@@ -100,6 +113,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 examRoom: true,
                 proctor: true,
                 hallInvigilator: true,
+                semester: true,
+                examParts: true,
             }
         });
 
@@ -174,6 +189,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         if (query?.examRoomId) where.examRoomId = query.examRoomId;
         if (query?.proctorId) where.proctorId = query.proctorId;
         if (query?.semesterId) where.semesterId = query.semesterId;
+        if (query?.campus) where.campus = query.campus;
+        if (query?.examType) where.examType = query.examType;
 
         if (query?.studentId) {
             where.studentExams = {
@@ -222,6 +239,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 examRoom: true,
                 proctor: true,
                 hallInvigilator: true,
+                semester: true,
+                examParts: true,
             },
         });
 
@@ -253,6 +272,26 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         return this.prisma.examSession.count({ where });
     }
 
+    async updateStatusBulk(ids: string[], status: string): Promise<number> {
+        const result = await this.prisma.examSession.updateMany({
+            where: { id: { in: ids } },
+            data: { status: status as any }
+        });
+        return result.count;
+    }
+
+    async publishGeneratedDrafts(semesterId: string, campus: string): Promise<number> {
+        const result = await this.prisma.examSession.updateMany({
+            where: {
+                semesterId,
+                campus: campus as any,
+                status: 'Draft'
+            },
+            data: { status: 'Scheduled' }
+        });
+        return result.count;
+    }
+
     async delete(id: string): Promise<void> {
         await this.prisma.examSession.delete({ where: { id } });
     }
@@ -281,7 +320,6 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 AND: [
                     { examOpenTime: { lt: endTime } },
                     { examCloseTime: { gt: startTime } },
-                    { isArchived: false },
                 ],
                 OR: orConditions,
             },
@@ -289,6 +327,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 examRoom: true,
                 proctor: true,
                 hallInvigilator: true,
+                semester: true,
             },
         });
 

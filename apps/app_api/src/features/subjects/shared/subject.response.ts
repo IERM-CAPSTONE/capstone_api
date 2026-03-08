@@ -6,13 +6,13 @@ export class SubjectPartResponse {
     id: string;
 
     @ApiProperty()
-    examTypeId: string;
+    examPartId: string;
 
     @ApiProperty({ required: false, nullable: true })
     duration: number | null;
 
     @ApiProperty({ required: false, nullable: true })
-    examType?: {
+    examPart?: {
         id: string;
         code: string;
         name: string | null;
@@ -34,6 +34,9 @@ export class SubjectResponse {
 
     @ApiProperty({ required: false, nullable: true })
     department: string | null;
+
+    @ApiProperty()
+    isCoursera: boolean;
 
     @ApiProperty({ required: false, nullable: true })
     semester?: {
@@ -81,14 +84,15 @@ export function toSubjectResponse(subject: Subject): SubjectResponse {
             name: subject.semester.name,
         } : null,
         department: subject.department,
+        isCoursera: subject.isCoursera,
         parts: subject.parts.map(p => ({
             id: p.id,
-            examTypeId: p.examTypeId,
+            examPartId: p.examPartId,
             duration: p.duration,
-            examType: p.examType ? {
-                id: p.examType.id,
-                code: p.examType.code,
-                name: p.examType.name,
+            examPart: p.examPart ? {
+                id: p.examPart.id,
+                code: p.examPart.code,
+                name: p.examPart.name,
             } : null,
         })),
         createdAt: subject.createdAt,

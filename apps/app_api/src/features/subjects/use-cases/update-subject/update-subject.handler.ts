@@ -35,7 +35,7 @@ export class UpdateSubjectHandler {
                 const part = SubjectPart.create({
                     id: uuidv4(),
                     subjectId: id,
-                    examTypeId: partDto.examTypeId,
+                    examPartId: partDto.examPartId,
                     duration: partDto.duration,
                 });
                 await this.subjectRepository.savePart(part);

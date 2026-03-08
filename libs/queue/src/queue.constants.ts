@@ -46,6 +46,8 @@ export const MESSAGE_PATTERNS = {
         AUTO_GENERATE_SCHEDULE: 'exam.auto_generate.schedule',
         /** Thông báo import hoàn tất */
         IMPORT_FINISHED: 'exam.import.finished',
+        /** Thông báo tạo lịch tự động hoàn tất */
+        AUTO_GENERATE_FINISHED: 'exam.auto_generate.finished',
     },
     // Face Recognition Patterns
     FACE: {

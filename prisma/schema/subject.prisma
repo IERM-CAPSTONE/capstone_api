@@ -1,4 +1,3 @@
-/// Represents a subject in the system
 model Subject {
   id         String        @id @default(uuid())
   code       String        @unique
@@ -7,6 +6,8 @@ model Subject {
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
   semesterId String?
+  isCoursera Boolean       @default(false)
+  isMajor    Boolean       @default(false)
   semester   Semester?     @relation(fields: [semesterId], references: [id])
   parts      SubjectPart[]
 
@@ -18,14 +19,14 @@ model Subject {
 model SubjectPart {
   id         String   @id @default(uuid())
   subjectId  String
-  examTypeId String
+  examPartId String
   duration   Int?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   subject    Subject  @relation(fields: [subjectId], references: [id])
-  examType   ExamType @relation(fields: [examTypeId], references: [id])
+  examPart   ExamPart @relation(fields: [examPartId], references: [id])
 
-  @@unique([subjectId, examTypeId])
+  @@unique([subjectId, examPartId])
   @@index([subjectId])
-  @@index([examTypeId])
+  @@index([examPartId])
 }

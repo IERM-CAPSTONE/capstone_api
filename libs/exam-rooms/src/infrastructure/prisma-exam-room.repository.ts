@@ -47,7 +47,7 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
 
     async findMany(query?: {
         roomNumber?: string;
-        campus?: string;
+        campus?: string | string[];
         skip?: number;
         take?: number;
     }): Promise<ExamRoom[]> {
@@ -58,7 +58,11 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
         }
 
         if (query?.campus !== undefined) {
-            where.campus = query.campus as any;
+            if (Array.isArray(query.campus)) {
+                where.campus = { in: query.campus };
+            } else {
+                where.campus = query.campus as any;
+            }
         }
 
         const skipVal = isNaN(query?.skip) || query?.skip < 0 ? 0 : Math.floor(query.skip);
@@ -92,13 +96,19 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
 
         if (query.id) where.id = query.id;
         if (query.roomNumber !== undefined) where.roomNumber = query.roomNumber;
-        if (query.campus !== undefined) where.campus = query.campus as any;
+        if (query.campus !== undefined) {
+            if (Array.isArray(query.campus)) {
+                where.campus = { in: query.campus };
+            } else {
+                where.campus = query.campus as any;
+            }
+        }
 
         const count = await this.prisma.examRoom.count({ where });
         return count > 0;
     }
 
-    async count(query?: { roomNumber?: string; campus?: string }): Promise<number> {
+    async count(query?: { roomNumber?: string; campus?: string | string[] }): Promise<number> {
         const where: any = {};
 
         if (query?.roomNumber !== undefined) {
@@ -106,7 +116,11 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
         }
 
         if (query?.campus !== undefined) {
-            where.campus = query.campus as any;
+            if (Array.isArray(query.campus)) {
+                where.campus = { in: query.campus };
+            } else {
+                where.campus = query.campus as any;
+            }
         }
 
         return this.prisma.examRoom.count({ where });

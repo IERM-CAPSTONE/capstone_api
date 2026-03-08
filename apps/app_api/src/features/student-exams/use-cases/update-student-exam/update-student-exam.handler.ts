@@ -12,7 +12,7 @@ export class UpdateStudentExamHandler {
 
     async execute(id: string, dto: UpdateStudentExamDto): Promise<StudentExamResponse> {
         const studentExam = await this.studentExamRepository.findById(id);
-        
+
         if (!studentExam) {
             throw new Error(`Student exam with id '${id}' not found`);
         }
@@ -20,13 +20,6 @@ export class UpdateStudentExamHandler {
         const updated = studentExam.update({
             seatNumber: dto.seatNumber,
             seatPosition: dto.seatPosition,
-            status: dto.status,
-            currentLocation: dto.currentLocation,
-            identityId: dto.identityId,
-            isMatched: dto.isMatched,
-            checkinTime: dto.checkinTime,
-            checkoutTime: dto.checkoutTime,
-            isValid: dto.isValid,
         });
 
         const saved = await this.studentExamRepository.save(updated);

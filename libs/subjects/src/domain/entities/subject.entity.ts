@@ -10,6 +10,7 @@ export class Subject {
         public readonly name: string | null,
         public readonly semesterId: string | null,
         public readonly department: string | null,
+        public readonly isCoursera: boolean,
         public readonly parts: SubjectPart[],
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
@@ -22,6 +23,7 @@ export class Subject {
         name?: string | null;
         semesterId?: string | null;
         department?: string | null;
+        isCoursera?: boolean;
         parts?: SubjectPart[];
     }): Subject {
         if (!props.code || props.code.trim() === '') {
@@ -34,6 +36,7 @@ export class Subject {
             props.name ?? null,
             props.semesterId ?? null,
             props.department ?? null,
+            props.isCoursera ?? false,
             props.parts ?? [],
             new Date(),
             new Date(),
@@ -46,6 +49,7 @@ export class Subject {
         name: string | null;
         semesterId: string | null;
         department: string | null;
+        isCoursera: boolean;
         parts: SubjectPart[];
         createdAt: Date;
         updatedAt: Date;
@@ -57,6 +61,7 @@ export class Subject {
             props.name,
             props.semesterId,
             props.department,
+            props.isCoursera,
             props.parts,
             props.createdAt,
             props.updatedAt,
@@ -69,9 +74,9 @@ export class Subject {
             ? found.parts.map((p: any) => SubjectPart.reconstitute({
                 id: p.id,
                 subjectId: p.subjectId,
-                examTypeId: p.examTypeId,
+                examPartId: p.examPartId,
                 duration: p.duration,
-                examType: p.examType ? p.examType : null,
+                examPart: p.examPart ? p.examPart : null,
                 createdAt: p.createdAt,
                 updatedAt: p.updatedAt,
             }))
@@ -83,6 +88,7 @@ export class Subject {
             name: found.name,
             semesterId: found.semesterId,
             department: found.department,
+            isCoursera: found.isCoursera ?? false,
             parts,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
@@ -98,6 +104,7 @@ export class Subject {
         name?: string | null;
         semesterId?: string | null;
         department?: string | null;
+        isCoursera?: boolean;
     }): Subject {
         return new Subject(
             this.id,
@@ -105,6 +112,7 @@ export class Subject {
             props.name !== undefined ? props.name : this.name,
             props.semesterId !== undefined ? props.semesterId : this.semesterId,
             props.department !== undefined ? props.department : this.department,
+            props.isCoursera !== undefined ? props.isCoursera : this.isCoursera,
             this.parts,
             this.createdAt,
             new Date(),
