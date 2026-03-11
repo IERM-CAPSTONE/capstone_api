@@ -31,6 +31,9 @@ export class StudentExamResponse {
     @ApiProperty({ nullable: true })
     stt: number | null;
 
+    @ApiProperty({ nullable: true })
+    studentEmail: string | null;
+
     @ApiProperty({
         description: 'Attendance/submission status per exam part',
         type: 'array',
@@ -81,6 +84,7 @@ export function toStudentExamResponse(studentExam: any): StudentExamResponse {
         updatedAt: studentExam.updatedAt,
         studentName: studentExam.studentName,
         studentCode: studentExam.studentCode,
+        studentEmail: studentExam.studentEmail,
         stt: studentExam.stt,
         parts: (studentExam.parts || []).map((p: any) => ({
             id: p.id,

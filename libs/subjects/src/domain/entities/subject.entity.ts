@@ -11,6 +11,7 @@ export class Subject {
         public readonly semesterId: string | null,
         public readonly department: string | null,
         public readonly isCoursera: boolean,
+        public readonly isMajor: boolean,
         public readonly parts: SubjectPart[],
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
@@ -24,6 +25,7 @@ export class Subject {
         semesterId?: string | null;
         department?: string | null;
         isCoursera?: boolean;
+        isMajor?: boolean;
         parts?: SubjectPart[];
     }): Subject {
         if (!props.code || props.code.trim() === '') {
@@ -37,6 +39,7 @@ export class Subject {
             props.semesterId ?? null,
             props.department ?? null,
             props.isCoursera ?? false,
+            props.isMajor ?? false,
             props.parts ?? [],
             new Date(),
             new Date(),
@@ -50,6 +53,7 @@ export class Subject {
         semesterId: string | null;
         department: string | null;
         isCoursera: boolean;
+        isMajor: boolean;
         parts: SubjectPart[];
         createdAt: Date;
         updatedAt: Date;
@@ -62,6 +66,7 @@ export class Subject {
             props.semesterId,
             props.department,
             props.isCoursera,
+            props.isMajor,
             props.parts,
             props.createdAt,
             props.updatedAt,
@@ -89,6 +94,7 @@ export class Subject {
             semesterId: found.semesterId,
             department: found.department,
             isCoursera: found.isCoursera ?? false,
+            isMajor: found.isMajor ?? false,
             parts,
             createdAt: found.createdAt,
             updatedAt: found.updatedAt,
@@ -105,6 +111,7 @@ export class Subject {
         semesterId?: string | null;
         department?: string | null;
         isCoursera?: boolean;
+        isMajor?: boolean;
     }): Subject {
         return new Subject(
             this.id,
@@ -113,6 +120,7 @@ export class Subject {
             props.semesterId !== undefined ? props.semesterId : this.semesterId,
             props.department !== undefined ? props.department : this.department,
             props.isCoursera !== undefined ? props.isCoursera : this.isCoursera,
+            props.isMajor !== undefined ? props.isMajor : this.isMajor,
             this.parts,
             this.createdAt,
             new Date(),

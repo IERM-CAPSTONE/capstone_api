@@ -71,6 +71,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             updatedAt: found.updatedAt,
             studentName: found.student?.fullName,
             studentCode: found.student?.code,
+            studentEmail: found.student?.email,
             parts: (found as any).parts,
         });
     }
@@ -154,6 +155,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             updatedAt: item.updatedAt,
             studentName: item.student?.fullName,
             studentCode: item.student?.code,
+            studentEmail: item.student?.email,
             parts: (item as any).parts,
         }));
 
@@ -176,8 +178,33 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
         return count > 0;
     }
 
-    async checkIn(studentId: string, examSessionId: string): Promise<void> {
-        // Method placeholder - checkIn logic needs to be redesigned based on the new schema
-        // since status and checkinTime were removed from StudentExam
+    async checkIn(studentId: string, examSessionId: string, examPartCode?: string): Promise<void> {
+        // 1. Find the student exam record
+        const studentExam = await this.prisma.studentExam.findFirst({
+            where: { studentId, examSessionId }
+        });
+
+        if (!studentExam) return;
+
+        // 2. Prepare the update condition
+        const whereClause: any = { studentExamId: studentExam.id };
+        if (examPartCode) {
+            // Find by specific part code if provided
+            const part = await this.prisma.examPart.findFirst({ where: { code: examPartCode } });
+            if (part) {
+                whereClause.examPartId = part.id;
+            }
+        }
+
+        // 3. Update isCheckedIn for the matching part(s)
+        await this.prisma.studentExamPart.updateMany({
+            where: whereClause,
+            data: {
+                isCheckedIn: true,
+                checkInTime: new Date(),
+            }
+        });
+
+        console.log(`[Repository] Checked in student ${studentId} for session ${examSessionId}${examPartCode ? ` (Part: ${examPartCode})` : ' (All parts)'}`);
     }
 }

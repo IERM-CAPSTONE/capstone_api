@@ -106,6 +106,8 @@ export class AutoGenerateScheduleProcessor {
 
             // 4. Call Scheduling Service
             const mainCampus = campuses[0] as Campus;
+            const semester = await this.prisma.semester.findUnique({ where: { id: data.semesterId } });
+            require('fs').writeFileSync('/tmp/debug_semester.json', JSON.stringify(semester, null, 2));
 
             const scheduledSessions = await this.schedulingService.generateSchedule({
                 semesterId: data.semesterId,
@@ -277,7 +279,7 @@ export class AutoGenerateScheduleProcessor {
         }
     }
 
-    private parseCsv(base64Data: string, campus?: Campus): { studentCode: string; subjectCode: string; date?: string; slot?: number; scheduleId?: string }[] {
+    private parseCsv(base64Data: string, campus?: Campus): { studentCode: string; subjectCode: string; examType?: string; date?: string; slot?: number; scheduleId?: string }[] {
         const buffer = Buffer.from(base64Data, 'base64');
         const workbook = XLSX.read(buffer, { type: 'buffer' });
         const firstSheetName = workbook.SheetNames[0];
@@ -292,11 +294,18 @@ export class AutoGenerateScheduleProcessor {
             const rawStudentCode = String(item.Roll || item.RollNumber || item.studentCode || item.Login || '').trim();
             const subjectCode = String(item.SubCode || item.SubjectCode || item.subjectCode || '').trim().toUpperCase();
 
+            // Detect Exam Type from common columns
+            const rawExamType = String(item.ExamType || item.SessionType || item.Type || item.SType || '').trim().toUpperCase();
+            let examType: string | undefined = undefined;
+            if (rawExamType.includes('RE')) examType = 'RE';
+            else if (rawExamType.includes('PE')) examType = 'PE';
+            else if (rawExamType.includes('FE')) examType = 'FE';
+
             if (!rawStudentCode || !subjectCode) continue;
 
             const studentCode = rawStudentCode.toUpperCase();
-            // Prefix with campus to allow same student-subject in different campuses (useful for test data)
-            const pairKey = `${campus || 'DEFAULT'}|${studentCode}|${subjectCode}`;
+            // Prefix with campus and examType to allow same student-subject in different campuses or types
+            const pairKey = `${campus || 'DEFAULT'}|${studentCode}|${subjectCode}|${examType || 'ALL'}`;
 
             if (uniquePairs.has(pairKey)) continue;
 
@@ -304,6 +313,7 @@ export class AutoGenerateScheduleProcessor {
             result.push({
                 studentCode: rawStudentCode,
                 subjectCode,
+                examType,
                 scheduleId: item.ScheduleID ? String(item.ScheduleID) : undefined
             });
         }

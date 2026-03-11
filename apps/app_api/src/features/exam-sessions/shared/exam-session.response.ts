@@ -73,6 +73,9 @@ export class ExamSessionResponse {
 
     @ApiProperty({ nullable: true })
     totalSeats: number | null;
+
+    @ApiProperty({ example: 40 })
+    studentCount: number;
 }
 
 export function toExamSessionResponse(session: ExamSession): ExamSessionResponse {
@@ -101,6 +104,7 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         maxRows: session.maxRows,
         maxColumns: session.maxColumns,
         totalSeats: session.totalSeats,
+        studentCount: session.studentCount,
     };
 }
 

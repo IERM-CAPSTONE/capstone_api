@@ -13,6 +13,7 @@ export class PrismaSubjectRepository implements ISubjectRepository {
             semesterId: subject.semesterId,
             department: subject.department,
             isCoursera: subject.isCoursera,
+            isMajor: subject.isMajor,
             updatedAt: new Date(),
         };
 

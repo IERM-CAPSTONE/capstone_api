@@ -45,53 +45,73 @@ export class ExamImportProcessor {
 
         try {
             const buffer = Buffer.from(data.fileContent, 'base64');
-            const workbook = xlsx.read(buffer, { type: 'buffer' });
+            let workbook: xlsx.WorkBook;
+
+            // More robust reading for CSV files
+            if (data.fileName && data.fileName.toLowerCase().endsWith('.csv')) {
+                const content = buffer.toString('utf-8');
+                workbook = xlsx.read(content, { type: 'string' });
+            } else {
+                workbook = xlsx.read(buffer, { type: 'buffer' });
+            }
+
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
             const items: any[] = xlsx.utils.sheet_to_json(worksheet);
 
-            this.logger.log(`Found ${items.length} rows for rooms import.`);
+            this.logger.log(`Found ${items.length} rows for rooms import in file ${data.fileName}.`);
 
             let successCount = 0;
             let errorCount = 0;
 
             for (const item of items) {
                 try {
-                    const { RoomNumber, Capacity, Campus } = item;
+                    // Avoid naming collision with Campus enum and support both header styles
+                    const itemRoomNum = item.RoomNumber || item.Room || item.room;
+                    const itemCapacity = item.Capacity || item.capacity;
+                    const itemCampus = item.Campus || item.campus;
 
-                    if (RoomNumber === undefined) {
-                        this.logger.warn(`Skipping row missing RoomNumber: ${JSON.stringify(item)}`);
+                    if (itemRoomNum === undefined || itemRoomNum === null || itemRoomNum === '') {
+                        this.logger.warn(`Skipping row missing identification: ${JSON.stringify(item)}`);
                         errorCount++;
                         continue;
                     }
 
-                    const campusStr = Campus ? String(Campus).trim().toUpperCase() : undefined;
+                    const roomNumStr = String(itemRoomNum).trim();
+                    if (!roomNumStr) continue;
+
+                    // Prioritize campusId from job data, then Campus from Excel item
+                    const campusStr = data.campusId || (itemCampus ? String(itemCampus).trim().toUpperCase() : undefined);
+                    const campusEnum = campusStr as Campus;
 
                     // Check if exists
                     const existing = await this.examRoomRepository.findOne({
-                        roomNumber: String(RoomNumber),
-                        campus: campusStr as Campus
+                        roomNumber: roomNumStr,
+                        campus: campusEnum
                     });
 
                     if (existing) {
-                        this.logger.debug(`Room ${RoomNumber} at campus ${campusStr || 'default'} already exists, updating...`);
+                        this.logger.debug(`Room ${roomNumStr} at campus ${campusStr || 'default'} already exists, updating...`);
                         const updated = existing.update({
-                            capacity: Capacity ? Number(Capacity) : undefined,
-                            campus: campusStr as Campus
+                            capacity: itemCapacity ? Number(itemCapacity) : undefined,
+                            campus: campusEnum
                         });
                         await this.examRoomRepository.save(updated);
                     } else {
                         const room = ExamRoom.create({
                             id: uuidv4(),
-                            roomNumber: String(RoomNumber),
-                            capacity: Capacity ? Number(Capacity) : undefined,
-                            campus: campusStr as Campus
+                            roomNumber: roomNumStr,
+                            capacity: itemCapacity ? Number(itemCapacity) : 18,
+                            max_rows: 6,
+                            max_columns: 3,
+                            total_seats: 18,
+                            campus: campusEnum
                         });
                         await this.examRoomRepository.save(room);
                     }
                     successCount++;
                 } catch (err) {
-                    this.logger.error(`Error processing room ${item.RoomNumber}: ${err.message}`);
+                    this.logger.error(`Error processing room ${item.RoomNumber || item.Room}: ${err.message}`);
                     errorCount++;
                 }
             }
@@ -163,10 +183,10 @@ export class ExamImportProcessor {
                             data: {
                                 id: uuidv4(),
                                 roomNumber: parsed.roomName,
-                                max_rows: 5,
-                                max_columns: 6,
-                                total_seats: 30,
-                                capacity: 30,
+                                max_rows: 6,
+                                max_columns: 3,
+                                total_seats: 18,
+                                capacity: 18,
                                 status: 'Available'
                             }
                         });

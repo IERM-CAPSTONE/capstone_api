@@ -28,6 +28,8 @@ export class CreateSubjectHandler {
             name: dto.name,
             semesterId: dto.semesterId,
             department: dto.department,
+            isCoursera: dto.isCoursera,
+            isMajor: dto.isMajor,
         });
 
         // Persist subject first

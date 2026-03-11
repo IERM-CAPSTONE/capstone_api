@@ -16,5 +16,5 @@ export interface IStudentExamRepository {
     }): Promise<{ data: StudentExam[]; total: number }>;
     delete(id: string): Promise<void>;
     exists(criteria: { examSessionId: string; studentId: string }): Promise<boolean>;
-    checkIn(studentId: string, examSessionId: string): Promise<void>;
+    checkIn(studentId: string, examSessionId: string, examPartCode?: string): Promise<void>;
 }

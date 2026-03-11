@@ -134,7 +134,7 @@ export class AuthenticateFaceHandler {
             } else {
               // 3. Update check-in status if correct room
               this.logger.log(`Student ${studentCode} confirmed for session. Updating check-in status...`);
-              await this.studentExamRepository.checkIn(result.student_id, dto.examSessionId);
+              await this.studentExamRepository.checkIn(result.student_id, dto.examSessionId, dto.examPartCode);
             }
           }
         } catch (e) {

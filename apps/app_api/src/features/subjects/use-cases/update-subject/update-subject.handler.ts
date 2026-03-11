@@ -24,6 +24,8 @@ export class UpdateSubjectHandler {
             name: dto.name,
             semesterId: dto.semesterId,
             department: dto.department,
+            isCoursera: dto.isCoursera,
+            isMajor: dto.isMajor,
         });
 
         await this.subjectRepository.save(updated);

@@ -22,6 +22,7 @@ import { ListUsersHandler, ListUsersEndpoint } from './use-cases/list-users';
 // Use Cases - Authentication
 import { FirebaseLoginHandler, FirebaseLoginEndpoint } from './use-cases/firebase-login';
 import { GoogleLoginHandler, GoogleLoginEndpoint } from './use-cases/google-login';
+import { GoogleIdTokenHandler, GoogleIdTokenEndpoint } from './use-cases/google-id-token';
 import { RefreshTokenHandler, RefreshTokenEndpoint } from './use-cases/refresh-token';
 import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
 
@@ -48,6 +49,7 @@ import { MeEndpoint } from './use-cases/me';
         // Authentication
         FirebaseLoginEndpoint,
         GoogleLoginEndpoint,
+        GoogleIdTokenEndpoint,
         RefreshTokenEndpoint,
         LogoutEndpoint,
         ImportStudentEndpoint,
@@ -72,6 +74,7 @@ import { MeEndpoint } from './use-cases/me';
         // Handlers - Authentication
         FirebaseLoginHandler,
         GoogleLoginHandler,
+        GoogleIdTokenHandler,
         RefreshTokenHandler,
         LogoutHandler,
         ImportStudentHandler,

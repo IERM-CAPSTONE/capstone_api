@@ -38,6 +38,9 @@ export class SubjectResponse {
     @ApiProperty()
     isCoursera: boolean;
 
+    @ApiProperty()
+    isMajor: boolean;
+
     @ApiProperty({ required: false, nullable: true })
     semester?: {
         id: string;
@@ -85,6 +88,7 @@ export function toSubjectResponse(subject: Subject): SubjectResponse {
         } : null,
         department: subject.department,
         isCoursera: subject.isCoursera,
+        isMajor: subject.isMajor,
         parts: subject.parts.map(p => ({
             id: p.id,
             examPartId: p.examPartId,

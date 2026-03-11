@@ -14,6 +14,7 @@ export class StudentExam {
         public readonly stt: number | null = null,
         public readonly studentName: string | null = null,
         public readonly studentCode: string | null = null,
+        public readonly studentEmail: string | null = null,
         public readonly parts: any[] = [],
     ) { }
 
@@ -48,6 +49,7 @@ export class StudentExam {
         stt?: number | null;
         studentName?: string | null;
         studentCode?: string | null;
+        studentEmail?: string | null;
         parts?: any[];
     }): StudentExam {
         return new StudentExam(
@@ -61,6 +63,7 @@ export class StudentExam {
             props.stt ?? null,
             props.studentName,
             props.studentCode,
+            props.studentEmail,
             props.parts ?? [],
         );
     }

@@ -20,4 +20,9 @@ export class AuthenticateFaceDto {
   @IsOptional()
   @IsString()
   examSessionId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  examPartCode?: string;
 }

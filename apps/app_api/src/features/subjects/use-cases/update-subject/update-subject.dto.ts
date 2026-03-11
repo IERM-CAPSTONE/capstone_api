@@ -19,6 +19,14 @@ export class UpdateSubjectDto {
     @IsOptional()
     department?: string;
 
+    @ApiProperty({ example: false, description: 'Is Coursera subject', required: false })
+    @IsOptional()
+    isCoursera?: boolean;
+
+    @ApiProperty({ example: false, description: 'Is Major subject', required: false })
+    @IsOptional()
+    isMajor?: boolean;
+
     @ApiProperty({ type: [CreateSubjectPartDto], required: false, description: 'Replace all parts if provided' })
     @IsOptional()
     @IsArray()

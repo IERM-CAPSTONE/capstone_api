@@ -2,6 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { Campus } from '@prisma/client';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const solver = require('javascript-lp-solver');
+
 export interface SchedulingConstraints {
     semesterId: string;
     campus: Campus;
@@ -42,253 +45,229 @@ export interface ScheduledSession {
 export class SchedulingService {
     private readonly logger = new Logger(SchedulingService.name);
 
-    // Major subjects (4 slots)
-    private readonly MAJOR_SLOTS = [
-        { open: '07:00' }, // Slot 1
-        { open: '09:30' }, // Slot 2
-        { open: '12:30' }, // Slot 3
-        { open: '15:00' }, // Slot 4
-    ];
+    private readonly START_HOUR = 7;
+    private readonly START_MINUTE = 30;
+    private readonly MIN_GAP_MINUTES = 40;
 
-    // Normal subjects (6 slots)
-    private readonly NORMAL_SLOTS = [
-        { open: '07:00' }, // Slot 1
-        { open: '08:45' }, // Slot 2
-        { open: '10:30' }, // Slot 3
-        { open: '12:30' }, // Slot 4
-        { open: '14:15' }, // Slot 5
-        { open: '16:00' }, // Slot 6
-    ];
+    private subjectCache = new Map<string, any>();
 
     constructor(private readonly prisma: PrismaService) { }
 
     async generateSchedule(constraints: SchedulingConstraints): Promise<ScheduledSession[]> {
-        this.logger.log(`Starting advanced scheduling for campus ${constraints.campus}`);
-
-        // 1. Get Semester info for start date
         const semester = await this.prisma.semester.findUnique({
             where: { id: constraints.semesterId }
         });
         if (!semester) throw new Error(`Semester ${constraints.semesterId} not found`);
 
-        // 2. Map Students to Subjects AND Campuses from CSV
-        // Structure: Map<SubjectCode, Map<Campus, StudentCodes[]>>
-        const subjectToCampusToStudents = new Map<string, Map<Campus, string[]>>();
+        this.logger.log(`[CP_SOLVER] Starting High-Performance Constraint Solver for ${constraints.campus}...`);
 
+        // 1. Prepare Data
+        const subjectToCampusToStudents = new Map<string, Map<Campus, string[]>>();
         for (const item of constraints.excelData) {
-            const subCode = item.subjectCode;
+            const subCode = item.subjectCode.toUpperCase();
             const studentCode = item.studentCode;
             const campus = item.campus || constraints.campus;
-
-            if (!subjectToCampusToStudents.has(subCode)) {
-                subjectToCampusToStudents.set(subCode, new Map<Campus, string[]>());
-            }
+            if (!subjectToCampusToStudents.has(subCode)) subjectToCampusToStudents.set(subCode, new Map<Campus, string[]>());
             const campusMap = subjectToCampusToStudents.get(subCode);
-            if (!campusMap.has(campus)) {
-                campusMap.set(campus, []);
-            }
+            if (!campusMap.has(campus)) campusMap.set(campus, []);
             campusMap.get(campus).push(studentCode);
         }
 
         const csvSubjectCodes = Array.from(subjectToCampusToStudents.keys());
-        this.logger.log(`CSV contains ${csvSubjectCodes.length} unique subject codes.`);
-
-        // 3. Get Subject details (Parts)
-        const subjectsInDb = await this.prisma.subject.findMany({
-            where: {
-                semesterId: constraints.semesterId,
-                code: { in: csvSubjectCodes }
-            },
-            include: { parts: { include: { examPart: true } } }
-        });
-
-        this.logger.log(`Found ${subjectsInDb.length} matching subjects in DB`);
-
-        // Pre-fetch rooms to know capacity per campus
-        const allRooms = await this.prisma.examRoom.findMany({
-            where: { id: { in: constraints.roomIds } }
-        });
-        const campusCapacityMap = new Map<Campus, number>();
-        allRooms.forEach(r => {
-            const cap = (r as any).total_seats || ((r as any).max_rows * (r as any).max_columns) || 30;
-            if (!campusCapacityMap.has(r.campus as Campus)) {
-                campusCapacityMap.set(r.campus as Campus, cap);
-            }
-        });
-
-        const finalSessions: any[] = [];
-        const retakeSessions: any[] = [];
-        const practicalSessions: any[] = [];
-        const courseraFinalSessions: any[] = [];
-        const courseraRetakeSessions: any[] = [];
-
-        for (const sub of subjectsInDb) {
-            const campusToStudents = subjectToCampusToStudents.get(sub.code) || new Map<Campus, string[]>();
-
-            const campusNeeds: Record<string, { studentCodes: string[], numRooms: number }> = {};
-            campusToStudents.forEach((students, camp) => {
-                const capacity = campusCapacityMap.get(camp) || 30;
-                campusNeeds[camp] = {
-                    studentCodes: this.shuffle(students),
-                    numRooms: Math.ceil(students.length / capacity)
-                };
+        const missingCodes = csvSubjectCodes.filter(code => !this.subjectCache.has(code));
+        if (missingCodes.length > 0) {
+            const fetched = await this.prisma.subject.findMany({
+                where: { code: { in: missingCodes } },
+                include: { parts: { include: { examPart: true } } }
             });
-
-            if (Object.keys(campusNeeds).length === 0) continue;
-
-            if ((sub as any).isCoursera) {
-                if (sub.parts.length === 0) continue;
-                const totalDuration = sub.parts.reduce((acc, p) => acc + (p.duration || 180), 0);
-                const allPartIds = sub.parts.map(p => p.examPartId);
-                const sessionData = {
-                    subjectCode: sub.code,
-                    campusNeeds,
-                    duration: totalDuration,
-                    examPartIds: allPartIds,
-                    examType: 'FE' as const,
-                    partName: sub.parts.map(p => p.examPart.code.toUpperCase()).join('+'),
-                    note: sub.parts.length > 1 ? sub.parts.map(p => p.examPart.code.toUpperCase()).join(', ') : undefined,
-                    isMajor: true,
-                };
-
-                courseraFinalSessions.push(sessionData);
-                courseraRetakeSessions.push({
-                    ...sessionData,
-                    examType: 'RE' as const,
-                    note: sessionData.note ? `${sessionData.note} (Retake)` : 'Retake'
-                });
-            } else {
-                const peParts: any[] = [];
-                const nonPeParts: any[] = [];
-
-                for (const part of sub.parts) {
-                    const typeCode = (part.examPart?.code || '').toUpperCase();
-                    const typeName = (part.examPart?.name || '').toUpperCase();
-                    const isPE = typeCode === 'PE' || typeCode === 'P' || typeCode.includes('PRACTICAL') || typeName.includes('THỰC HÀNH');
-                    if (isPE) peParts.push(part);
-                    else nonPeParts.push(part);
-                }
-
-                for (const pe of peParts) {
-                    practicalSessions.push({
-                        subjectCode: sub.code,
-                        campusNeeds,
-                        duration: pe.duration || 90,
-                        examPartIds: [pe.examPartId],
-                        examType: 'PE' as const,
-                        partName: pe.examPart.name,
-                        isMajor: true,
-                    });
-                }
-
-                if (nonPeParts.length > 0) {
-                    const totalDuration = nonPeParts.reduce((acc, p) => acc + (p.duration || 60), 0);
-                    const allPartIds = nonPeParts.map(p => p.examPartId);
-                    const hasTE = nonPeParts.some(p => {
-                        const c = p.examPart.code.toUpperCase();
-                        return c === 'TE' || c === 'T';
-                    });
-                    const hasRetake = nonPeParts.some(p => p.examPart.code.toUpperCase().includes('RE'));
-
-                    const sessionData = {
-                        subjectCode: sub.code,
-                        campusNeeds,
-                        duration: totalDuration,
-                        examPartIds: allPartIds,
-                        examType: (hasTE ? 'TE' : 'FE') as 'FE' | 'TE',
-                        note: nonPeParts.length > 1 ? nonPeParts.map(p => p.examPart.code.toUpperCase()).join(', ') : undefined,
-                        isMajor: (sub as any).isMajor,
-                    };
-
-                    if (hasRetake) {
-                        retakeSessions.push({ ...sessionData, examType: 'RE' as const });
-                    } else {
-                        finalSessions.push(sessionData);
-                        retakeSessions.push({
-                            ...sessionData,
-                            examType: 'RE' as const,
-                            note: sessionData.note ? `${sessionData.note} (Retake)` : 'Retake'
-                        });
-                    }
-                }
-            }
+            fetched.forEach(s => this.subjectCache.set(s.code.toUpperCase(), s));
         }
 
-        const allScheduled: ScheduledSession[] = [];
-        const rooms = await this.prisma.examRoom.findMany({ where: { id: { in: constraints.roomIds } } });
+        const subjectsInDb = csvSubjectCodes.map(code => this.subjectCache.get(code)).filter(Boolean);
+        const allRoomsInDb = await this.prisma.examRoom.findMany({ where: { id: { in: constraints.roomIds } } });
+        
         const campusRooms = new Map<Campus, string[]>();
         const roomCapacityMap = new Map<string, number>();
-        rooms.forEach(r => {
-            if (!campusRooms.has(r.campus as Campus)) campusRooms.set(r.campus as Campus, []);
-            campusRooms.get(r.campus as Campus).push(r.id);
+        const campusCapacityMap = new Map<Campus, number>();
+
+        allRoomsInDb.forEach(r => {
+            const camp = r.campus as Campus;
+            if (!campusRooms.has(camp)) campusRooms.set(camp, []);
+            campusRooms.get(camp).push(r.id);
             const cap = (r as any).total_seats || ((r as any).max_rows * (r as any).max_columns) || 30;
             roomCapacityMap.set(r.id, cap);
+            if (!campusCapacityMap.has(camp)) campusCapacityMap.set(camp, cap);
         });
 
-        // practicalWeek
-        if (constraints.practicalWeek && practicalSessions.length > 0) {
-            allScheduled.push(...this.assignSynced(practicalSessions, campusRooms, semester.startDate, constraints.practicalWeek, true, roomCapacityMap, constraints.busySlots));
+        // 2. Identify All Session Goals (Nodes in the Constraint Graph)
+        const allPools: any[] = [];
+        for (const sub of subjectsInDb) {
+            const campusToStudents = subjectToCampusToStudents.get(sub.code.toUpperCase());
+            if (!campusToStudents) continue;
+
+            const peParts = sub.parts.filter(p => {
+                const code = p.examPart.code.toUpperCase();
+                const name = p.examPart.name.toUpperCase();
+                return code === 'PE' || code === 'P' || code.includes('PRACTICAL') || name.includes('THỰC HÀNH');
+            });
+            const reParts = sub.parts.filter(p => p.examPart.code.toUpperCase().includes('RE'));
+            const feParts = sub.parts.filter(p => !peParts.includes(p) && !reParts.includes(p));
+
+            const buildSession = (type: string, parts: any[], week: number | undefined) => {
+                if (!week || parts.length === 0) return null;
+                const campusNeeds: Record<string, { studentCodes: string[], numRooms: number }> = {};
+                campusToStudents.forEach((students, camp) => {
+                    const capacity = campusCapacityMap.get(camp) || 30;
+                    if (students.length > 0) {
+                        campusNeeds[camp] = { studentCodes: this.shuffle(students), numRooms: Math.ceil(students.length / capacity) };
+                    }
+                });
+                return {
+                    subjectCode: sub.code,
+                    campusNeeds,
+                    duration: parts.reduce((acc, p) => acc + (p.duration || 60), 0),
+                    examPartIds: parts.map(p => p.examPartId),
+                    examType: type as any,
+                    isMajor: sub.isMajor || sub.isCoursera,
+                    weekNum: week,
+                    note: parts.map(p => p.examPart.code.toUpperCase()).join(', ')
+                };
+            };
+
+            const pe = buildSession('PE', peParts, constraints.practicalWeek); if (pe) allPools.push(pe);
+            if (sub.isCoursera) {
+                const cf = buildSession('FE', feParts, constraints.courseraWeek ?? constraints.finalWeek); if (cf) allPools.push(cf);
+                const cr = buildSession('RE', reParts.length > 0 ? reParts : feParts, constraints.courseraRetakeWeek ?? constraints.retakeWeek); if (cr) allPools.push(cr);
+            } else {
+                const f = buildSession('FE', feParts, constraints.finalWeek); if (f) allPools.push(f);
+                const r = buildSession('RE', reParts.length > 0 ? reParts : feParts, constraints.retakeWeek); if (r) allPools.push(r);
+            }
         }
 
-        // courseraWeek
-        const courseraFinalWeek = constraints.courseraWeek ?? constraints.finalWeek;
-        if (courseraFinalSessions.length > 0) {
-            allScheduled.push(...this.assignSynced(courseraFinalSessions, campusRooms, semester.startDate, courseraFinalWeek, true, roomCapacityMap, constraints.busySlots));
+        // 3. MASTER ASSIGNMENT (LP-SOLVER)
+        // We use 'javascript-lp-solver' to find the best DAY for each subject pool
+        // to minimize the total days used while staying under campus capacity and student limits.
+        this.logger.log(`[HYBRID_SOLVER] Modeling Master Day-Assignment with javascript-lp-solver...`);
+
+        const model: any = {
+            optimize: "totalDays",
+            opType: "min",
+            constraints: {},
+            variables: {},
+            ints: {}
+        };
+
+        // For each pool and each possible day (0-6), create a binary variable X_p_d
+        const daysToTry = [0, 1, 2, 3, 4, 5]; 
+        const MINUTES_PER_DAY = 10 * 60; // Approx 10 hours of effective testing time per room
+
+        allPools.forEach((pool, pIdx) => {
+            const varNamePrefix = `p${pIdx}`;
+            const assignConstraint = `assign_p${pIdx}`;
+            model.constraints[assignConstraint] = { equal: 1 };
+
+            daysToTry.forEach(day => {
+                const varName = `${varNamePrefix}_d${day}`;
+                const poolDuration = pool.duration || 60;
+                
+                model.variables[varName] = {
+                    [assignConstraint]: 1,
+                    // Track room-minutes usage (Rooms * Duration)
+                    ...Object.keys(pool.campusNeeds).reduce((acc, camp) => {
+                        const roomsNeeded = pool.campusNeeds[camp].numRooms;
+                        acc[`cap_${camp}_d${day}`] = roomsNeeded * (poolDuration + this.MIN_GAP_MINUTES);
+                        return acc;
+                    }, {})
+                };
+                model.ints[varName] = 1;
+            });
+        });
+
+        // Add capacity constraints for each campus/day in minutes
+        campusRooms.forEach((rooms, camp) => {
+            daysToTry.forEach(day => {
+                // Total available minutes in all rooms for this campus/day
+                model.constraints[`cap_${camp}_d${day}`] = { max: rooms.length * MINUTES_PER_DAY };
+            });
+        });
+
+        const lpResult = solver.Solve(model);
+        this.logger.log(`[HYBRID_SOLVER] Master Plan feasibility: ${lpResult.feasible ? 'OPTIMAL' : 'FEASIBLE'}`);
+
+        // 4. FINE-GRAINED SCHEDULING (CP-SOLVER)
+        // Group pools by the day suggested by LP (shuffled for room placement)
+        const dayAssignments = new Map<number, any[]>();
+        Object.keys(lpResult).forEach(key => {
+            if (lpResult[key] === 1 && key.startsWith('p')) {
+                const [pPart, dPart] = key.split('_');
+                const pIdx = parseInt(pPart.substring(1));
+                const day = parseInt(dPart.substring(1));
+                if (!dayAssignments.has(day)) dayAssignments.set(day, []);
+                dayAssignments.get(day).push(allPools[pIdx]);
+            }
+        });
+
+        const weekStates = new Map<number, any>();
+        const getOrCreateState = (week: number) => {
+            if (!weekStates.has(week)) {
+                weekStates.set(week, { roomTimelines: new Map(), studentIntervals: new Map(), studentDayCounts: new Map() });
+            }
+            return weekStates.get(week);
+        };
+
+        const finalSchedule: ScheduledSession[] = [];
+        const sortedDays = Array.from(dayAssignments.keys()).sort((a, b) => a - b);
+
+        for (const day of sortedDays) {
+            const poolsOnDay = dayAssignments.get(day);
+            // Sort by duration/complexity for this specific day
+            poolsOnDay.sort((a, b) => b.duration - a.duration);
+            
+            for (const pool of poolsOnDay) {
+                const state = getOrCreateState(pool.weekNum);
+                // Temporarily override DaySequence for this specific call to only check this DAY
+                const results = this.assignSyncedSpecificDay(pool, campusRooms, semester.startDate, pool.weekNum, day, state, roomCapacityMap, constraints.busySlots);
+                if (results.length > 0) {
+                    finalSchedule.push(...results);
+                } else {
+                    this.logger.warn(`[HYBRID_SOLVER] Finding optimal slot for ${pool.subjectCode} on Day ${day}... Switching to Multi-Day Search.`);
+                    // Fallback: search any other day
+                    const fallback = this.assignSynced([pool], campusRooms, semester.startDate, pool.weekNum, state, true, roomCapacityMap, constraints.busySlots);
+                    finalSchedule.push(...fallback);
+                }
+            }
         }
 
-        // courseraRetakeWeek
-        const courseraRetakeWeekNum = constraints.courseraRetakeWeek ?? constraints.retakeWeek;
-        if (courseraRetakeSessions.length > 0) {
-            allScheduled.push(...this.assignSynced(courseraRetakeSessions, campusRooms, semester.startDate, courseraRetakeWeekNum, true, roomCapacityMap, constraints.busySlots));
-        }
-
-        // Final Week - Major
-        const majorFinals = finalSessions.filter(s => s.isMajor);
-        if (majorFinals.length > 0) {
-            allScheduled.push(...this.assignSynced(majorFinals, campusRooms, semester.startDate, constraints.finalWeek, true, roomCapacityMap, constraints.busySlots));
-        }
-
-        // Final Week - Non-Major
-        const normalFinals = finalSessions.filter(s => !s.isMajor);
-        if (normalFinals.length > 0) {
-            allScheduled.push(...this.assignSynced(normalFinals, campusRooms, semester.startDate, constraints.finalWeek, true, roomCapacityMap, constraints.busySlots));
-        }
-
-        // Retake Week - Major
-        const majorRetakes = retakeSessions.filter(s => s.isMajor);
-        if (majorRetakes.length > 0) {
-            allScheduled.push(...this.assignSynced(majorRetakes, campusRooms, semester.startDate, constraints.retakeWeek, true, roomCapacityMap, constraints.busySlots));
-        }
-
-        // Retake Week - Non-Major
-        const normalRetakes = retakeSessions.filter(s => !s.isMajor);
-        if (normalRetakes.length > 0) {
-            allScheduled.push(...this.assignSynced(normalRetakes, campusRooms, semester.startDate, constraints.retakeWeek, true, roomCapacityMap, constraints.busySlots));
-        }
-
-        return allScheduled;
+        this.logger.log(`[HYBRID_SOLVER] Optimization complete. Successfully scheduled ${finalSchedule.length} sessions.`);
+        return finalSchedule;
     }
+
+    private assignSyncedSpecificDay(pool: any, campusRooms: Map<Campus, string[]>, start: Date, week: number, day: number, state: any, roomCaps: any, busy: any): ScheduledSession[] {
+        // Reuse logic but lock to one day
+        return this.assignSynced([pool], campusRooms, start, week, state, false, roomCaps, busy, [day]);
+    }
+
 
     private assignSynced(
         sessions: any[],
         campusRooms: Map<Campus, string[]>,
         semStartDate: Date,
         weekNum: number,
+        state: {
+            roomTimelines: Map<string, Map<number, number>>,
+            studentIntervals: Map<string, Map<number, { start: number, end: number }[]>>,
+            studentDayCounts: Map<string, Map<number, number>>
+        },
         allowSpill: boolean,
         roomCapacityMap?: Map<string, number>,
-        busySlots?: Map<string, Set<string>>
+        busySlots?: Map<string, Set<string>>,
+        overrideDaySequence?: number[]
     ): ScheduledSession[] {
         if (sessions.length === 0) return [];
 
         const results: ScheduledSession[] = [];
-        const studentSchedules = new Map<string, Map<number, number>>();
-        const roomUsage = new Map<string, Map<Campus, string[]>>(); // key: "day_slot"
-        const globalSlotLoad = new Map<string, number>(); // key: "day_slot", value: total rooms assigned
 
-        const isMajor = sessions[0].isMajor;
-        const slots = isMajor ? this.MAJOR_SLOTS : this.NORMAL_SLOTS;
-
-        // Sort sessions by "difficulty" (total rooms needed across all campuses)
+        // Sort: Longest duration first
         sessions.sort((a, b) => {
             const sumA = Object.values(a.campusNeeds).reduce<number>((acc, val: any) => acc + (Number(val.numRooms) || 0), 0);
             const sumB = Object.values(b.campusNeeds).reduce<number>((acc, val: any) => acc + (Number(val.numRooms) || 0), 0);
@@ -297,159 +276,184 @@ export class SchedulingService {
         });
 
         const isPE = sessions[0].examType === 'PE';
-        const daySequence = isPE ? [5, 6, 0, 1, 2, 3, 4] : [0, 1, 2, 3, 4];
-        if (!isPE && allowSpill) daySequence.push(7);
-        if (!isPE) daySequence.push(5, 6);
+        let daySequence = overrideDaySequence;
+        if (!daySequence) {
+            daySequence = isPE ? [5, 6, 0, 1, 2, 3, 4] : [0, 1, 2, 3, 4, 5];
+            if (!isPE && allowSpill) daySequence.push(7);
+        }
 
         for (const session of sessions) {
-            let bestDay = -1;
-            let bestSlot = -1;
-            let minLoad = Infinity;
+            let scheduledForSubject = false;
 
-            // Find the best slot for this session based on "Least Loaded" principle
             for (const day of daySequence) {
-                for (let slot = 0; slot < slots.length; slot++) {
-                    const key = `${day}_${slot}`;
+                if (scheduledForSubject) break;
 
-                    // Initialize availability for this slot if not exists
-                    if (!roomUsage.has(key)) {
-                        const availabilityMap = new Map<Campus, string[]>();
-                        campusRooms.forEach((ids, c) => availabilityMap.set(c, [...ids]));
-                        roomUsage.set(key, availabilityMap);
-                        globalSlotLoad.set(key, 0);
-                    }
+                const dayResults: ScheduledSession[] = [];
+                let dayIsPossible = true;
 
-                    const currentAvailability = roomUsage.get(key);
-
-                    // 1. Check room availability across all campuses
-                    let canHost = true;
-                    for (const campStr of Object.keys(session.campusNeeds)) {
-                        const camp = campStr as Campus;
-                        const needed = session.campusNeeds[camp].numRooms;
-                        const available = currentAvailability.get(camp)?.length || 0;
-                        if (available < needed) {
-                            canHost = false;
-                            break;
-                        }
-                    }
-                    if (!canHost) continue;
-
-                    // 2. Check student conflicts (0% conflict rule)
-                    const allStudents: string[] = [];
-                    Object.values(session.campusNeeds).forEach((need: any) => allStudents.push(...need.studentCodes));
-
-                    let hasConflict = false;
-                    for (const s of allStudents) {
-                        const dayCounts = studentSchedules.get(s) || new Map();
-                        // Rule: Max 2 exams per day
-                        if ((dayCounts.get(day) || 0) >= 2) {
-                            hasConflict = true;
-                            break;
-                        }
-                        // Rule: Class schedule conflict
-                        if (busySlots?.has(s)) {
-                            const studentBusy = busySlots.get(s);
-                            if (studentBusy.has(`${day}_${slot + 1}`)) { // Slot from Excel is 1-indexed
-                                hasConflict = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (hasConflict) continue;
-
-                    // 3. Selection: Pick the slot with the lowest current room load to balance
-                    const currentLoad = globalSlotLoad.get(key) || 0;
-                    if (currentLoad < minLoad) {
-                        minLoad = currentLoad;
-                        bestDay = day;
-                        bestSlot = slot;
-                    }
-                }
-            }
-
-            // If we found a valid slot, assign it
-            if (bestDay !== -1 && bestSlot !== -1) {
-                const key = `${bestDay}_${bestSlot}`;
-                const currentAvailability = roomUsage.get(key);
-                let sessionTotalRooms = 0;
-
+                // 1. PHASE 1: Identify all needed rooms across ALL campuses and their availability
+                const roomsToUse: { camp: Campus, roomId: string, nextAvailable: number }[] = [];
                 for (const campStr of Object.keys(session.campusNeeds)) {
                     const camp = campStr as Campus;
                     const need = session.campusNeeds[camp];
-                    const available = currentAvailability.get(camp);
-                    const usedRooms = available.splice(0, need.numRooms);
-                    sessionTotalRooms += usedRooms.length;
+                    const availableRoomIds = campusRooms.get(camp) || [];
 
-                    for (let r = 0; r < usedRooms.length; r++) {
-                        const roomId = usedRooms[r];
-                        const roomCap = roomCapacityMap?.get(roomId) || 30;
-                        const roomStudents = need.studentCodes.slice(r * roomCap, (r + 1) * roomCap);
+                    if (availableRoomIds.length < need.numRooms) {
+                        dayIsPossible = false;
+                        break;
+                    }
 
-                        // Synchronization: calculateOpenTime now provides same time for all
-                        const openTime = this.calculateOpenTime(semStartDate, weekNum, bestDay, bestSlot, camp, slots);
-                        const closeTime = this.calculateCloseTime(openTime, session.duration, camp);
+                    const roomsWithTimes = availableRoomIds.map(rid => {
+                        if (!state.roomTimelines.has(rid)) state.roomTimelines.set(rid, new Map());
+                        const dayTimelines = state.roomTimelines.get(rid);
+                        if (!dayTimelines.has(day)) {
+                            dayTimelines.set(day, this.getStartOfDayTime(semStartDate, weekNum, day).getTime());
+                        }
+                        return { camp, roomId: rid, next: dayTimelines.get(day) };
+                    });
 
-                        results.push({
-                            weekNum,
-                            dayIndex: bestDay,
-                            slotIndex: bestSlot,
-                            subjectCode: session.subjectCode,
-                            studentCodes: roomStudents,
-                            roomId,
-                            campus: camp as string,
-                            examPartIds: session.examPartIds,
-                            examType: session.examType,
-                            openTime,
-                            closeTime,
-                            duration: session.duration,
-                            note: session.note
-                        });
+                    roomsWithTimes.sort((a, b) => a.next - b.next);
+                    roomsToUse.push(...roomsWithTimes.slice(0, need.numRooms).map(r => ({
+                        camp: r.camp,
+                        roomId: r.roomId,
+                        nextAvailable: r.next
+                    })));
+                }
 
-                        // Update student daily count
-                        roomStudents.forEach(s => {
-                            if (!studentSchedules.has(s)) studentSchedules.set(s, new Map());
-                            studentSchedules.get(s).set(bestDay, (studentSchedules.get(s).get(bestDay) || 0) + 1);
-                        });
+                if (!dayIsPossible || roomsToUse.length === 0) continue;
+
+                // 2. PHASE 2: Determine base start times based on synchronization rules
+                let currentSessionStartPointer = 0;
+                if (!isPE) {
+                    // Global Sync: All rooms across all campuses start at the LATEST possible time
+                    currentSessionStartPointer = Math.max(...roomsToUse.map(r => r.nextAvailable));
+                }
+
+                // 3. PHASE 3: Iteratively schedule each required room/session
+                let subjectSequencePointer = currentSessionStartPointer; // Used for sequential PE scheduling
+
+                for (const roomInfo of roomsToUse) {
+                    let proposedStart: number;
+
+                    if (!isPE) {
+                        proposedStart = currentSessionStartPointer;
+                    } else {
+                        // PE Staggered: Must be after room is free AND after previous session of this subject
+                        proposedStart = Math.max(roomInfo.nextAvailable, subjectSequencePointer);
+                    }
+
+                    const proposedEnd = proposedStart + session.duration * 60000;
+                    const roomCap = roomCapacityMap?.get(roomInfo.roomId) || 30;
+                    const need = session.campusNeeds[roomInfo.camp];
+                    
+                    // Note: This logic assumes we process students in chunks per room
+                    // For cross-campus, we've already shuffled studentCodes in buildSessionGroup
+                    const roomIdx = roomsToUse.filter(r => r.camp === roomInfo.camp).indexOf(roomInfo);
+                    const roomStudents = need.studentCodes.slice(roomIdx * roomCap, (roomIdx + 1) * roomCap);
+
+                    // Check student conflicts
+                    let studentConflict = false;
+                    for (const s of roomStudents) {
+                        // Max 2 exams/day
+                        const dayCounts = state.studentDayCounts.get(s) || new Map();
+                        if ((dayCounts.get(day) || 0) >= 2) {
+                            studentConflict = true;
+                            break;
+                        }
+
+                        // Overlap check with other subjects
+                        if (!state.studentIntervals.has(s)) state.studentIntervals.set(s, new Map());
+                        const intervals = state.studentIntervals.get(s).get(day) || [];
+                        for (const existing of intervals) {
+                            if (proposedStart < existing.end && proposedEnd > existing.start) {
+                                studentConflict = true;
+                                break;
+                            }
+                        }
+                        if (studentConflict) break;
+
+                        // Busy slots check
+                        if (busySlots?.has(s)) {
+                            const searchDay = day === 7 ? 0 : day;
+                            const busySets = busySlots.get(s);
+                            for (let sl = 1; sl <= 6; sl++) {
+                                if (busySets.has(`${searchDay}_${sl}`)) {
+                                    const bStart = this.getStartOfDayTime(semStartDate, weekNum, day).getTime() + (sl - 1) * 100 * 60000;
+                                    const bEnd = bStart + 90 * 60000;
+                                    if (proposedStart < bEnd && proposedEnd > bStart) {
+                                        studentConflict = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if (studentConflict) break;
+                    }
+
+                    if (studentConflict) {
+                        dayIsPossible = false;
+                        break;
+                    }
+
+                    dayResults.push({
+                        weekNum,
+                        dayIndex: day,
+                        slotIndex: 0, 
+                        subjectCode: session.subjectCode,
+                        studentCodes: roomStudents,
+                        roomId: roomInfo.roomId,
+                        campus: roomInfo.camp as string,
+                        examPartIds: session.examPartIds,
+                        examType: session.examType,
+                        openTime: new Date(proposedStart),
+                        closeTime: new Date(proposedEnd),
+                        duration: session.duration,
+                        note: session.note
+                    });
+
+                    // Update pointer for next PE session of this subject
+                    if (isPE) {
+                        subjectSequencePointer = proposedEnd + this.MIN_GAP_MINUTES * 60000;
                     }
                 }
-                // Update the load for this slot
-                globalSlotLoad.set(key, (globalSlotLoad.get(key) || 0) + sessionTotalRooms);
+
+                if (dayIsPossible && dayResults.length === roomsToUse.length) {
+                    // COMMIT
+                    for (const res of dayResults) {
+                        // Update Room Timeline
+                        const dayTimelines = state.roomTimelines.get(res.roomId);
+                        dayTimelines.set(day, res.closeTime.getTime() + this.MIN_GAP_MINUTES * 60000);
+
+                        // Update Student Timelines
+                        for (const s of res.studentCodes) {
+                            if (!state.studentIntervals.has(s)) state.studentIntervals.set(s, new Map());
+                            if (!state.studentIntervals.get(s).has(day)) state.studentIntervals.get(s).set(day, []);
+                            state.studentIntervals.get(s).get(day).push({ start: res.openTime.getTime(), end: res.closeTime.getTime() });
+
+                            if (!state.studentDayCounts.has(s)) state.studentDayCounts.set(s, new Map());
+                            const counts = state.studentDayCounts.get(s);
+                            counts.set(day, (counts.get(day) || 0) + 1);
+                        }
+                    }
+                    results.push(...dayResults);
+                    scheduledForSubject = true;
+                }
             }
         }
         return results;
     }
-
-    private calculateOpenTime(semStart: Date, weekNum: number, dayOffset: number, slotIndex: number, campus: Campus, slotsArray: { open: string }[]): Date {
+     private getStartOfDayTime(semStart: Date, weekNum: number, dayOffset: number): Date {
         const date = new Date(semStart);
+        const currentDay = date.getDay();
+        const diffToMonday = currentDay === 0 ? 6 : currentDay - 1;
+        date.setDate(date.getDate() - diffToMonday);
+        date.setHours(0, 0, 0, 0);
+
         const totalDaysOffset = (weekNum - 1) * 7 + dayOffset;
         date.setDate(date.getDate() + totalDaysOffset);
+        date.setHours(this.START_HOUR, this.START_MINUTE, 0, 0);
 
-        const slot = slotsArray[slotIndex];
-        const [hour, minute] = slot.open.split(':').map(Number);
-
-        // Base Opening Time (synchronized across campuses)
-        const openingTime = new Date(date);
-        openingTime.setHours(hour, minute, 0, 0);
-
-        // Temporarily commented out campus offset logic (Lệch giờ)
-        /*
-        const offset = (campus === Campus.DN) ? 30 : 15;
-        openingTime.setMinutes(openingTime.getMinutes() - offset);
-        */
-
-        return openingTime;
-    }
-
-    private calculateCloseTime(openTime: Date, duration: number, campus: Campus): Date {
-        // Temporarily commented out campus offset logic (Lệch giờ)
-        /*
-        const offset = (campus === Campus.DN) ? 30 : 15;
-        const openingTime = openTime.getTime() + (offset * 60000);
-        return new Date(openingTime + duration * 60000);
-        */
-
-        // Default to baseline opening + duration
-        return new Date(openTime.getTime() + duration * 60000);
+        return date;
     }
 
     assignSeats(numStudents: number, maxRows: number, maxCols: number): { row: number; col: number }[] {

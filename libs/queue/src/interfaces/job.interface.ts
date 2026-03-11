@@ -82,6 +82,9 @@ export interface ExamImportJobData {
 
     /** Semester ID (optional) */
     semesterId?: string;
+
+    /** Campus ID (optional) */
+    campusId?: string;
 }
 
 export interface ExamImportFinishedData {

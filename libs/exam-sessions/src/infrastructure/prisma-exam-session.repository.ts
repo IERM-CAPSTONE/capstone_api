@@ -58,6 +58,9 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 hallInvigilator: true,
                 semester: true,
                 examParts: true,
+                _count: {
+                    select: { studentExams: true }
+                }
             }
         });
 
@@ -73,6 +76,9 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 hallInvigilator: true,
                 semester: true,
                 examParts: true,
+                _count: {
+                    select: { studentExams: true }
+                }
             }
         });
         if (!found) return null;
@@ -115,6 +121,9 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 hallInvigilator: true,
                 semester: true,
                 examParts: true,
+                _count: {
+                    select: { studentExams: true }
+                }
             }
         });
 
@@ -241,6 +250,9 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 hallInvigilator: true,
                 semester: true,
                 examParts: true,
+                _count: {
+                    select: { studentExams: true }
+                }
             },
         });
 

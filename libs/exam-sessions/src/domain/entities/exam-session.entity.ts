@@ -27,6 +27,7 @@ export class ExamSession {
         public readonly maxRows: number | null = null,
         public readonly maxColumns: number | null = null,
         public readonly totalSeats: number | null = null,
+        public readonly studentCount: number = 0,
     ) { }
 
     static create(props: {
@@ -70,6 +71,7 @@ export class ExamSession {
             null,
             null,
             null,
+            0,
         );
     }
 
@@ -98,6 +100,7 @@ export class ExamSession {
         maxRows?: number | null;
         maxColumns?: number | null;
         totalSeats?: number | null;
+        studentCount?: number;
     }): ExamSession {
         return new ExamSession(
             props.id,
@@ -123,6 +126,7 @@ export class ExamSession {
             props.maxRows ?? null,
             props.maxColumns ?? null,
             props.totalSeats ?? null,
+            props.studentCount ?? 0,
         );
     }
 
@@ -152,6 +156,7 @@ export class ExamSession {
             maxRows: found.examRoom?.max_rows,
             maxColumns: found.examRoom?.max_columns,
             totalSeats: found.examRoom?.total_seats,
+            studentCount: found._count?.studentExams ?? 0,
         });
     }
 
@@ -198,6 +203,7 @@ export class ExamSession {
             this.maxRows,
             this.maxColumns,
             this.totalSeats,
+            this.studentCount,
         );
     }
 }
