@@ -23,6 +23,34 @@ export class ProcessTicketHandler {
             throw new BadRequestException('assigneeId is required when action is "assign"');
         }
 
+        // 1.5 Validate session status: only Ongoing or within 30min grace period
+        if ((ticket as any).sessionId) {
+            const session = await this.prisma.examSession.findUnique({
+                where: { id: (ticket as any).sessionId },
+                select: { examOpenTime: true, examCloseTime: true },
+            });
+
+            if (session?.examCloseTime) {
+                // DB stores Vietnam local time (UTC+7) as naive timestamps.
+                // Prisma reads naive timestamps as UTC Date objects — reinterpret as VN time.
+                const toVNDate = (s: any): Date | null => {
+                    if (!s) return null;
+                    const raw = s instanceof Date
+                        ? s.toISOString().replace('Z', '')
+                        : String(s).replace(/Z$/, '').replace(/[+-]\d{2}:?\d{2}$/, '').replace(' ', 'T');
+                    const d = new Date(`${raw}+07:00`);
+                    return isNaN(d.getTime()) ? null : d;
+                };
+                const now = new Date();
+                const closeTime = toVNDate(session.examCloseTime);
+                const GRACE_PERIOD_MS = 30 * 60 * 1000; // 30 minutes
+                if (closeTime && now > new Date(closeTime.getTime() + GRACE_PERIOD_MS)) {
+                    throw new BadRequestException('Cannot process ticket: exam session ended more than 30 minutes ago');
+                }
+            }
+        }
+
+
         // 2. Update the ticket
         const newStatus = dto.action === ProcessAction.RESOLVE ? 'SOLVED' : 'IN_PROGRESS';
         const updatedTicket = await this.ticketRepository.save({
