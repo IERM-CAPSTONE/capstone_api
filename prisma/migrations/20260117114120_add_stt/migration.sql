@@ -1,16 +1,16 @@
 /*
   Warnings:
 
-  - The values [PRACTICAL,THEORY] on the enum `ExamType` will be removed. If these variants are still used in the database, this will fail.
+  - The values [PRACTICAL,THEORY] on the enum `ExamPart` will be removed. If these variants are still used in the database, this will fail.
 
 */
 -- AlterEnum
 BEGIN;
-CREATE TYPE "ExamType_new" AS ENUM ('PE', 'TE', 'S', 'L', 'R', 'W', 'FE');
-ALTER TABLE "StudentExamPart" ALTER COLUMN "examType" TYPE "ExamType_new" USING ("examType"::text::"ExamType_new");
-ALTER TYPE "ExamType" RENAME TO "ExamType_old";
-ALTER TYPE "ExamType_new" RENAME TO "ExamType";
-DROP TYPE "public"."ExamType_old";
+CREATE TYPE "ExamPart_new" AS ENUM ('PE', 'TE', 'S', 'L', 'R', 'W', 'FE');
+ALTER TABLE "StudentExamPart" ALTER COLUMN "examPart" TYPE "ExamPart_new" USING ("examPart"::text::"ExamPart_new");
+ALTER TYPE "ExamPart" RENAME TO "ExamPart_old";
+ALTER TYPE "ExamPart_new" RENAME TO "ExamPart";
+DROP TYPE "public"."ExamPart_old";
 COMMIT;
 
 -- AlterTable (use IF NOT EXISTS to tolerate existing columns)

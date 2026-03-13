@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { PrismaModule } from '@app/prisma';
 import { EXAM_SESSION_REPOSITORY } from './domain/repositories';
 import { PrismaExamSessionRepository } from './infrastructure';
+import { SchedulingService } from './domain/services';
 
 @Global()
 @Module({
@@ -11,7 +12,8 @@ import { PrismaExamSessionRepository } from './infrastructure';
             provide: EXAM_SESSION_REPOSITORY,
             useClass: PrismaExamSessionRepository,
         },
+        SchedulingService,
     ],
-    exports: [EXAM_SESSION_REPOSITORY],
+    exports: [EXAM_SESSION_REPOSITORY, SchedulingService],
 })
 export class ExamSessionsCoreModule { }

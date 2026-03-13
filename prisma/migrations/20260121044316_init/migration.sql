@@ -1,2 +1,2 @@
 -- AlterEnum
-ALTER TYPE "ExamType" ADD VALUE 'RE';
+ALTER TYPE "ExamPart" ADD VALUE 'RE';

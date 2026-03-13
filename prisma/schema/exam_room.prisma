@@ -1,19 +1,17 @@
-// Prisma ExamRoom Model
-
 /// Stores exam room information (room number, capacity, etc.)
 model ExamRoom {
-  id         String         @id @default(uuid())
-  roomNumber String         @unique
-  capacity   Int?
-  status     ExamRoomStatus @default(Available)
-
-  max_rows    Int?
-  max_columns Int?
-  total_seats Int?
-
+  id            String         @id @default(uuid())
+  roomNumber    String         @unique
+  capacity      Int?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  status        ExamRoomStatus @default(Available)
+  max_columns   Int?
+  max_rows      Int?
+  total_seats   Int?
+  campus        Campus?
   examSessions  ExamSession[]
   notifications Notification[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([campus])
 }

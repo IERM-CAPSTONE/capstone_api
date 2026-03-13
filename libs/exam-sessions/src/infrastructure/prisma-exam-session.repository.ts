@@ -15,8 +15,8 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examCode: session.examCode,
             openCode: session.openCode,
             status: session.status as any,
+            campus: session.campus as any,
             examType: session.examType as any,
-            semester: session.semester,
             note: session.note,
             updatedAt: session.updatedAt,
         };
@@ -25,11 +25,13 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         if (session.examRoomId) createRelationData.examRoom = { connect: { id: session.examRoomId } };
         if (session.proctorId) createRelationData.proctor = { connect: { id: session.proctorId } };
         if (session.hallInvigilatorId) createRelationData.hallInvigilator = { connect: { id: session.hallInvigilatorId } };
+        if (session.semesterId) createRelationData.semester = { connect: { id: session.semesterId } };
 
         const updateRelationData = {
             examRoom: session.examRoomId ? { connect: { id: session.examRoomId } } : { disconnect: true },
             proctor: session.proctorId ? { connect: { id: session.proctorId } } : { disconnect: true },
             hallInvigilator: session.hallInvigilatorId ? { connect: { id: session.hallInvigilatorId } } : { disconnect: true },
+            semester: session.semesterId ? { connect: { id: session.semesterId } } : { disconnect: true },
         };
 
         const saved = await this.prisma.examSession.upsert({
@@ -39,15 +41,26 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 ...data,
                 ...createRelationData,
                 createdAt: session.createdAt,
+                examParts: {
+                    connect: session.examPart.map(code => ({ code }))
+                }
             },
             update: {
                 ...data,
                 ...updateRelationData,
+                examParts: {
+                    set: session.examPart.map(code => ({ code }))
+                }
             },
             include: {
                 examRoom: true,
                 proctor: true,
                 hallInvigilator: true,
+                semester: true,
+                examParts: true,
+                _count: {
+                    select: { studentExams: true }
+                }
             }
         });
 
@@ -61,6 +74,11 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 examRoom: true,
                 proctor: true,
                 hallInvigilator: true,
+                semester: true,
+                examParts: true,
+                _count: {
+                    select: { studentExams: true }
+                }
             }
         });
         if (!found) return null;
@@ -80,21 +98,32 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         endTime?: string;
         examRoomId?: string;
         proctorId?: string;
+        semesterId?: string;
+        campus?: string;
+        examType?: string;
         studentId?: string;
         skip?: number;
         take?: number;
     }): Promise<ExamSession[]> {
         const where = this.buildWhere(query);
 
+        const skipVal = isNaN(query?.skip) || query?.skip < 0 ? 0 : Math.floor(query.skip);
+        const takeVal = isNaN(query?.take) || query?.take <= 0 ? undefined : Math.floor(query.take);
+
         const found = await this.prisma.examSession.findMany({
             where,
-            skip: query?.skip,
-            take: query?.take,
+            skip: skipVal,
+            take: takeVal,
             orderBy: { createdAt: 'desc' },
             include: {
                 examRoom: true,
                 proctor: true,
                 hallInvigilator: true,
+                semester: true,
+                examParts: true,
+                _count: {
+                    select: { studentExams: true }
+                }
             }
         });
 
@@ -103,9 +132,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
     private buildWhere(query?: any): any {
         const where: any = {};
-
-        // Exclude archived sessions by default
-        where.isArchived = false;
+        const andConditions: any[] = [];
 
         if (query?.subjectCode) {
             where.subjectCode = query.subjectCode;
@@ -121,14 +148,12 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         if (query?.status) {
             const now = new Date();
             if (query.status === 'Upcoming') {
-                where.examOpenTime = { gt: now };
+                andConditions.push({ examOpenTime: { gt: now } });
             } else if (query.status === 'Ongoing') {
-                where.AND = [
-                    { examOpenTime: { lte: now } },
-                    { examCloseTime: { gte: now } }
-                ];
+                andConditions.push({ examOpenTime: { lte: now } });
+                andConditions.push({ examCloseTime: { gte: now } });
             } else if (query.status === 'Completed') {
-                where.examCloseTime = { lt: now };
+                andConditions.push({ examCloseTime: { lt: now } });
             } else {
                 where.status = query.status;
             }
@@ -153,30 +178,28 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 }
             }
 
-            where.examOpenTime = { ...where.examOpenTime, ...dateConditions };
+            andConditions.push({ examOpenTime: dateConditions });
         }
 
         // Time filtering (simplified for now as it's hard to filter time-only in Prisma)
-        // If fromDate == toDate (single day), we can combine with time
-        if (query?.startTime || query?.endTime) {
-            // This logic is simplified to "occurs after startTime" and "occurs before endTime" 
-            // naturally relative to the date filter already applied.
-            if (query.startTime && query.fromDate) {
-                const [h, m] = query.startTime.split(':').map(Number);
-                const start = new Date(query.fromDate);
-                start.setHours(h, m, 0, 0);
-                where.examOpenTime = { ...where.examOpenTime, gte: start };
-            }
-            if (query.endTime && (query.toDate || query.fromDate)) {
-                const [h, m] = query.endTime.split(':').map(Number);
-                const end = new Date(query.toDate || query.fromDate);
-                end.setHours(h, m, 59, 999);
-                where.examCloseTime = { ...where.examCloseTime, lte: end };
-            }
+        if (query?.startTime && query.fromDate) {
+            const [h, m] = query.startTime.split(':').map(Number);
+            const start = new Date(query.fromDate);
+            start.setHours(h, m, 0, 0);
+            andConditions.push({ examOpenTime: { gte: start } });
+        }
+        if (query?.endTime && (query.toDate || query.fromDate)) {
+            const [h, m] = query.endTime.split(':').map(Number);
+            const end = new Date(query.toDate || query.fromDate);
+            end.setHours(h, m, 59, 999);
+            andConditions.push({ examCloseTime: { lte: end } });
         }
 
         if (query?.examRoomId) where.examRoomId = query.examRoomId;
         if (query?.proctorId) where.proctorId = query.proctorId;
+        if (query?.semesterId) where.semesterId = query.semesterId;
+        if (query?.campus) where.campus = query.campus;
+        if (query?.examType) where.examType = query.examType;
 
         if (query?.studentId) {
             where.studentExams = {
@@ -184,6 +207,26 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                     studentId: query.studentId
                 }
             };
+        }
+
+        // If we have AND conditions, we need to combine them
+        // If we also have direct properties, we need to wrap them all in AND
+        if (andConditions.length > 0) {
+            if (Object.keys(where).length > 0) {
+                // We have both direct properties and AND conditions
+                // Convert direct properties to AND conditions
+                Object.keys(where).forEach(key => {
+                    andConditions.push({ [key]: where[key] });
+                });
+                return { AND: andConditions };
+            } else {
+                // Only AND conditions
+                if (andConditions.length === 1) {
+                    return andConditions[0];
+                } else {
+                    return { AND: andConditions };
+                }
+            }
         }
 
         return where;
@@ -205,6 +248,11 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 examRoom: true,
                 proctor: true,
                 hallInvigilator: true,
+                semester: true,
+                examParts: true,
+                _count: {
+                    select: { studentExams: true }
+                }
             },
         });
 
@@ -230,9 +278,30 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         endTime?: string;
         examRoomId?: string;
         proctorId?: string;
+        studentId?: string;
     }): Promise<number> {
         const where = this.buildWhere(query);
         return this.prisma.examSession.count({ where });
+    }
+
+    async updateStatusBulk(ids: string[], status: string): Promise<number> {
+        const result = await this.prisma.examSession.updateMany({
+            where: { id: { in: ids } },
+            data: { status: status as any }
+        });
+        return result.count;
+    }
+
+    async publishGeneratedDrafts(semesterId: string, campus: string): Promise<number> {
+        const result = await this.prisma.examSession.updateMany({
+            where: {
+                semesterId,
+                campus: campus as any,
+                status: 'Draft'
+            },
+            data: { status: 'Scheduled' }
+        });
+        return result.count;
     }
 
     async delete(id: string): Promise<void> {
@@ -263,7 +332,6 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 AND: [
                     { examOpenTime: { lt: endTime } },
                     { examCloseTime: { gt: startTime } },
-                    { isArchived: false },
                 ],
                 OR: orConditions,
             },
@@ -271,6 +339,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 examRoom: true,
                 proctor: true,
                 hallInvigilator: true,
+                semester: true,
             },
         });
 

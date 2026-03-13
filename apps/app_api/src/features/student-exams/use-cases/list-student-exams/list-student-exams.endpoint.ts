@@ -15,7 +15,7 @@ export class ListStudentExamsEndpoint {
     constructor(private readonly handler: ListStudentExamsHandler) { }
 
     @Get()
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR)
+    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR, RoleType.STUDENT)
     @ApiOperation({ summary: 'Get list of student exams' })
     @ApiQuery({ name: 'page', required: false, type: Number })
     @ApiQuery({ name: 'limit', required: false, type: Number })

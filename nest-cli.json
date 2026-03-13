@@ -60,6 +60,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/exam-sessions/tsconfig.lib.json"
       }
+    },
+    "proctor-applications": {
+      "type": "library",
+      "root": "libs/proctor-applications",
+      "entryFile": "index",
+      "sourceRoot": "libs/proctor-applications/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/proctor-applications/tsconfig.lib.json"
+      }
     }
   }
 }

@@ -3,7 +3,7 @@ import { PrismaService } from '@app/prisma';
 
 @Injectable()
 export class ArchiveExamSessionHandler {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) { }
 
   async execute(id: string): Promise<any> {
     try {
@@ -32,14 +32,12 @@ export class ArchiveExamSessionHandler {
         where: { id },
         data: {
           status: 'Ended',
-          isArchived: true,
           updatedAt: new Date(),
         },
         select: {
           id: true,
           examCode: true,
           status: true,
-          isArchived: true,
           examCloseTime: true,
           examOpenTime: true,
           subjectCode: true,

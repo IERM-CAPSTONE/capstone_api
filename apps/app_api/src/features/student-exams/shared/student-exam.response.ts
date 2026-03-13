@@ -17,27 +17,6 @@ export class StudentExamResponse {
     seatPosition: string | null;
 
     @ApiProperty()
-    status: string;
-
-    @ApiProperty({ nullable: true })
-    currentLocation: string | null;
-
-    @ApiProperty({ nullable: true })
-    identityId: string | null;
-
-    @ApiProperty()
-    isMatched: boolean;
-
-    @ApiProperty({ nullable: true })
-    checkinTime: Date | null;
-
-    @ApiProperty({ nullable: true })
-    checkoutTime: Date | null;
-
-    @ApiProperty()
-    isValid: boolean;
-
-    @ApiProperty()
     createdAt: Date;
 
     @ApiProperty()
@@ -48,6 +27,33 @@ export class StudentExamResponse {
 
     @ApiProperty({ nullable: true })
     studentCode: string | null;
+
+    @ApiProperty({ nullable: true })
+    stt: number | null;
+
+    @ApiProperty({ nullable: true })
+    studentEmail: string | null;
+
+    @ApiProperty({
+        description: 'Attendance/submission status per exam part',
+        type: 'array',
+        items: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                examPartId: { type: 'string', nullable: true },
+                examPartCode: { type: 'string', nullable: true },
+                examPartName: { type: 'string', nullable: true },
+                isCheckedIn: { type: 'boolean' },
+                checkInTime: { type: 'string', nullable: true },
+                isSubmit: { type: 'boolean' },
+                submitTime: { type: 'string', nullable: true },
+                isSign: { type: 'boolean' },
+                signTime: { type: 'string', nullable: true },
+            }
+        }
+    })
+    parts: any[];
 }
 
 export class PaginatedStudentExamResponse {
@@ -74,16 +80,23 @@ export function toStudentExamResponse(studentExam: any): StudentExamResponse {
         studentId: studentExam.studentId,
         seatNumber: studentExam.seatNumber,
         seatPosition: studentExam.seatPosition ?? null,
-        status: studentExam.status,
-        currentLocation: studentExam.currentLocation,
-        identityId: studentExam.identityId,
-        isMatched: studentExam.isMatched,
-        checkinTime: studentExam.checkinTime,
-        checkoutTime: studentExam.checkoutTime,
-        isValid: studentExam.isValid,
         createdAt: studentExam.createdAt,
         updatedAt: studentExam.updatedAt,
         studentName: studentExam.studentName,
         studentCode: studentExam.studentCode,
+        studentEmail: studentExam.studentEmail,
+        stt: studentExam.stt,
+        parts: (studentExam.parts || []).map((p: any) => ({
+            id: p.id,
+            examPartId: p.examPartId,
+            examPartCode: p.examPart?.code ?? null,
+            examPartName: p.examPart?.name ?? null,
+            isCheckedIn: p.isCheckedIn,
+            checkInTime: p.checkInTime,
+            isSubmit: p.isSubmit,
+            submitTime: p.submitTime,
+            isSign: p.isSign,
+            signTime: p.signTime,
+        })),
     };
 }

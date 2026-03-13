@@ -20,10 +20,15 @@ export class UpdateExamRoomHandler {
             throw new Error(`ExamRoom with id '${id}' not found`);
         }
 
-        // Check room number uniqueness if changing
-        if (dto.roomNumber !== undefined && dto.roomNumber !== existingExamRoom.roomNumber.value) {
-            if (await this.examRoomRepository.exists({ roomNumber: dto.roomNumber })) {
-                throw new Error(`Room number '${dto.roomNumber}' already exists`);
+        // Check room number uniqueness within campus if changing roomNumber or campus
+        const newRoomNumber = dto.roomNumber ?? existingExamRoom.roomNumber.value;
+        const newCampus = dto.campus ?? existingExamRoom.campus;
+
+        if (dto.roomNumber !== undefined || dto.campus !== undefined) {
+            if (newRoomNumber !== existingExamRoom.roomNumber.value || newCampus !== existingExamRoom.campus) {
+                if (await this.examRoomRepository.exists({ roomNumber: newRoomNumber, campus: newCampus })) {
+                    throw new Error(`Room number '${newRoomNumber}' already exists in campus '${newCampus || 'default'}'`);
+                }
             }
         }
 
@@ -31,6 +36,7 @@ export class UpdateExamRoomHandler {
         const updatedExamRoom = existingExamRoom.update({
             roomNumber: dto.roomNumber,
             capacity: dto.capacity,
+            campus: dto.campus,
         });
 
         // Persist

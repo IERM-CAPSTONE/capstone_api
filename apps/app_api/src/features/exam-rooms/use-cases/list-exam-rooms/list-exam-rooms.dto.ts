@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsInt, Min, IsArray } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
 /**
  * List ExamRooms - Query DTO
@@ -24,4 +24,15 @@ export class ListExamRoomsDto {
     @IsOptional()
     @IsString()
     roomNumber?: string;
+
+    @ApiProperty({ example: 'HCM', description: 'Filter by campus', required: false, isArray: true })
+    @IsOptional()
+    @Transform(({ value }) => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string') return value.split(',').filter(Boolean);
+        return value ? [value] : [];
+    })
+    @IsArray()
+    @IsString({ each: true })
+    campus?: string[];
 }

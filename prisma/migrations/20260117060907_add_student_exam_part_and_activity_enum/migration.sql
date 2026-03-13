@@ -18,7 +18,7 @@
 CREATE TYPE "ActivityType" AS ENUM ('CHECKED_IN', 'MOVED');
 
 -- CreateEnum
-CREATE TYPE "ExamType" AS ENUM ('PRACTICAL', 'THEORY');
+CREATE TYPE "ExamPart" AS ENUM ('PRACTICAL', 'THEORY');
 
 -- DropForeignKey
 ALTER TABLE "StudentExam" DROP CONSTRAINT "StudentExam_identityId_fkey";
@@ -59,7 +59,7 @@ CREATE TABLE "StudentExamPart" (
     "isInRoom" BOOLEAN NOT NULL DEFAULT false,
     "isCheckedIn" BOOLEAN NOT NULL DEFAULT false,
     "checkInTime" TIMESTAMP(3),
-    "examType" "ExamType" NOT NULL,
+    "examPart" "ExamPart" NOT NULL,
     "isSubmit" BOOLEAN NOT NULL DEFAULT false,
     "submitTime" TIMESTAMP(3),
     "isSign" BOOLEAN NOT NULL DEFAULT false,
@@ -83,7 +83,7 @@ CREATE UNIQUE INDEX "ActivityHistory_studentExamId_ticketId_key" ON "ActivityHis
 CREATE INDEX "StudentExamPart_studentExamId_idx" ON "StudentExamPart"("studentExamId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "StudentExamPart_studentExamId_examType_key" ON "StudentExamPart"("studentExamId", "examType");
+CREATE UNIQUE INDEX "StudentExamPart_studentExamId_examPart_key" ON "StudentExamPart"("studentExamId", "examPart");
 
 -- AddForeignKey
 ALTER TABLE "ActivityHistory" ADD CONSTRAINT "ActivityHistory_studentExamId_fkey" FOREIGN KEY ("studentExamId") REFERENCES "StudentExam"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

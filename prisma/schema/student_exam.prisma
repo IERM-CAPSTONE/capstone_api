@@ -1,36 +1,21 @@
-// Prisma StudentExam Model
-
 /// Junction table: which student belongs to which exam session
 model StudentExam {
-    id String @id @default(uuid())
+  id                String            @id @default(uuid())
+  studentId         String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  examSessionId     String
+  seatNumber        String?
+  stt               Int?
+  seatPosition      String?
+  examSession       ExamSession       @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
+  student           User              @relation(fields: [studentId], references: [id])
+  seat              ExamSeat?         @relation(fields: [seatPosition], references: [id])
+  activityHistories ActivityHistory[]
+  parts             StudentExamPart[]
 
-    examSessionId String
-    examSession   ExamSession @relation(fields: [examSessionId], references: [id])
-
-    studentId String
-    student   User   @relation(fields: [studentId], references: [id])
-
-    stt        Int?
-    seatNumber String?
-    seatPosition String?
-    seat         ExamSeat? @relation(fields: [seatPosition], references: [id])
-    status     StudentExamStatus @default(REGISTERED)
-
-    currentLocation String?
-    identityId      String?
-    isMatched       Boolean   @default(false)
-    checkinTime     DateTime?
-    checkoutTime    DateTime?
-    isValid         Boolean   @default(true)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    activityHistories ActivityHistory[]
-    parts             StudentExamPart[]
-
-    @@unique([examSessionId, studentId])
-    @@index([studentId])
-    @@index([examSessionId])
-    @@index([seatPosition])
+  @@unique([examSessionId, studentId])
+  @@index([studentId])
+  @@index([examSessionId])
+  @@index([seatPosition])
 }

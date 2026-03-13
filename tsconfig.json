@@ -72,6 +72,30 @@
       ],
       "@app/cache/*": [
         "libs/cache/src/*"
+      ],
+      "@app/proctor-applications": [
+        "libs/proctor-applications/src"
+      ],
+      "@app/proctor-applications/*": [
+        "libs/proctor-applications/src/*"
+      ],
+      "@app/exam-parts": [
+        "libs/exam-parts/src"
+      ],
+      "@app/exam-parts/*": [
+        "libs/exam-parts/src/*"
+      ],
+      "@app/subjects": [
+        "libs/subjects/src"
+      ],
+      "@app/subjects/*": [
+        "libs/subjects/src/*"
+      ],
+      "@app/semesters": [
+        "libs/semesters/src"
+      ],
+      "@app/semesters/*": [
+        "libs/semesters/src/*"
       ]
     }
   },

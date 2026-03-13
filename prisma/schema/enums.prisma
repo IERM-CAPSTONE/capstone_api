@@ -1,6 +1,3 @@
-// Prisma Enums
-// All enum definitions for the IERM system
-
 /// User roles in the system
 enum Role {
   ADMIN
@@ -76,6 +73,7 @@ enum ExamSessionStatus {
   Ongoing
   Ended
   Scheduled
+  Draft
 }
 
 /// Activity types for auditing student exam actions
@@ -94,16 +92,9 @@ enum ExamSeatStatus {
   Absent
 }
 
-/// Type of exam part
 enum ExamType {
   PE
-  TE
-  S
-  L
-  R
-  W
   FE
+  TE
   RE
-  GV
-  MC
 }

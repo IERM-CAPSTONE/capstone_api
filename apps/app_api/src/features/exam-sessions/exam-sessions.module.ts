@@ -12,6 +12,10 @@ import { ImportProctorHandler, ImportProctorEndpoint } from './use-cases/import-
 import { ImportExamCodeHandler, ImportExamCodeEndpoint } from './use-cases/import-exam-code';
 import { ArchiveExamSessionHandler, ArchiveExamSessionEndpoint } from './use-cases/archive-exam-session';
 import { FinalizeSeatAssignmentsHandler, FinalizeSeatAssignmentsEndpoint } from './use-cases/finalize-seats';
+import { AutoGenerateScheduleHandler, AutoGenerateScheduleEndpoint } from './use-cases/auto-generate-schedule';
+import { PublishExamSessionsHandler, PublishExamSessionsEndpoint } from './use-cases/publish-exam-sessions';
+import { ExportExamSessionsHandler, ExportExamSessionsEndpoint } from './use-cases/export-exam-sessions';
+
 
 @Module({
     imports: [ExamSessionsCoreModule, ExamSeatsModule],
@@ -26,6 +30,9 @@ import { FinalizeSeatAssignmentsHandler, FinalizeSeatAssignmentsEndpoint } from 
         ImportExamCodeEndpoint,
         ArchiveExamSessionEndpoint,
         FinalizeSeatAssignmentsEndpoint,
+        AutoGenerateScheduleEndpoint,
+        PublishExamSessionsEndpoint,
+        ExportExamSessionsEndpoint,
     ],
     providers: [
         CreateExamSessionHandler,
@@ -38,6 +45,9 @@ import { FinalizeSeatAssignmentsHandler, FinalizeSeatAssignmentsEndpoint } from 
         ImportExamCodeHandler,
         ArchiveExamSessionHandler,
         FinalizeSeatAssignmentsHandler,
+        AutoGenerateScheduleHandler,
+        PublishExamSessionsHandler,
+        ExportExamSessionsHandler,
     ],
 })
 export class ExamSessionsModule { }

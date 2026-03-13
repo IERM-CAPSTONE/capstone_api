@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "ExamSession" ADD COLUMN     "examType" "ExamType"[];
+ALTER TABLE "ExamSession" ADD COLUMN     "examPart" "ExamPart"[];

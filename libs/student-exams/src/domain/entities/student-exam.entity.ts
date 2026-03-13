@@ -9,17 +9,13 @@ export class StudentExam {
         public readonly studentId: string,
         public readonly seatNumber: string | null,
         public readonly seatPosition: string | null,
-        public readonly status: string,
-        public readonly currentLocation: string | null,
-        public readonly identityId: string | null,
-        public readonly isMatched: boolean,
-        public readonly checkinTime: Date | null,
-        public readonly checkoutTime: Date | null,
-        public readonly isValid: boolean,
         public readonly createdAt: Date,
         public readonly updatedAt: Date,
+        public readonly stt: number | null = null,
         public readonly studentName: string | null = null,
         public readonly studentCode: string | null = null,
+        public readonly studentEmail: string | null = null,
+        public readonly parts: any[] = [],
     ) { }
 
     static create(props: {
@@ -28,13 +24,7 @@ export class StudentExam {
         studentId: string;
         seatNumber?: string | null;
         seatPosition?: string | null;
-        status?: string;
-        currentLocation?: string | null;
-        identityId?: string | null;
-        isMatched?: boolean;
-        checkinTime?: Date | null;
-        checkoutTime?: Date | null;
-        isValid?: boolean;
+        stt?: number | null;
     }): StudentExam {
         return new StudentExam(
             props.id,
@@ -42,15 +32,9 @@ export class StudentExam {
             props.studentId,
             props.seatNumber ?? null,
             props.seatPosition ?? null,
-            props.status ?? 'REGISTERED',
-            props.currentLocation ?? null,
-            props.identityId ?? null,
-            props.isMatched ?? false,
-            props.checkinTime ?? null,
-            props.checkoutTime ?? null,
-            props.isValid ?? true,
             new Date(),
             new Date(),
+            props.stt ?? null,
         );
     }
 
@@ -60,17 +44,13 @@ export class StudentExam {
         studentId: string;
         seatNumber: string | null;
         seatPosition: string | null;
-        status: string;
-        currentLocation: string | null;
-        identityId: string | null;
-        isMatched: boolean;
-        checkinTime: Date | null;
-        checkoutTime: Date | null;
-        isValid: boolean;
         createdAt: Date;
         updatedAt: Date;
+        stt?: number | null;
         studentName?: string | null;
         studentCode?: string | null;
+        studentEmail?: string | null;
+        parts?: any[];
     }): StudentExam {
         return new StudentExam(
             props.id,
@@ -78,30 +58,20 @@ export class StudentExam {
             props.studentId,
             props.seatNumber,
             props.seatPosition,
-            props.status,
-            props.currentLocation,
-            props.identityId,
-            props.isMatched,
-            props.checkinTime,
-            props.checkoutTime,
-            props.isValid,
             props.createdAt,
             props.updatedAt,
+            props.stt ?? null,
             props.studentName,
             props.studentCode,
+            props.studentEmail,
+            props.parts ?? [],
         );
     }
 
     update(props: {
         seatNumber?: string | null;
         seatPosition?: string | null;
-        status?: string;
-        currentLocation?: string | null;
-        identityId?: string | null;
-        isMatched?: boolean;
-        checkinTime?: Date | null;
-        checkoutTime?: Date | null;
-        isValid?: boolean;
+        stt?: number | null;
     }): StudentExam {
         return new StudentExam(
             this.id,
@@ -109,15 +79,9 @@ export class StudentExam {
             this.studentId,
             props.seatNumber !== undefined ? props.seatNumber : this.seatNumber,
             props.seatPosition !== undefined ? props.seatPosition : this.seatPosition,
-            props.status !== undefined ? props.status : this.status,
-            props.currentLocation !== undefined ? props.currentLocation : this.currentLocation,
-            props.identityId !== undefined ? props.identityId : this.identityId,
-            props.isMatched !== undefined ? props.isMatched : this.isMatched,
-            props.checkinTime !== undefined ? props.checkinTime : this.checkinTime,
-            props.checkoutTime !== undefined ? props.checkoutTime : this.checkoutTime,
-            props.isValid !== undefined ? props.isValid : this.isValid,
             this.createdAt,
             new Date(),
+            props.stt !== undefined ? props.stt : this.stt,
             this.studentName,
             this.studentCode,
         );

@@ -12,13 +12,14 @@ export class ImportExamRoomHandler {
         private readonly examServiceClient: ClientProxy,
     ) { }
 
-    async handle(file: Express.Multer.File): Promise<{ message: string }> {
-        this.logger.log(`📤 Sending import-exam-room job for file: ${file.originalname}`);
+    async handle(file: Express.Multer.File, campusId?: string): Promise<{ message: string }> {
+        this.logger.log(`📤 Sending import-exam-room job for file: ${file.originalname} (Campus: ${campusId || 'Default'})`);
 
         const jobData: ExamImportJobData = {
             fileName: file.originalname,
             fileContent: file.buffer.toString('base64'),
             mimeType: file.mimetype,
+            campusId,
         };
 
         // Emit message to RabbitMQ

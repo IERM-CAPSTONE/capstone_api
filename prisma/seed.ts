@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Campus } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
@@ -162,51 +162,33 @@ async function main() {
     // ============================================
     console.log('🏢 Creating exam rooms with seat maps...');
 
-    const room101 = await prisma.examRoom.create({
-      data: {
-        roomNumber: '101',
-        capacity: 20,
-        status: 'Available',
-        max_rows: 4,
-        max_columns: 5,
-        total_seats: 20,
-      },
-    });
+    const campuses: Campus[] = ['HCM', 'HN', 'DN', 'QN', 'CT'];
+    const rooms = [];
 
-    const room102 = await prisma.examRoom.create({
-      data: {
-        roomNumber: '102',
-        capacity: 25,
-        status: 'Available',
-        max_rows: 5,
-        max_columns: 5,
-        total_seats: 25,
-      },
-    });
+    for (const campus of campuses) {
+      for (let i = 1; i <= 5; i++) {
+        const roomNum = `${campus}_${100 + i}`;
+        const room = await prisma.examRoom.create({
+          data: {
+            roomNumber: roomNum,
+            capacity: 20 + i,
+            status: 'Available',
+            max_rows: 5,
+            max_columns: 5,
+            total_seats: 25,
+            campus: campus,
+          },
+        });
+        rooms.push(room);
+      }
+    }
 
-    const room201 = await prisma.examRoom.create({
-      data: {
-        roomNumber: '201',
-        capacity: 21,
-        status: 'Available',
-        max_rows: 4,
-        max_columns: 5,
-        total_seats: 21,
-      },
-    });
+    const room101 = rooms.find(r => r.roomNumber === 'HCM_101') || rooms[0];
+    const room102 = rooms.find(r => r.roomNumber === 'HCM_102') || rooms[1];
+    const room201 = rooms.find(r => r.roomNumber === 'HN_101') || rooms[5];
+    const room202 = rooms.find(r => r.roomNumber === 'HN_102') || rooms[6];
 
-    const room202 = await prisma.examRoom.create({
-      data: {
-        roomNumber: '202',
-        capacity: 19,
-        status: 'Available',
-        max_rows: 4,
-        max_columns: 5,
-        total_seats: 19,
-      },
-    });
-
-    console.log(`✅ Created 4 exam rooms with seat configurations`);
+    console.log(`✅ Created ${rooms.length} exam rooms across ${campuses.length} campuses`);
 
     // ============================================
     // 3. CREATE EXAM SESSIONS
@@ -268,8 +250,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession1.id } },
         student: { connect: { id: student1.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -277,8 +257,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession1.id } },
         student: { connect: { id: student2.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -286,8 +264,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession1.id } },
         student: { connect: { id: student3.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -295,8 +271,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession1.id } },
         student: { connect: { id: student4.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -304,8 +278,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession1.id } },
         student: { connect: { id: student5.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -314,8 +286,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession2.id } },
         student: { connect: { id: student2.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -323,8 +293,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession2.id } },
         student: { connect: { id: student3.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -332,8 +300,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession2.id } },
         student: { connect: { id: student6.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -341,8 +307,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession2.id } },
         student: { connect: { id: student7.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -351,8 +315,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession3.id } },
         student: { connect: { id: student1.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -360,8 +322,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession3.id } },
         student: { connect: { id: student4.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -369,8 +329,6 @@ async function main() {
       data: {
         examSession: { connect: { id: examSession3.id } },
         student: { connect: { id: student8.id } },
-        status: 'REGISTERED',
-        isMatched: false,
       },
     });
 
@@ -384,7 +342,7 @@ async function main() {
     console.log('='.repeat(50));
     console.log('\n📊 Summary:');
     console.log(`   Users: 12 (1 Admin, 1 Officer, 2 Proctors, 8 Students)`);
-    console.log(`   Exam Rooms: 4 (with seat configs: 4x5, 5x5)`);
+    console.log(`   Exam Rooms: ${rooms.length} (across ${campuses.length} campuses)`);
     console.log(`   Exam Sessions: 3`);
     console.log(`   Student Exams: 12 (no seats assigned yet)`);
 

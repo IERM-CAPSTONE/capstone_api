@@ -24,9 +24,14 @@ export class RefreshTokenEndpoint {
 
         const { accessToken, refreshToken } = await this.handler.handleRefresh(userId);
 
-        // Update cookies
+        // Update cookies (for web)
         this.tokenService.setCookies(res, accessToken, refreshToken);
 
-        res.json({ message: 'Tokens refreshed successfully' });
+        // Return tokens in body (for mobile/manual handling)
+        res.json({
+            message: 'Tokens refreshed successfully',
+            accessToken,
+            refreshToken
+        });
     }
 }

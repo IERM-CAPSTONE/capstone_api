@@ -1,20 +1,14 @@
-// Prisma ActivityHistory Model
-
 /// Junction table: which student belongs to which exam session
 model ActivityHistory {
-  id String @id @default(uuid())
-
+  id            String       @id @default(uuid())
   studentExamId String
+  ticketId      String
+  activityType  ActivityType
+  description   String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   studentExam   StudentExam? @relation(fields: [studentExamId], references: [id])
-
-  ticketId String
-  ticket   IssueTicket? @relation(fields: [ticketId], references: [id])
-
-  activityType ActivityType
-  description  String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ticket        IssueTicket? @relation(fields: [ticketId], references: [id])
 
   @@unique([studentExamId, ticketId])
   @@index([studentExamId])

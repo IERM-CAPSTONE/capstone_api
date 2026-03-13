@@ -33,10 +33,16 @@ export class ExamSessionResponse {
     status: string;
 
     @ApiProperty({ example: ['L', 'R'] })
-    examType: string[];
+    examPart: string[];
 
     @ApiProperty({ nullable: true })
-    semester: string | null;
+    semesterId: string | null;
+
+    @ApiProperty({ nullable: true, enum: ['HCM', 'HN', 'DN', 'QN', 'CT'] })
+    campus: string | null;
+
+    @ApiProperty({ nullable: true, enum: ['PE', 'FE', 'TE', 'RE'] })
+    examType: string | null;
 
     @ApiProperty({ nullable: true })
     note: string | null;
@@ -49,6 +55,9 @@ export class ExamSessionResponse {
 
     @ApiProperty({ nullable: true })
     roomNumber: string | null;
+
+    @ApiProperty({ nullable: true })
+    semesterName: string | null;
 
     @ApiProperty({ nullable: true })
     proctorName: string | null;
@@ -65,8 +74,8 @@ export class ExamSessionResponse {
     @ApiProperty({ nullable: true })
     totalSeats: number | null;
 
-    @ApiProperty({ description: 'Archive flag', default: false })
-    isArchived: boolean;
+    @ApiProperty({ example: 40 })
+    studentCount: number;
 }
 
 export function toExamSessionResponse(session: ExamSession): ExamSessionResponse {
@@ -81,8 +90,11 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         examOpenTime: session.examTime.openTime,
         examCloseTime: session.examTime.closeTime,
         status: session.status,
+        examPart: session.examPart,
+        semesterId: session.semesterId,
+        semesterName: session.semesterName,
+        campus: session.campus,
         examType: session.examType,
-        semester: session.semester,
         note: session.note,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
@@ -92,7 +104,7 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         maxRows: session.maxRows,
         maxColumns: session.maxColumns,
         totalSeats: session.totalSeats,
-        isArchived: session.isArchived ?? false,
+        studentCount: session.studentCount,
     };
 }
 

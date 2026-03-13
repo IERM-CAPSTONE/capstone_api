@@ -1,51 +1,37 @@
-// Prisma ExamSession Model
-
 /// Represents a concrete exam session for a subject in a room at a given time
 model ExamSession {
-  id String @id @default(uuid())
-
-  examRoomId String?
-  examRoom   ExamRoom? @relation(fields: [examRoomId], references: [id])
-
+  id                String              @id @default(uuid())
+  examRoomId        String?
   /// Assigned staff
-  proctorId String?
-  proctor   User?   @relation("proctor", fields: [proctorId], references: [id])
-
+  proctorId         String?
   hallInvigilatorId String?
-  hallInvigilator   User?   @relation("hallInvigilator", fields: [hallInvigilatorId], references: [id])
-
-  subjectCode   String?
-  examOpenTime  DateTime?
-  examCloseTime DateTime?
-  examCode      String?
-  openCode      String?
-  status        ExamSessionStatus @default(Scheduled)
-  examType      ExamType[]
-  semester      String?
-  note          String?
-  isArchived    Boolean @default(false)
-
-  /// Attendance/registration list for this session
-  studentExams StudentExam[]
-
-  /// Seat layout for this session
-  examSeats ExamSeat[]
-
-  /// Locks layout editing after import
-  hasStudentsImported Boolean @default(false)
-
-  /// Related tickets/issues during this session
-  tickets IssueTicket[]
-
-  /// Assignment history/audit
-  assignments ProctorAssignment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  subjectCode       String?
+  examOpenTime      DateTime?
+  examCloseTime     DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  status            ExamSessionStatus   @default(Draft)
+  examType          ExamType?
+  examCode          String?
+  openCode          String?
+  note              String?
+  semesterId        String?
+  campus            Campus?
+  examParts         ExamPart[]
+  semester          Semester?           @relation(fields: [semesterId], references: [id])
+  studentExams      StudentExam[]
+  examSeats         ExamSeat[]
+  examRoom          ExamRoom?           @relation(fields: [examRoomId], references: [id])
+  proctor           User?               @relation("proctor", fields: [proctorId], references: [id])
+  hallInvigilator   User?               @relation("hallInvigilator", fields: [hallInvigilatorId], references: [id])
+  tickets           IssueTicket[]
+  assignments       ProctorAssignment[]
 
   @@index([examRoomId])
   @@index([proctorId])
   @@index([hallInvigilatorId])
   @@index([subjectCode])
+  @@index([semesterId])
+  @@index([campus])
   @@index([examOpenTime, examCloseTime])
 }

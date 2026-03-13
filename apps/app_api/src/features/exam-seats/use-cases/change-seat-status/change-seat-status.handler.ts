@@ -26,14 +26,7 @@ export class ChangeExamSeatStatusHandler {
             throw new BadRequestException(`Exam session not found`);
         }
 
-        // Gate: Cannot edit layout after students imported
-        if (examSession.hasStudentsImported && !['Assigned', 'Present', 'Absent'].includes(dto.status)) {
-            throw new ForbiddenException(
-                'Cannot edit layout after students imported. Only status changes for existing student assignments are allowed.'
-            );
-        }
-
-        // Validate status transition based on role
+        // User is allowed to edit layout based on role transition logic only
         this.validateStatusTransition(examSeat.status, dto.status, userRole);
 
         // Update the seat

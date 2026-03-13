@@ -5,6 +5,7 @@ import {
     UploadedFile,
     UseGuards,
     BadRequestException,
+    Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
@@ -33,14 +34,21 @@ export class ImportExamRoomEndpoint {
                     type: 'string',
                     format: 'binary',
                 },
+                campus: {
+                    type: 'string',
+                    description: 'Campus to import to (e.g. HCM, HN, DN, QN, CT)',
+                },
             },
         },
     })
     @UseInterceptors(FileInterceptor('file'))
-    async handle(@UploadedFile() file: Express.Multer.File) {
+    async handle(
+        @UploadedFile() file: Express.Multer.File,
+        @Body('campus') campus?: string,
+    ) {
         if (!file) {
             throw new BadRequestException('File is required');
         }
-        return await this.handler.handle(file);
+        return await this.handler.handle(file, campus);
     }
 }

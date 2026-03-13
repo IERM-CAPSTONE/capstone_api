@@ -20,4 +20,9 @@ export class UpdateExamRoomDto {
     @IsOptional()
     @IsEnum(['Available', 'Occupied', 'Maintenance', 'Exam_Ongoing', 'For_Exam'])
     status?: string;
+
+    @ApiProperty({ example: 'HCM', enum: ['HCM', 'HN', 'DN', 'QN', 'CT'], description: 'Campus', required: false })
+    @IsOptional()
+    @IsEnum(['HCM', 'HN', 'DN', 'QN', 'CT'])
+    campus?: string;
 }

@@ -1,0 +1,24 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
+
+export class ExportExamSessionsDto {
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    semesterId?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    campus?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    fromDate?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    toDate?: string;
+}

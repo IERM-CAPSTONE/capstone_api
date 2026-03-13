@@ -79,10 +79,16 @@ export interface ExamImportJobData {
 
     /** Mime type */
     mimeType: string;
+
+    /** Semester ID (optional) */
+    semesterId?: string;
+
+    /** Campus ID (optional) */
+    campusId?: string;
 }
 
 export interface ExamImportFinishedData {
-    action: 'rooms' | 'schedule' | 'proctor' | 'examcode';
+    action: 'rooms' | 'schedule' | 'proctor' | 'examcode' | 'subjects';
     fileName?: string;
     successCount: number;
     errorCount: number;
