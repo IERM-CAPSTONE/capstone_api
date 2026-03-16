@@ -39,4 +39,17 @@ export class ListUsersEndpoint {
         query.role = RoleType.PROCTOR;
         return this.handler.execute(query);
     }
+
+    @Get('assignees')
+    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
+    @ApiOperation({ summary: 'Get IT Support and Hall Invigilator users for ticket assignment' })
+    @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name or email' })
+    @ApiResponse({ status: 200, description: 'Assignee candidates retrieved successfully' })
+    async getAssignees(@Query() query: ListUsersDto): Promise<any[]> {
+        const [itSupport, hallInvigilator] = await Promise.all([
+            this.handler.execute({ ...query, role: RoleType.IT_SUPPORT, limit: 100 }),
+            this.handler.execute({ ...query, role: RoleType.HALL_INVIGILATOR, limit: 100 }),
+        ]);
+        return [...itSupport.data, ...hallInvigilator.data];
+    }
 }

@@ -1,7 +1,7 @@
-/// Notification messages from users to exam rooms (in-app/email/sms as channels)
+/// In-app notifications, supports user-to-user messaging
 model Notification {
   id        String   @id @default(uuid())
-  toId      String
+  toUserId  String
   fromId    String?
   title     String
   message   String
@@ -9,9 +9,9 @@ model Notification {
   meta      Json?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
-  to        ExamRoom @relation(fields: [toId], references: [id])
+  toUser    User     @relation("notificationTo", fields: [toUserId], references: [id])
   from      User?    @relation("notificationFrom", fields: [fromId], references: [id])
 
-  @@index([toId])
+  @@index([toUserId])
   @@index([fromId])
 }
