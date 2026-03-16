@@ -296,11 +296,6 @@ export class ExamImportProcessor {
 
                     if (!session || !session.examRoom) throw new Error(`Room not found for session ${finalSessionId}`);
 
-                    // Capacity Validation
-                    if (students.length > session.examRoom.total_seats) {
-                        throw new Error(`Student count (${students.length}) exceeds room capacity (${session.examRoom.total_seats}) for session ${sessionStr}`);
-                    }
-
                     // Phase 2: Fetch or Create ExamSeats for this session
                     let examSeats = await this.prisma.examSeat.findMany({
                         where: { examSessionId: finalSessionId },
@@ -308,9 +303,16 @@ export class ExamImportProcessor {
 
                     // If no seats exist, create them (should be auto-initialized in CreateExamSession, but handle edge case)
                     if (examSeats.length === 0) {
+                        const maxRows = session.examRoom.max_rows ?? 6;
+                        const maxColumns = session.examRoom.max_columns ?? 3;
+                        const maxGridSeats = maxRows * maxColumns;
+                        const totalSeats = session.examRoom.total_seats ?? maxGridSeats;
+                        const seatsToGenerate = Math.max(1, Math.min(totalSeats, maxGridSeats));
+
                         const seatRecords = [];
-                        for (let row = 1; row <= session.examRoom.max_rows; row++) {
-                            for (let col = 1; col <= session.examRoom.max_columns; col++) {
+                        let generated = 0;
+                        for (let row = 1; row <= maxRows && generated < seatsToGenerate; row++) {
+                            for (let col = 1; col <= maxColumns && generated < seatsToGenerate; col++) {
                                 seatRecords.push({
                                     id: uuidv4(),
                                     examSessionId: finalSessionId,
@@ -320,6 +322,7 @@ export class ExamImportProcessor {
                                     createdAt: new Date(),
                                     updatedAt: new Date(),
                                 });
+                                generated++;
                             }
                         }
                         await this.prisma.examSeat.createMany({ data: seatRecords });
@@ -331,19 +334,15 @@ export class ExamImportProcessor {
                         .filter(seat => seat.status === 'Available')
                         .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col));
 
-                    // Validate sufficient available seats
-                    if (availableSeats.length < students.length) {
-                        throw new Error(
-                            `Not enough Available seats: ${availableSeats.length} available, ${students.length} students. ` +
-                            `Lock some available seats before importing students.`
+                    // Professional handling: still import all students even when seats are insufficient.
+                    // Students beyond current available seats are created with seatNumber = null.
+                    const availableSeatLabels = availableSeats.map((seat) => `${seat.row}-${seat.col}`);
+                    if (students.length > availableSeatLabels.length) {
+                        this.logger.warn(
+                            `Session ${sessionStr}: ${students.length} students but only ${availableSeatLabels.length} available seats. ` +
+                            `${students.length - availableSeatLabels.length} students will be imported without provisional seatNumber.`
                         );
                     }
-
-                    // Shuffle available seats for random assignment
-                    this.shuffleArray(availableSeats);
-
-                    // Use raw seat coordinates as fallback for seatNumber
-                    const allPossibleSeats = this.generateSeats(session.examRoom.max_rows, session.examRoom.max_columns);
 
                     for (let i = 0; i < students.length; i++) {
                         const st = students[i];
@@ -367,9 +366,8 @@ export class ExamImportProcessor {
                                 throw new Error(`Student ${st.studentCode} already exists in session ${sessionStr}`);
                             }
 
-                            // Assign physical seat (seatPosition) and ordered seat number (seatNumber)
-                            const assignedPhysicalSeat = availableSeats[i];
-                            const seatNumberString = allPossibleSeats[i]; // "1-1", "1-2", etc.
+                            // Keep seatPosition null until finalization. Assign provisional seatNumber only if capacity allows.
+                            const seatNumberString = i < availableSeatLabels.length ? availableSeatLabels[i] : null;
 
                             // Create StudentExam WITHOUT seat assignment (deferred until seat layout is finalized)
                             studentExam = await this.prisma.studentExam.create({
@@ -378,7 +376,7 @@ export class ExamImportProcessor {
                                     examSessionId: finalSessionId,
                                     studentId: user.id,
                                     stt: st.stt ? Number(st.stt) : null,
-                                    seatNumber: seatNumberString, // Ordered list (1-1, 1-2, etc.)
+                                    seatNumber: seatNumberString,
                                     seatPosition: null, // ✅ NOT assigned yet - will be assigned when layout finalized
                                 }
                             });
@@ -984,23 +982,6 @@ export class ExamImportProcessor {
             closeTime: parseTime(endTimeStr),
             roomName: roomName.trim(),
         };
-    }
-
-    private generateSeats(rows: number, cols: number): string[] {
-        const seats: string[] = [];
-        for (let r = 1; r <= rows; r++) {
-            for (let c = 1; c <= cols; c++) {
-                seats.push(`${r}-${c}`);
-            }
-        }
-        return seats;
-    }
-
-    private shuffleArray(array: any[]) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
     }
 
     private emitFinished(

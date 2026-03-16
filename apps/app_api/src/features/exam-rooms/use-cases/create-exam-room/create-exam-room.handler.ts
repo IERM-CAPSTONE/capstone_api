@@ -30,8 +30,10 @@ export class CreateExamRoomHandler {
             id: uuidv4(),
             roomNumber: dto.roomNumber,
             capacity: dto.capacity,
+            status: dto.status,
             maxRows: dto.maxRows,
             maxColumns: dto.maxColumns,
+            totalSeats: dto.totalSeats,
             campus: dto.campus,
         });
 

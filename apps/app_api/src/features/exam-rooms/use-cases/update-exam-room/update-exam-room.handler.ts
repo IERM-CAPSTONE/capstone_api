@@ -36,6 +36,10 @@ export class UpdateExamRoomHandler {
         const updatedExamRoom = existingExamRoom.update({
             roomNumber: dto.roomNumber,
             capacity: dto.capacity,
+            status: dto.status,
+            maxRows: dto.maxRows,
+            maxColumns: dto.maxColumns,
+            totalSeats: dto.totalSeats,
             campus: dto.campus,
         });
 

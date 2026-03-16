@@ -61,11 +61,17 @@ export class CreateExamSessionHandler {
                 where: { id: saved.examRoomId }
             });
 
-            if (room && room.max_rows && room.max_columns) {
+            if (room) {
+                const maxRows = room.max_rows ?? 6;
+                const maxColumns = room.max_columns ?? 3;
+                const maxGridSeats = maxRows * maxColumns;
+                const totalSeats = room.total_seats ?? maxGridSeats;
+                const seatsToGenerate = Math.max(1, Math.min(totalSeats, maxGridSeats));
                 const seatsToCreate: ExamSeat[] = [];
-                
-                for (let row = 1; row <= room.max_rows; row++) {
-                    for (let col = 1; col <= room.max_columns; col++) {
+
+                let generated = 0;
+                for (let row = 1; row <= maxRows && generated < seatsToGenerate; row++) {
+                    for (let col = 1; col <= maxColumns && generated < seatsToGenerate; col++) {
                         seatsToCreate.push(
                             ExamSeat.create({
                                 id: uuidv4(),
@@ -75,6 +81,7 @@ export class CreateExamSessionHandler {
                                 status: 'Available',
                             })
                         );
+                        generated++;
                     }
                 }
 

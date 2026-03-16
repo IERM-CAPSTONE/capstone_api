@@ -31,12 +31,12 @@ export class SwapSeatsHandler {
             throw new BadRequestException('Seats must belong to the same exam session');
         }
 
-        // 3. Verify session has students imported (layout finalized)
+        // 3. Verify session is not in Draft status (layout finalized)
         const session = await this.prisma.examSession.findUnique({
             where: { id: examSessionId }
         });
 
-        if (!session || !session.hasStudentsImported) {
+        if (!session || session.status === 'Draft') {
             throw new BadRequestException('Seat swapping only enabled after layout is finalized');
         }
 
