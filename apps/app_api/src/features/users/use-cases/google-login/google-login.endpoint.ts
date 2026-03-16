@@ -41,7 +41,7 @@ export class GoogleLoginEndpoint {
         // Redirect back to frontend
         const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3001');
         const locale = 'en'; // Default locale
-        
+
         if (user.role.value === RoleType.ADMIN) {
             return res.redirect(`${frontendUrl}/${locale}/admin`);
         }
@@ -50,6 +50,12 @@ export class GoogleLoginEndpoint {
         }
         else if (user.role.value === RoleType.EXAM_OFFICER) {
             return res.redirect(`${frontendUrl}/${locale}/exam-officer/exam-schedules`);
+        }
+        else if (user.role.value === RoleType.HALL_INVIGILATOR) {
+            return res.redirect(`${frontendUrl}/${locale}/hall-invigilator`);
+        }
+        else if (user.role.value === RoleType.IT_SUPPORT) {
+            return res.redirect(`${frontendUrl}/${locale}/it-support`);
         }
         else {
             return res.redirect(`${frontendUrl}/${locale}/auth/login`);

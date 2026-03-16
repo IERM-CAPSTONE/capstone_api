@@ -177,7 +177,7 @@ export class ExamImportProcessor {
                     if (!parsed) throw new Error(`Cannot parse examSession string: ${s.examSession}`);
 
                     // Find or create Room
-                    let room = await this.prisma.examRoom.findUnique({ where: { roomNumber: parsed.roomName } });
+                    let room = await this.prisma.examRoom.findFirst({ where: { roomNumber: parsed.roomName } });
                     if (!room) {
                         room = await this.prisma.examRoom.create({
                             data: {
@@ -553,7 +553,7 @@ export class ExamImportProcessor {
                     const openTime = parseTime(startStr);
                     const closeTime = parseTime(endStr);
 
-                    const room = await this.prisma.examRoom.findUnique({
+                    const room = await this.prisma.examRoom.findFirst({
                         where: { roomNumber: String(p.examRoom) }
                     });
 
@@ -854,7 +854,7 @@ export class ExamImportProcessor {
                     const openTime = parseTime(startStr);
                     const closeTime = parseTime(endStr);
 
-                    const room = await this.prisma.examRoom.findUnique({
+                    const room = await this.prisma.examRoom.findFirst({
                         where: { roomNumber: String(c.examRoom) }
                     });
 

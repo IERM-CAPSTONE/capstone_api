@@ -8,8 +8,8 @@ const solver = require('javascript-lp-solver');
 export interface SchedulingConstraints {
     semesterId: string;
     campus: Campus;
-    finalWeek: number;
-    retakeWeek: number;
+    finalWeek?: number;
+    retakeWeek?: number;
     practicalWeek?: number;
     courseraWeek?: number;       // Dedicated week for Coursera FE sessions
     courseraRetakeWeek?: number; // Dedicated week for Coursera RE sessions
@@ -48,6 +48,7 @@ export class SchedulingService {
     private readonly START_HOUR = 7;
     private readonly START_MINUTE = 30;
     private readonly MIN_GAP_MINUTES = 40;
+    private readonly MINUTES_PER_DAY = 10 * 60;
 
     private subjectCache = new Map<string, any>();
 
@@ -150,16 +151,23 @@ export class SchedulingService {
         this.logger.log(`[HYBRID_SOLVER] Modeling Master Day-Assignment with javascript-lp-solver...`);
 
         const model: any = {
-            optimize: "totalDays",
+            optimize: "objective",
             opType: "min",
             constraints: {},
             variables: {},
             ints: {}
         };
 
-        // For each pool and each possible day (0-6), create a binary variable X_p_d
         const daysToTry = [0, 1, 2, 3, 4, 5]; 
-        const MINUTES_PER_DAY = 10 * 60; // Approx 10 hours of effective testing time per room
+
+        // 1. Define Day-Use variables in the objective
+        daysToTry.forEach(day => {
+            const dayVar = `day_${day}_used`;
+            model.variables[dayVar] = { objective: 1000 }; // Heavy weight to minimize total days
+            model.ints[dayVar] = 1;
+            // Also prefer earlier days slightly to keep schedule compact at the start of the week
+            model.variables[dayVar].objective += (day * 1); 
+        });
 
         allPools.forEach((pool, pIdx) => {
             const varNamePrefix = `p${pIdx}`;
@@ -169,16 +177,26 @@ export class SchedulingService {
             daysToTry.forEach(day => {
                 const varName = `${varNamePrefix}_d${day}`;
                 const poolDuration = pool.duration || 60;
+                const dayVar = `day_${day}_used`;
                 
+                // Link pool assignment to day-use indicator: X_p_d - day_d_used <= 0
+                const linkLabel = `link_p${pIdx}_d${day}`;
+                model.constraints[linkLabel] = { max: 0 };
+
                 model.variables[varName] = {
                     [assignConstraint]: 1,
-                    // Track room-minutes usage (Rooms * Duration)
+                    [linkLabel]: 1,
+                    // Track room-minutes usage
                     ...Object.keys(pool.campusNeeds).reduce((acc, camp) => {
                         const roomsNeeded = pool.campusNeeds[camp].numRooms;
                         acc[`cap_${camp}_d${day}`] = roomsNeeded * (poolDuration + this.MIN_GAP_MINUTES);
                         return acc;
                     }, {})
                 };
+                
+                // Add negative link on dayVar: -1 * day_d_used
+                model.variables[dayVar][linkLabel] = -1;
+                
                 model.ints[varName] = 1;
             });
         });
@@ -186,8 +204,7 @@ export class SchedulingService {
         // Add capacity constraints for each campus/day in minutes
         campusRooms.forEach((rooms, camp) => {
             daysToTry.forEach(day => {
-                // Total available minutes in all rooms for this campus/day
-                model.constraints[`cap_${camp}_d${day}`] = { max: rooms.length * MINUTES_PER_DAY };
+                model.constraints[`cap_${camp}_d${day}`] = { max: rooms.length * this.MINUTES_PER_DAY };
             });
         });
 
@@ -288,155 +305,134 @@ export class SchedulingService {
             for (const day of daySequence) {
                 if (scheduledForSubject) break;
 
-                const dayResults: ScheduledSession[] = [];
-                let dayIsPossible = true;
+                const dayStart = this.getStartOfDayTime(semStartDate, weekNum, day).getTime();
+                const dayEnd = dayStart + this.MINUTES_PER_DAY * 60000;
+                let currentAttemptStart = dayStart;
 
-                // 1. PHASE 1: Identify all needed rooms across ALL campuses and their availability
-                const roomsToUse: { camp: Campus, roomId: string, nextAvailable: number }[] = [];
-                for (const campStr of Object.keys(session.campusNeeds)) {
-                    const camp = campStr as Campus;
-                    const need = session.campusNeeds[camp];
-                    const availableRoomIds = campusRooms.get(camp) || [];
+                while (currentAttemptStart + session.duration * 60000 <= dayEnd) {
+                    const dayResults: ScheduledSession[] = [];
+                    let attemptIsPossible = true;
 
-                    if (availableRoomIds.length < need.numRooms) {
-                        dayIsPossible = false;
-                        break;
-                    }
+                    // 1. PHASE 1: Identify needed rooms
+                    const roomsToUse: { camp: Campus, roomId: string, nextAvailable: number }[] = [];
+                    for (const campStr of Object.keys(session.campusNeeds)) {
+                        const camp = campStr as Campus;
+                        const need = session.campusNeeds[camp];
+                        const availableRoomIds = campusRooms.get(camp) || [];
 
-                    const roomsWithTimes = availableRoomIds.map(rid => {
-                        if (!state.roomTimelines.has(rid)) state.roomTimelines.set(rid, new Map());
-                        const dayTimelines = state.roomTimelines.get(rid);
-                        if (!dayTimelines.has(day)) {
-                            dayTimelines.set(day, this.getStartOfDayTime(semStartDate, weekNum, day).getTime());
-                        }
-                        return { camp, roomId: rid, next: dayTimelines.get(day) };
-                    });
-
-                    roomsWithTimes.sort((a, b) => a.next - b.next);
-                    roomsToUse.push(...roomsWithTimes.slice(0, need.numRooms).map(r => ({
-                        camp: r.camp,
-                        roomId: r.roomId,
-                        nextAvailable: r.next
-                    })));
-                }
-
-                if (!dayIsPossible || roomsToUse.length === 0) continue;
-
-                // 2. PHASE 2: Determine base start times based on synchronization rules
-                let currentSessionStartPointer = 0;
-                if (!isPE) {
-                    // Global Sync: All rooms across all campuses start at the LATEST possible time
-                    currentSessionStartPointer = Math.max(...roomsToUse.map(r => r.nextAvailable));
-                }
-
-                // 3. PHASE 3: Iteratively schedule each required room/session
-                let subjectSequencePointer = currentSessionStartPointer; // Used for sequential PE scheduling
-
-                for (const roomInfo of roomsToUse) {
-                    let proposedStart: number;
-
-                    if (!isPE) {
-                        proposedStart = currentSessionStartPointer;
-                    } else {
-                        // PE Staggered: Must be after room is free AND after previous session of this subject
-                        proposedStart = Math.max(roomInfo.nextAvailable, subjectSequencePointer);
-                    }
-
-                    const proposedEnd = proposedStart + session.duration * 60000;
-                    const roomCap = roomCapacityMap?.get(roomInfo.roomId) || 30;
-                    const need = session.campusNeeds[roomInfo.camp];
-                    
-                    // Note: This logic assumes we process students in chunks per room
-                    // For cross-campus, we've already shuffled studentCodes in buildSessionGroup
-                    const roomIdx = roomsToUse.filter(r => r.camp === roomInfo.camp).indexOf(roomInfo);
-                    const roomStudents = need.studentCodes.slice(roomIdx * roomCap, (roomIdx + 1) * roomCap);
-
-                    // Check student conflicts
-                    let studentConflict = false;
-                    for (const s of roomStudents) {
-                        // Max 2 exams/day
-                        const dayCounts = state.studentDayCounts.get(s) || new Map();
-                        if ((dayCounts.get(day) || 0) >= 2) {
-                            studentConflict = true;
+                        if (availableRoomIds.length < need.numRooms) {
+                            attemptIsPossible = false;
                             break;
                         }
 
-                        // Overlap check with other subjects
-                        if (!state.studentIntervals.has(s)) state.studentIntervals.set(s, new Map());
-                        const intervals = state.studentIntervals.get(s).get(day) || [];
-                        for (const existing of intervals) {
-                            if (proposedStart < existing.end && proposedEnd > existing.start) {
+                        const roomsWithTimes = availableRoomIds.map(rid => {
+                            if (!state.roomTimelines.has(rid)) state.roomTimelines.set(rid, new Map());
+                            const dayTimelines = state.roomTimelines.get(rid);
+                            if (!dayTimelines.has(day)) dayTimelines.set(day, dayStart);
+                            return { camp, roomId: rid, next: dayTimelines.get(day) };
+                        });
+
+                        roomsWithTimes.sort((a, b) => a.next - b.next);
+                        roomsToUse.push(...roomsWithTimes.slice(0, need.numRooms).map(r => ({
+                            camp: r.camp,
+                            roomId: r.roomId,
+                            nextAvailable: r.next
+                        })));
+                    }
+
+                    if (!attemptIsPossible || roomsToUse.length === 0) break;
+
+                    // 2. Adjust attempt start to respect room availability
+                    const earliestPossibleStart = isPE 
+                        ? currentAttemptStart 
+                        : Math.max(currentAttemptStart, ...roomsToUse.map(r => r.nextAvailable));
+                    
+                    if (earliestPossibleStart + session.duration * 60000 > dayEnd) break;
+
+                    // 3. PHASE 3: Iteratively schedule
+                    let subjectSequencePointer = earliestPossibleStart;
+                    for (const roomInfo of roomsToUse) {
+                        let proposedStart = isPE ? Math.max(roomInfo.nextAvailable, subjectSequencePointer) : earliestPossibleStart;
+                        const proposedEnd = proposedStart + session.duration * 60000;
+                        const roomCap = roomCapacityMap?.get(roomInfo.roomId) || 30;
+                        const need = session.campusNeeds[roomInfo.camp];
+                        
+                        const roomIdx = roomsToUse.filter(r => r.camp === roomInfo.camp).indexOf(roomInfo);
+                        const roomStudents = need.studentCodes.slice(roomIdx * roomCap, (roomIdx + 1) * roomCap);
+
+                        let studentConflict = false;
+                        for (const s of roomStudents) {
+                            if ((state.studentDayCounts.get(s)?.get(day) || 0) >= 2) {
                                 studentConflict = true;
                                 break;
                             }
-                        }
-                        if (studentConflict) break;
+                            const intervals = state.studentIntervals.get(s)?.get(day) || [];
+                            for (const existing of intervals) {
+                                if (proposedStart < existing.end && proposedEnd > existing.start) {
+                                    studentConflict = true;
+                                    break;
+                                }
+                            }
+                            if (studentConflict) break;
 
-                        // Busy slots check
-                        if (busySlots?.has(s)) {
-                            const searchDay = day === 7 ? 0 : day;
-                            const busySets = busySlots.get(s);
-                            for (let sl = 1; sl <= 6; sl++) {
-                                if (busySets.has(`${searchDay}_${sl}`)) {
-                                    const bStart = this.getStartOfDayTime(semStartDate, weekNum, day).getTime() + (sl - 1) * 100 * 60000;
-                                    const bEnd = bStart + 90 * 60000;
-                                    if (proposedStart < bEnd && proposedEnd > bStart) {
-                                        studentConflict = true;
-                                        break;
+                            if (busySlots?.has(s)) {
+                                const searchDay = day === 7 ? 0 : day;
+                                const busySets = busySlots.get(s);
+                                for (let sl = 1; sl <= 6; sl++) {
+                                    if (busySets.has(`${searchDay}_${sl}`)) {
+                                        const bStart = dayStart + (sl - 1) * 100 * 60000;
+                                        const bEnd = bStart + 90 * 60000;
+                                        if (proposedStart < bEnd && proposedEnd > bStart) {
+                                            studentConflict = true;
+                                            break;
+                                        }
                                     }
                                 }
                             }
+                            if (studentConflict) break;
                         }
-                        if (studentConflict) break;
+
+                        if (studentConflict) {
+                            attemptIsPossible = false;
+                            break;
+                        }
+
+                        dayResults.push({
+                            weekNum,
+                            dayIndex: day,
+                            slotIndex: 0, 
+                            subjectCode: session.subjectCode,
+                            studentCodes: roomStudents,
+                            roomId: roomInfo.roomId,
+                            campus: roomInfo.camp as string,
+                            examPartIds: session.examPartIds,
+                            examType: session.examType,
+                            openTime: new Date(proposedStart),
+                            closeTime: new Date(proposedEnd),
+                            duration: session.duration,
+                            note: session.note
+                        });
+                        if (isPE) subjectSequencePointer = proposedEnd + this.MIN_GAP_MINUTES * 60000;
                     }
 
-                    if (studentConflict) {
-                        dayIsPossible = false;
+                    if (attemptIsPossible && dayResults.length === roomsToUse.length) {
+                        for (const res of dayResults) {
+                            const dayTimelines = state.roomTimelines.get(res.roomId);
+                            dayTimelines.set(day, res.closeTime.getTime() + this.MIN_GAP_MINUTES * 60000);
+                            for (const s of res.studentCodes) {
+                                if (!state.studentIntervals.has(s)) state.studentIntervals.set(s, new Map());
+                                if (!state.studentIntervals.get(s).has(day)) state.studentIntervals.get(s).set(day, []);
+                                state.studentIntervals.get(s).get(day).push({ start: res.openTime.getTime(), end: res.closeTime.getTime() });
+                                if (!state.studentDayCounts.has(s)) state.studentDayCounts.set(s, new Map());
+                                const counts = state.studentDayCounts.get(s);
+                                counts.set(day, (counts.get(day) || 0) + 1);
+                            }
+                        }
+                        results.push(...dayResults);
+                        scheduledForSubject = true;
                         break;
                     }
-
-                    dayResults.push({
-                        weekNum,
-                        dayIndex: day,
-                        slotIndex: 0, 
-                        subjectCode: session.subjectCode,
-                        studentCodes: roomStudents,
-                        roomId: roomInfo.roomId,
-                        campus: roomInfo.camp as string,
-                        examPartIds: session.examPartIds,
-                        examType: session.examType,
-                        openTime: new Date(proposedStart),
-                        closeTime: new Date(proposedEnd),
-                        duration: session.duration,
-                        note: session.note
-                    });
-
-                    // Update pointer for next PE session of this subject
-                    if (isPE) {
-                        subjectSequencePointer = proposedEnd + this.MIN_GAP_MINUTES * 60000;
-                    }
-                }
-
-                if (dayIsPossible && dayResults.length === roomsToUse.length) {
-                    // COMMIT
-                    for (const res of dayResults) {
-                        // Update Room Timeline
-                        const dayTimelines = state.roomTimelines.get(res.roomId);
-                        dayTimelines.set(day, res.closeTime.getTime() + this.MIN_GAP_MINUTES * 60000);
-
-                        // Update Student Timelines
-                        for (const s of res.studentCodes) {
-                            if (!state.studentIntervals.has(s)) state.studentIntervals.set(s, new Map());
-                            if (!state.studentIntervals.get(s).has(day)) state.studentIntervals.get(s).set(day, []);
-                            state.studentIntervals.get(s).get(day).push({ start: res.openTime.getTime(), end: res.closeTime.getTime() });
-
-                            if (!state.studentDayCounts.has(s)) state.studentDayCounts.set(s, new Map());
-                            const counts = state.studentDayCounts.get(s);
-                            counts.set(day, (counts.get(day) || 0) + 1);
-                        }
-                    }
-                    results.push(...dayResults);
-                    scheduledForSubject = true;
+                    currentAttemptStart += 30 * 60000;
                 }
             }
         }
