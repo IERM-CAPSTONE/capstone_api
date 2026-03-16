@@ -8,16 +8,18 @@ import { DeleteExamRoomHandler, DeleteExamRoomEndpoint } from './use-cases/delet
 import { GetExamRoomHandler, GetExamRoomEndpoint } from './use-cases/get-exam-room';
 import { ListExamRoomsHandler, ListExamRoomsEndpoint } from './use-cases/list-exam-rooms';
 import { ImportExamRoomHandler, ImportExamRoomEndpoint } from './use-cases/import-exam-room';
+import { DeleteManyExamRoomsHandler, DeleteManyExamRoomsEndpoint } from './use-cases/delete-many-exam-rooms';
 
 @Module({
     imports: [ExamRoomsCoreModule],
     controllers: [
         CreateExamRoomEndpoint,
-        UpdateExamRoomEndpoint,
-        DeleteExamRoomEndpoint,
-        GetExamRoomEndpoint,
         ListExamRoomsEndpoint,
         ImportExamRoomEndpoint,
+        DeleteManyExamRoomsEndpoint,
+        GetExamRoomEndpoint,
+        UpdateExamRoomEndpoint,
+        DeleteExamRoomEndpoint,
     ],
     providers: [
         CreateExamRoomHandler,
@@ -26,6 +28,7 @@ import { ImportExamRoomHandler, ImportExamRoomEndpoint } from './use-cases/impor
         GetExamRoomHandler,
         ListExamRoomsHandler,
         ImportExamRoomHandler,
+        DeleteManyExamRoomsHandler,
     ],
 })
 export class ExamRoomsModule { }

@@ -1,7 +1,7 @@
 /// Stores exam room information (room number, capacity, etc.)
 model ExamRoom {
   id            String         @id @default(uuid())
-  roomNumber    String         @unique
+  roomNumber    String
   capacity      Int?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -13,5 +13,6 @@ model ExamRoom {
   examSessions  ExamSession[]
   notifications Notification[]
 
+  @@unique([roomNumber, campus])
   @@index([campus])
 }

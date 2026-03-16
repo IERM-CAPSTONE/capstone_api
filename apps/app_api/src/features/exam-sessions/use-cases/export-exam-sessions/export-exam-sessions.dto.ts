@@ -15,6 +15,12 @@ export class ExportExamSessionsDto {
     @ApiProperty({ required: false })
     @IsOptional()
     @IsString()
+    examType?: string;
+
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
     fromDate?: string;
 
     @ApiProperty({ required: false })

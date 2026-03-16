@@ -12,8 +12,8 @@ import { Campus } from '@prisma/client';
 interface AutoGenerateScheduleJob {
     semesterId: string;
     campus: Campus[];
-    finalWeek: number;
-    retakeWeek: number;
+    finalWeek?: number;
+    retakeWeek?: number;
     practicalWeek?: number;
     courseraWeek?: number;
     courseraRetakeWeek?: number;

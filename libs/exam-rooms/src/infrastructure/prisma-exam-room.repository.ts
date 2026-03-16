@@ -131,4 +131,22 @@ export class PrismaExamRoomRepository implements IExamRoomRepository {
             where: { id },
         });
     }
+
+    async deleteMany(query: { roomNumber?: string; campus?: string }): Promise<number> {
+        const where: any = {};
+
+        if (query.roomNumber !== undefined) {
+            where.roomNumber = query.roomNumber;
+        }
+
+        if (query.campus !== undefined) {
+            where.campus = query.campus as any;
+        }
+
+        const { count } = await this.prisma.examRoom.deleteMany({
+            where,
+        });
+
+        return count;
+    }
 }
