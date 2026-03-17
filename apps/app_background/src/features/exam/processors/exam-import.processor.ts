@@ -263,7 +263,7 @@ export class ExamImportProcessor {
                     if (!finalSessionId) {
                         try {
                             const parsed = this.parseExamSession(sessionStr);
-                            const room = await this.prisma.examRoom.findUnique({ where: { roomNumber: parsed.roomName } });
+                            const room = await this.prisma.examRoom.findFirst({ where: { roomNumber: parsed.roomName } });
                             this.logger.log(`Fallback Lookup: Room ${parsed.roomName} found: ${!!room}`);
 
                             if (room) {

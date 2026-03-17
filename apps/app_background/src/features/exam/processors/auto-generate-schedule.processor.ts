@@ -7,7 +7,7 @@ import { Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
-import { Campus } from '@prisma/client';
+import { Campus, ExamSessionStatus } from '@prisma/client';
 
 interface AutoGenerateScheduleJob {
     semesterId: string;
@@ -95,7 +95,7 @@ export class AutoGenerateScheduleProcessor {
                 where: {
                     semesterId: data.semesterId,
                     campus: { in: campuses as Campus[] },
-                    status: 'Draft'
+                    status: ExamSessionStatus.Draft
                 }
             });
 
@@ -195,9 +195,9 @@ export class AutoGenerateScheduleProcessor {
                         examOpenTime: session.openTime,
                         examCloseTime: session.closeTime,
                         semesterId: data.semesterId,
-                        status: 'Draft',
+                        status: ExamSessionStatus.Draft,
                         examType: session.examType as any,
-                        campus: (session.campus || room?.campus || mainCampus) as any,
+                        campus: (session.campus || (room as any)?.campus || mainCampus) as any,
                         examParts: { connect: session.examPartIds.map(id => ({ id })) },
                     }
                 });

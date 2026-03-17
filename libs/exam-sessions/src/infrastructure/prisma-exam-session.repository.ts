@@ -18,34 +18,21 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             campus: session.campus as any,
             examType: session.examType as any,
             note: session.note,
+            hasStudentsImported: false, // Default or map from entity if exist
             updatedAt: session.updatedAt,
         };
-
-        // Pre-lookup valid ExamType records to avoid "not found" errors on connect
-        let validExamTypeIds: { id: string }[] = [];
-        if (session.examType?.length) {
-            const found = await this.prisma.examType.findMany({
-                where: { code: { in: session.examType } },
-                select: { id: true },
-            });
-            validExamTypeIds = found;
-        }
 
         const createRelationData: any = {};
         if (session.examRoomId) createRelationData.examRoom = { connect: { id: session.examRoomId } };
         if (session.proctorId) createRelationData.proctor = { connect: { id: session.proctorId } };
         if (session.hallInvigilatorId) createRelationData.hallInvigilator = { connect: { id: session.hallInvigilatorId } };
         if (session.semesterId) createRelationData.semester = { connect: { id: session.semesterId } };
-        if (validExamTypeIds.length > 0) {
-            createRelationData.examType = { connect: validExamTypeIds };
-        }
 
         const updateRelationData = {
             examRoom: session.examRoomId ? { connect: { id: session.examRoomId } } : { disconnect: true },
             proctor: session.proctorId ? { connect: { id: session.proctorId } } : { disconnect: true },
             hallInvigilator: session.hallInvigilatorId ? { connect: { id: session.hallInvigilatorId } } : { disconnect: true },
             semester: session.semesterId ? { connect: { id: session.semesterId } } : { disconnect: true },
-            examType: { set: validExamTypeIds },
         };
 
         const saved = await this.prisma.examSession.upsert({
