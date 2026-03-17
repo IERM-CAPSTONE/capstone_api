@@ -69,6 +69,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/proctor-applications/tsconfig.lib.json"
       }
+    },
+    "tickets": {
+      "type": "library",
+      "root": "libs/tickets",
+      "entryFile": "index",
+      "sourceRoot": "libs/tickets/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/tickets/tsconfig.lib.json"
+      }
     }
   }
 }

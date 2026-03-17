@@ -108,7 +108,12 @@
     "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "diagnostics": false
+        }
+      ]
     },
     "collectCoverageFrom": [
       "apps/app_api/src/**/*.ts",
@@ -142,7 +147,9 @@
       "^@app/prisma(|/.*)$": "<rootDir>/libs/prisma/$1",
       "^@app/queue(|/.*)$": "<rootDir>/libs/queue/src/$1",
       "^@app/exam-parts(|/.*)$": "<rootDir>/libs/exam-parts/src/$1",
-      "^@app/subjects(|/.*)$": "<rootDir>/libs/subjects/src/$1"
+      "^@app/subjects(|/.*)$": "<rootDir>/libs/subjects/src/$1",
+      "^@app/exam-types(|/.*)$": "<rootDir>/libs/exam-types/src/$1",
+      "^@app/tickets(|/.*)$": "<rootDir>/libs/tickets/src/$1"
     }
   }
 }
