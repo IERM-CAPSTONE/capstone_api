@@ -3,6 +3,27 @@ import { PrismaService } from '@app/prisma';
 import { StudentExam } from '../domain/entities';
 import { IStudentExamRepository } from '../domain/repositories';
 
+type StudentMeta = {
+    fullName?: string | null;
+    code?: string | null;
+    email?: string | null;
+    avatarUrl?: string | null;
+};
+
+type StudentExamWithMeta = StudentExam & {
+    studentAvatarUrl?: string | null;
+    student?: StudentMeta | null;
+};
+
+const attachStudentMeta = (
+    exam: StudentExam,
+    student: StudentMeta | null | undefined,
+): StudentExamWithMeta =>
+    Object.assign(exam, {
+        studentAvatarUrl: student?.avatarUrl ?? null,
+        student: student ?? null,
+    });
+
 @Injectable()
 export class PrismaStudentExamRepository implements IStudentExamRepository {
     constructor(private readonly prisma: PrismaService) { }
@@ -60,7 +81,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
 
         if (!found) return null;
 
-        return StudentExam.reconstitute({
+        const exam = StudentExam.reconstitute({
             id: found.id,
             examSessionId: found.examSessionId,
             studentId: found.studentId,
@@ -74,6 +95,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             studentEmail: found.student?.email,
             parts: (found as any).parts,
         });
+
+        return attachStudentMeta(exam, found.student);
     }
 
     async findByExamSessionId(examSessionId: string): Promise<StudentExam[]> {
@@ -82,18 +105,22 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             include: { student: true },
         });
 
-        return results.map(item => StudentExam.reconstitute({
-            id: item.id,
-            examSessionId: item.examSessionId,
-            studentId: item.studentId,
-            seatNumber: item.seatNumber,
-            seatPosition: item.seatPosition,
-            stt: item.stt,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            studentName: item.student?.fullName,
-            studentCode: item.student?.code,
-        }));
+        return results.map(item => {
+            const exam = StudentExam.reconstitute({
+                id: item.id,
+                examSessionId: item.examSessionId,
+                studentId: item.studentId,
+                seatNumber: item.seatNumber,
+                seatPosition: item.seatPosition,
+                stt: item.stt,
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
+                studentName: item.student?.fullName,
+                studentCode: item.student?.code,
+            });
+
+            return attachStudentMeta(exam, item.student);
+        });
     }
 
     async findByStudentId(studentId: string): Promise<StudentExam[]> {
@@ -144,20 +171,24 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             this.prisma.studentExam.count({ where }),
         ]);
 
-        const data = results.map(item => StudentExam.reconstitute({
-            id: item.id,
-            examSessionId: item.examSessionId,
-            studentId: item.studentId,
-            seatNumber: item.seatNumber,
-            seatPosition: item.seatPosition,
-            stt: item.stt,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            studentName: item.student?.fullName,
-            studentCode: item.student?.code,
-            studentEmail: item.student?.email,
-            parts: (item as any).parts,
-        }));
+        const data = results.map(item => {
+            const exam = StudentExam.reconstitute({
+                id: item.id,
+                examSessionId: item.examSessionId,
+                studentId: item.studentId,
+                seatNumber: item.seatNumber,
+                seatPosition: item.seatPosition,
+                stt: item.stt,
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
+                studentName: item.student?.fullName,
+                studentCode: item.student?.code,
+                studentEmail: item.student?.email,
+                parts: (item as any).parts,
+            });
+
+            return attachStudentMeta(exam, item.student);
+        });
 
         return { data, total };
     }
