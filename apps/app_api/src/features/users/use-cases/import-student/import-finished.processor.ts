@@ -64,6 +64,23 @@ export class ImportFinishedProcessor {
         channel.ack(originalMsg);
     }
 
+    @MessagePattern(MESSAGE_PATTERNS.EXAM.AUTO_GENERATE_CALCULATED)
+    async handleAutoGenerateCalculated(
+        @Payload() data: any,
+        @Ctx() context: RmqContext
+    ) {
+        const channel = context.getChannelRef();
+        const originalMsg = context.getMessage();
+
+        this.logger.log(`Received auto-generate calculated event...`);
+
+        // Push to WebSocket
+        this.notificationGateway.sendToAll('AUTO_GENERATE_CALCULATED', data);
+
+        // Manual acknowledge
+        channel.ack(originalMsg);
+    }
+
     @MessagePattern(MESSAGE_PATTERNS.EXAM.AUTO_GENERATE_FINISHED)
     async handleAutoGenerateFinished(
         @Payload() data: any,

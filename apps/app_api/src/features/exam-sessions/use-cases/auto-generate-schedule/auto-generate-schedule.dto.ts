@@ -56,4 +56,8 @@ export class AutoGenerateScheduleDto {
     @ApiProperty({ type: [CampusFileDto], description: 'Per-campus student class schedule files', required: false })
     @IsArray() @ValidateNested({ each: true }) @Type(() => CampusFileDto) @IsOptional()
     classScheduleFiles?: CampusFileDto[];
+
+    @ApiProperty({ example: 6, description: 'Number of exam days in a week (6 or 7)', required: false })
+    @IsNumber() @IsOptional()
+    examDays?: number;
 }

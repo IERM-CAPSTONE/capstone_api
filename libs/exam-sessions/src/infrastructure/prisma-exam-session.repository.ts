@@ -305,6 +305,17 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         return result.count;
     }
 
+    async publishAllDraftsForSemester(semesterId: string): Promise<number> {
+        const result = await this.prisma.examSession.updateMany({
+            where: {
+                semesterId,
+                status: 'Draft'
+            },
+            data: { status: 'Scheduled' }
+        });
+        return result.count;
+    }
+
     async delete(id: string): Promise<void> {
         await this.prisma.examSession.delete({ where: { id } });
     }

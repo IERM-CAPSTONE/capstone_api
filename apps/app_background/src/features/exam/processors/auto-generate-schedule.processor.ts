@@ -21,6 +21,7 @@ interface AutoGenerateScheduleJob {
     fileData?: string; // Base64 CSV (legacy fallback for single campus)
     campusFiles?: { campus: string; fileData: string }[]; // Per-campus files
     classScheduleFiles?: { campus: string; fileData: string }[]; // Per-campus class schedule files
+    examDays?: number; // 6 or 7
 }
 
 @Controller()
@@ -99,175 +100,209 @@ export class AutoGenerateScheduleProcessor {
                 }
             });
 
-            // 3. Pre-fetch rooms
-            const rooms = await this.prisma.examRoom.findMany({
+            // 3. Pre-fetch rooms to identify active campuses
+            const allRooms = await this.prisma.examRoom.findMany({
                 where: { id: { in: data.roomIds } }
             });
+            const roomMapByCampus = new Map<Campus, string[]>();
+            allRooms.forEach(r => {
+                const camp = r.campus as Campus;
+                if (!roomMapByCampus.has(camp)) roomMapByCampus.set(camp, []);
+                roomMapByCampus.get(camp).push(r.id);
+            });
 
-            // 4. Call Scheduling Service
-            const mainCampus = campuses[0] as Campus;
-            const semester = await this.prisma.semester.findUnique({ where: { id: data.semesterId } });
-            require('fs').writeFileSync('/tmp/debug_semester.json', JSON.stringify(semester, null, 2));
+            const activeCampuses = Array.from(roomMapByCampus.keys());
+            this.logger.log(`🚀 Starting UNIFIED scheduling for ${activeCampuses.length} campuses: ${activeCampuses.join(', ')} — same subject will share the same exam slot across all campuses`);
 
-            const scheduledSessions = await this.schedulingService.generateSchedule({
+            // Single unified scheduling call — the service groups by subjectCode internally
+            // so ALL campuses' students for the same subject end up in the SAME time slot
+            const { sessions: allScheduledSessions, failedPools: totalFailedPools } = await this.schedulingService.generateSchedule({
                 semesterId: data.semesterId,
-                campus: mainCampus,
+                campus: activeCampuses[0],           // primary campus (used as fallback only)
                 finalWeek: data.finalWeek,
                 retakeWeek: data.retakeWeek,
                 practicalWeek: data.practicalWeek,
                 courseraWeek: data.courseraWeek,
                 courseraRetakeWeek: data.courseraRetakeWeek,
-                roomIds: data.roomIds,
-                excelData: excelData,
-                busySlots: busySlotsMap
+                roomIds: data.roomIds,               // ALL room IDs across all campuses
+                excelData: excelData,                // ALL campus data (each row has .campus set)
+                busySlots: busySlotsMap,
+                examDays: data.examDays
             });
 
-            this.logger.log(`Algorithm generated ${scheduledSessions.length} sessions`);
+            const totalScheduledSessionsCount = allScheduledSessions.length;
 
-            // 5. Pre-process Students and Rooms
+            this.logger.log(`📊 All campuses processed. Total: ${allScheduledSessions.length} sessions, ${totalFailedPools.length} failed pools.`);
+
+            // Emit early calculated event so UI can display errors while DB is saving
+            // Resolve room IDs → room numbers for readable error messages
+            const allRoomNumberMap = new Map<string, string>(allRooms.map(r => [r.id, (r as any).roomNumber || r.id]));
+            const enrichedFailedItems = totalFailedPools.map(f => ({
+                subjectCode: f.subjectCode,
+                examType: f.examType,
+                campus: f.campus,
+                reason: f.reason,
+                note: f.note,
+                students: f._failStudents || [],
+                rooms: f._failRooms
+                    ? {
+                        campus: f._failRooms.campus,
+                        needed: f._failRooms.needed,
+                        available: f._failRooms.available,
+                        roomNumbers: (f._failRooms.roomIds || []).map(id => allRoomNumberMap.get(id) || id),
+                    }
+                    : undefined,
+            }));
+
+            this.apiEventClient.emit(MESSAGE_PATTERNS.EXAM.AUTO_GENERATE_CALCULATED, {
+                semesterId: data.semesterId,
+                failedCount: totalFailedPools.length,
+                failedItems: enrichedFailedItems,
+            });
+            // 5. Save everything to Database
             const allStudentCodes = new Set<string>();
-            scheduledSessions.forEach(s => s.studentCodes.forEach(code => allStudentCodes.add(code.trim())));
-
-            const existingUsers = await this.prisma.user.findMany({
-                where: {
-                    OR: [
-                        { code: { in: Array.from(allStudentCodes) } },
-                        { username: { in: Array.from(allStudentCodes) } }
-                    ]
-                }
-            });
-
+            allScheduledSessions.forEach(s => s.studentCodes.forEach(code => allStudentCodes.add(code.trim())));
+            
+            const studentCodeArray = Array.from(allStudentCodes);
             const userMap = new Map<string, any>();
-            existingUsers.forEach(u => {
-                if (u.code) userMap.set(u.code.trim(), u);
-                if (u.username) userMap.set(u.username.trim(), u);
-            });
+            const chunkSize = 5000;
 
-            // Create missing students
-            const missingCodes = Array.from(allStudentCodes).filter(code => !userMap.has(code));
-            if (missingCodes.length > 0) {
-                this.logger.log(`Creating ${missingCodes.length} missing placeholder students...`);
-                await this.prisma.user.createMany({
-                    data: missingCodes.map(code => ({
-                        id: uuidv4(),
-                        code: code,
-                        username: code,
-                        fullName: `Student ${code}`,
-                        role: 'STUDENT',
-                        isActive: true
-                    })),
-                    skipDuplicates: true
+            // Fetch users in chunks
+            for (let i = 0; i < studentCodeArray.length; i += chunkSize) {
+                const chunk = studentCodeArray.slice(i, i + chunkSize);
+                const existingUsers = await this.prisma.user.findMany({
+                    where: {
+                        OR: [
+                            { code: { in: chunk } },
+                            { username: { in: chunk } }
+                        ]
+                    }
                 });
-
-                // Refresh user map
-                const newlyCreated = await this.prisma.user.findMany({
-                    where: { code: { in: missingCodes } }
+                existingUsers.forEach(u => {
+                    if (u.code) userMap.set(u.code.trim(), u);
+                    if (u.username) userMap.set(u.username.trim(), u);
                 });
-                newlyCreated.forEach(u => userMap.set(u.code.trim(), u));
             }
 
-            // Pre-fetch all rooms
-            const roomIds = Array.from(new Set(scheduledSessions.map(s => s.roomId)));
+            // Create missing students in chunks
+            const missingCodes = studentCodeArray.filter(code => !userMap.has(code));
+            if (missingCodes.length > 0) {
+                this.logger.log(`Creating ${missingCodes.length} missing placeholder students...`);
+                for (let i = 0; i < missingCodes.length; i += chunkSize) {
+                    const chunk = missingCodes.slice(i, i + chunkSize);
+                    await this.prisma.user.createMany({
+                        data: chunk.map(code => ({
+                            id: uuidv4(),
+                            code: code,
+                            username: code,
+                            fullName: `Student ${code}`,
+                            role: 'STUDENT',
+                            isActive: true
+                        })),
+                        skipDuplicates: true
+                    });
+
+                    const newlyCreated = await this.prisma.user.findMany({ where: { code: { in: chunk } } });
+                    newlyCreated.forEach(u => userMap.set(u.code.trim(), u));
+                }
+            }
+
             const roomsInDb = await this.prisma.examRoom.findMany({
-                where: { id: { in: roomIds } }
+                where: { id: { in: data.roomIds } }
             });
             const roomMap = new Map(roomsInDb.map(r => [r.id, r]));
 
-            // Batch data collection
-            const examSeatsToCreate: any[] = [];
-            const studentExamsToCreate: any[] = [];
-            const studentExamPartsToCreate: any[] = [];
+            this.logger.log(`Preparing bulk save for ${allScheduledSessions.length} sessions in chunks...`);
+            
+            // To replace the sequential N+1 query creation of ExamSession, we create them fully concurrently in chunks.
+            // We use a chunk size of 100 for Promise.all to avoid overloading connection pool
+            const sessionChunkSize = 100;
+            for (let i = 0; i < allScheduledSessions.length; i += sessionChunkSize) {
+                const sessionChunk = allScheduledSessions.slice(i, i + sessionChunkSize);
+                
+                // Concurrent creation of sessions in this chunk
+                await Promise.all(sessionChunk.map(async (session) => {
+                    const sessionId = uuidv4();
+                    (session as any)._createdSessionId = sessionId;
 
-            this.logger.log(`Preparing bulk data for ${scheduledSessions.length} sessions...`);
-
-            for (const session of scheduledSessions) {
-                const sessionId = uuidv4();
-                const room = roomMap.get(session.roomId);
-                const maxRows = room?.max_rows || 5;
-                const maxCols = room?.max_columns || 4;
-
-                // Create ExamSession (using create for relation support)
-                await this.prisma.examSession.create({
-                    data: {
-                        id: sessionId,
-                        examRoomId: session.roomId,
-                        subjectCode: session.subjectCode,
-                        examOpenTime: session.openTime,
-                        examCloseTime: session.closeTime,
-                        semesterId: data.semesterId,
-                        status: ExamSessionStatus.Draft,
-                        examType: session.examType as any,
-                        campus: (session.campus || (room as any)?.campus || mainCampus) as any,
-                        examParts: { connect: session.examPartIds.map(id => ({ id })) },
-                    }
-                });
-
-                const assignedSeats = this.schedulingService.assignSeats(
-                    session.studentCodes.length,
-                    maxRows,
-                    maxCols
-                );
-
-                const sessionStudents = new Set<string>(); // Keep track of student IDs already added to this session
-                for (let i = 0; i < session.studentCodes.length; i++) {
-                    const studentCode = session.studentCodes[i].trim();
-                    const student = userMap.get(studentCode);
-                    if (!student || sessionStudents.has(student.id)) continue;
-
-                    sessionStudents.add(student.id);
-
-                    const seatInfo = assignedSeats[i];
-                    const seatId = uuidv4();
-                    const studentExamId = uuidv4();
-                    const seatIdx = (seatInfo.row - 1) * maxCols + seatInfo.col;
-
-                    examSeatsToCreate.push({
-                        id: seatId,
-                        examSessionId: sessionId,
-                        row: seatInfo.row,
-                        col: seatInfo.col,
-                        status: 'Assigned'
+                    await this.prisma.examSession.create({
+                        data: {
+                            id: sessionId,
+                            examRoomId: session.roomId,
+                            subjectCode: session.subjectCode,
+                            examOpenTime: session.openTime,
+                            examCloseTime: session.closeTime,
+                            semesterId: data.semesterId,
+                            status: ExamSessionStatus.Draft,
+                            examType: session.examType as any,
+                            campus: session.campus as any,
+                            examParts: { connect: session.examPartIds.map(id => ({ id })) },
+                        }
                     });
+                }));
 
-                    studentExamsToCreate.push({
-                        id: studentExamId,
-                        studentId: student.id,
-                        examSessionId: sessionId,
-                        seatPosition: seatId,
-                        seatNumber: seatIdx.toString(),
-                        stt: i + 1,
-                    });
+                // Now loop over sessionChunk sequentially to prepare child relationships
+                let examSeatsChunk: any[] = [];
+                let studentExamsChunk: any[] = [];
+                let studentExamPartsChunk: any[] = [];
 
-                    for (const partId of session.examPartIds) {
-                        studentExamPartsToCreate.push({
-                            id: uuidv4(),
-                            studentExamId: studentExamId,
-                            examPartId: partId,
-                        });
+                for (const session of sessionChunk) {
+                    const sessionId = (session as any)._createdSessionId;
+                    const room = roomMap.get(session.roomId);
+                    const maxRows = room?.max_rows || 5;
+                    const maxCols = room?.max_columns || 4;
+                    const assignedSeats = this.schedulingService.assignSeats(session.studentCodes.length, maxRows, maxCols);
+
+                    for (let j = 0; j < session.studentCodes.length; j++) {
+                        const studentCode = session.studentCodes[j].trim();
+                        const student = userMap.get(studentCode);
+                        if (!student) continue;
+
+                        const seatInfo = assignedSeats[j];
+                        const seatId = uuidv4();
+                        const studentExamId = uuidv4();
+                        const seatIdx = (seatInfo.row - 1) * maxCols + seatInfo.col;
+
+                        examSeatsChunk.push({ id: seatId, examSessionId: sessionId, row: seatInfo.row, col: seatInfo.col, status: 'Assigned' });
+                        studentExamsChunk.push({ id: studentExamId, studentId: student.id, examSessionId: sessionId, seatPosition: seatId, seatNumber: seatIdx.toString(), stt: j + 1 });
+                        
+                        for (const partId of session.examPartIds) {
+                            studentExamPartsChunk.push({ id: uuidv4(), studentExamId: studentExamId, examPartId: partId });
+                        }
                     }
                 }
+
+                // Insert child chunks immediately to avoid memory bloating
+                if (examSeatsChunk.length > 0) {
+                    for (let k = 0; k < examSeatsChunk.length; k += chunkSize) {
+                        await this.prisma.examSeat.createMany({ data: examSeatsChunk.slice(k, k + chunkSize) });
+                    }
+                }
+                
+                if (studentExamsChunk.length > 0) {
+                    for (let k = 0; k < studentExamsChunk.length; k += chunkSize) {
+                        await this.prisma.studentExam.createMany({ data: studentExamsChunk.slice(k, k + chunkSize) });
+                    }
+                }
+
+                if (studentExamPartsChunk.length > 0) {
+                    for (let k = 0; k < studentExamPartsChunk.length; k += chunkSize) {
+                        await this.prisma.studentExamPart.createMany({ data: studentExamPartsChunk.slice(k, k + chunkSize) });
+                    }
+                }
+
+                // Yield the event loop to ensure RabbitMQ doesn't timeout
+                await new Promise(resolve => setImmediate(resolve));
             }
 
-            // Bulk Insert all sub-entities
-            this.logger.log(`Bulk inserting: ${examSeatsToCreate.length} seats, ${studentExamsToCreate.length} studentExams...`);
+            this.logger.log(`✅ Successfully generated and saved schedule for all campuses`);
 
-            if (examSeatsToCreate.length > 0) {
-                await this.prisma.examSeat.createMany({ data: examSeatsToCreate });
-            }
-            if (studentExamsToCreate.length > 0) {
-                await this.prisma.studentExam.createMany({ data: studentExamsToCreate });
-            }
-            if (studentExamPartsToCreate.length > 0) {
-                await this.prisma.studentExamPart.createMany({ data: studentExamPartsToCreate });
-            }
-
-            this.logger.log(`✅ Successfully generated and saved schedule`);
-
-            // 6. Notify API that we are done
             this.apiEventClient.emit(MESSAGE_PATTERNS.EXAM.AUTO_GENERATE_FINISHED, {
                 semesterId: data.semesterId,
-                campuses: campuses,
-                sessionCount: scheduledSessions.length,
+                campuses: activeCampuses,
+                sessionCount: totalScheduledSessionsCount,
+                failedCount: totalFailedPools.length,
+                failedItems: totalFailedPools,
                 success: true
             });
 

@@ -17,9 +17,8 @@ export class PublishExamSessionsHandler {
         } else if (dto.semesterId && dto.campus) {
             count = await this.repository.publishGeneratedDrafts(dto.semesterId, dto.campus);
         } else if (dto.semesterId) {
-            // If only semester is provided, maybe publish all drafts for that semester?
-            // Not implemented campus-wide yet but we can do it if needed
-            // For now we follow the user's specific campus/semester context usually found in UI
+            // Publish ALL draft sessions for this semester across all campuses
+            count = await this.repository.publishAllDraftsForSemester(dto.semesterId);
         }
 
         return {
