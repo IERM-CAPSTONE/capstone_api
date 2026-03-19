@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { PrismaService } from '@app/prisma';
 import { IDeviceRepository, DEVICE_REPOSITORY } from '@app/devices';
 import { PaginatedDeviceResponse, toDeviceResponse } from '../../shared';
 import { ListAllDevicesDto } from './list-all-devices.dto';
@@ -8,6 +9,7 @@ export class ListAllDevicesHandler {
     constructor(
         @Inject(DEVICE_REPOSITORY)
         private readonly repository: IDeviceRepository,
+        private readonly prisma: PrismaService,
     ) { }
 
     async execute(dto: ListAllDevicesDto): Promise<PaginatedDeviceResponse> {
@@ -36,8 +38,26 @@ export class ListAllDevicesHandler {
             }),
         ]);
 
+        const ownerIds = Array.from(new Set(devices.map((d) => d.ownerId).filter(Boolean)));
+        const owners = ownerIds.length > 0
+            ? await this.prisma.user.findMany({
+                where: { id: { in: ownerIds } },
+                select: { id: true, fullName: true, username: true, email: true },
+            })
+            : [];
+
+        const ownerMap = new Map(owners.map((u) => [u.id, u]));
+
         return {
-            data: devices.map(toDeviceResponse),
+            data: devices.map((device) => {
+                const dtoData = toDeviceResponse(device) as any;
+                const owner = ownerMap.get(device.ownerId);
+
+                return {
+                    ...dtoData,
+                    ownerName: owner?.fullName ?? owner?.username ?? owner?.email ?? null,
+                };
+            }),
             total,
             page,
             limit,

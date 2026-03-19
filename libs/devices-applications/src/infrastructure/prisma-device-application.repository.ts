@@ -15,6 +15,11 @@ export class PrismaDeviceApplicationRepository implements IDeviceApplicationRepo
             updatedAt: application.updatedAt,
         };
 
+        const updateData = {
+            ...data,
+            approvedBy: application.approvedBy,
+        };
+
         const saved = await this.prisma.deviceApplication.upsert({
             where: { id: application.id },
             create: {
@@ -35,7 +40,7 @@ export class PrismaDeviceApplicationRepository implements IDeviceApplicationRepo
                     }
                     : {}),
             },
-            update: data,
+            update: updateData,
         });
 
         return DeviceApplication.mapFromPrisma(saved);

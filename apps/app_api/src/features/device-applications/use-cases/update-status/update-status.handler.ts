@@ -23,10 +23,12 @@ export class UpdateDeviceApplicationStatusHandler {
             throw new Error('Rejected reason is required');
         }
 
+        const processedAt = new Date();
+
         const updated = application.update({
             status: dto.status as any,
-            approvedBy: dto.status === 'APPROVED' ? approverId : null,
-            approvedAt: dto.status === 'APPROVED' ? new Date() : null,
+            approvedBy: approverId,
+            approvedAt: processedAt,
             rejectedReason: dto.status === 'REJECTED' ? dto.rejectedReason ?? null : null,
         });
 

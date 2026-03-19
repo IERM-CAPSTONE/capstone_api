@@ -102,6 +102,18 @@
       ],
       "@app/tickets/*": [
         "libs/tickets/src/*"
+      ],
+      "@app/devices": [
+        "libs/devices/src"
+      ],
+      "@app/devices/*": [
+        "libs/devices/src/*"
+      ],
+      "@app/devices-applications": [
+        "libs/devices-applications/src"
+      ],
+      "@app/devices-applications/*": [
+        "libs/devices-applications/src/*"
       ]
     }
   },
