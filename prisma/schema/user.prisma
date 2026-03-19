@@ -20,7 +20,9 @@ model User {
   notificationsSent       Notification[]       @relation("notificationFrom")
   proctorSessions         ExamSession[]        @relation("proctor")
   hallInvigilatorSessions ExamSession[]        @relation("hallInvigilator")
-  registeredDevices       Device[]             @relation("deviceRegisteredBy")
+  ownedDevices            Device[]             @relation("deviceOwner")
+  deviceApplications      DeviceApplication[]  @relation("deviceApplicationRegisteredBy")
+  deviceApprovals         DeviceApplication[]  @relation("deviceApplicationApprovedBy")
   proctorAssignmentsMade  ProctorAssignment[]  @relation("assignmentCreator")
 
   @@index([role])

@@ -16,6 +16,8 @@ import { AppExamPartsModule } from './features/exam-parts';
 import { AppSubjectsModule } from './features/subjects';
 import { SemestersModule } from './features/semesters/semesters.module';
 import { AppCacheModule } from '@app/cache';
+import { DevicesModule } from './features/devices';
+import { DeviceApplicationsModule } from './features/device-applications';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { AppCacheModule } from '@app/cache';
     AppExamPartsModule,
     AppSubjectsModule,
     SemestersModule,
+    DevicesModule,
+    DeviceApplicationsModule,
   ],
   providers: [],
   exports: [],

@@ -98,3 +98,9 @@ enum ExamType {
   TE
   RE
 }
+
+enum DeviceApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
