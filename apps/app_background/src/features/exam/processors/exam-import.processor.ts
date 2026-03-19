@@ -177,7 +177,7 @@ export class ExamImportProcessor {
                     if (!parsed) throw new Error(`Cannot parse examSession string: ${s.examSession}`);
 
                     // Find or create Room
-                    let room = await this.prisma.examRoom.findUnique({ where: { roomNumber: parsed.roomName } });
+                    let room = await this.prisma.examRoom.findFirst({ where: { roomNumber: parsed.roomName } });
                     if (!room) {
                         room = await this.prisma.examRoom.create({
                             data: {
@@ -263,7 +263,7 @@ export class ExamImportProcessor {
                     if (!finalSessionId) {
                         try {
                             const parsed = this.parseExamSession(sessionStr);
-                            const room = await this.prisma.examRoom.findUnique({ where: { roomNumber: parsed.roomName } });
+                            const room = await this.prisma.examRoom.findFirst({ where: { roomNumber: parsed.roomName } });
                             this.logger.log(`Fallback Lookup: Room ${parsed.roomName} found: ${!!room}`);
 
                             if (room) {
@@ -555,7 +555,7 @@ export class ExamImportProcessor {
                     const openTime = parseTime(startStr);
                     const closeTime = parseTime(endStr);
 
-                    const room = await this.prisma.examRoom.findUnique({
+                    const room = await this.prisma.examRoom.findFirst({
                         where: { roomNumber: String(p.examRoom) }
                     });
 
@@ -660,14 +660,20 @@ export class ExamImportProcessor {
                             return foundKey ? item[foundKey] : null;
                         };
 
-                        const code = findValue(['MÃ MÔN', 'CODE']);
+                        const code = findValue(['MÃ MÔN', 'CODE', 'SUBCODE']);
                         if (!code) continue;
 
                         const name = findValue(['TÊN MÔN', 'NAME']) ? String(findValue(['TÊN MÔN', 'NAME'])).replace(/\r\n/g, ' ') : null;
                         const semester = sheetName; // Use sheet name as semester
                         const department = findValue(['BỘ MÔN', 'DEPARTMENT']) || null;
                         const detailsStr = findValue(['CHI TIẾT', 'DETAILS', 'DETAIL']) || '';
-                        const totalDuration = parseInt(String(findValue(['TỔNG THỜI LƯỢNG', 'DURATION']))) || null;
+                        const examPartCol = findValue(['EXAMPART', 'PHẦN THI', 'PHANTHI', 'PARTS', 'EXTRAPARTS']);
+                        
+                        // New duration logic: 270 -> 180, 90 -> 60. Others (180, 60) remain same.
+                        const rawDuration = parseInt(String(findValue(['TỔNG THỜI LƯỢNG', 'DURATION', 'EXAMDURATION']))) || null;
+                        let totalDuration = rawDuration;
+                        if (rawDuration === 270) totalDuration = 180;
+                        else if (rawDuration === 90) totalDuration = 60;
 
                         // Find Semester ID by data.semesterId or lookup by sheet name
                         let semesterId: string | null = data.semesterId || null;
@@ -710,8 +716,30 @@ export class ExamImportProcessor {
                             }
                         });
 
-                        // Parse parts from details string
-                        const parts = this.parseSubjectParts(String(detailsStr), examParts);
+                        // Parse parts from details string (e.g. "1.Reading: 30ph; 2.Writing: 30ph")
+                        let parts = this.parseSubjectParts(String(detailsStr), examParts);
+
+                        // If no parts in details, check the examPart column (production backup)
+                        // This allows columns like: examPart: "FE" or "Reading, Writing"
+                        if (parts.length === 0 && examPartCol) {
+                            const partIdentifiers = String(examPartCol).split(/[,;]/).map(p => p.trim()).filter(Boolean);
+                            for (const pId of partIdentifiers) {
+                                // 1. Match by Exact Code (High priority)
+                                // 2. Match by Exact/Partial Name (Fallback)
+                                const found = examParts.find(et => 
+                                    et.code.toUpperCase() === pId.toUpperCase() || 
+                                    (et.name && et.name.toUpperCase() === pId.toUpperCase()) ||
+                                    (et.name && et.name.toUpperCase().includes(pId.toUpperCase()))
+                                );
+
+                                if (found) {
+                                    parts.push({
+                                        examPartId: found.id,
+                                        duration: totalDuration ? Math.floor(totalDuration / partIdentifiers.length) : 60
+                                    });
+                                }
+                            }
+                        }
 
                         // Re-create parts for this subject
                         if (parts.length > 0) {
@@ -731,7 +759,7 @@ export class ExamImportProcessor {
                             }
                         } else if (totalDuration) {
                             // Fallback to single part if totalDuration exists but no parts parsed
-                            const defaultType = examParts.find(t => t.code === 'FE') || examParts.find(t => t.code === 'MC') || examParts[0];
+                            const defaultType = examParts.find(t => t.code === 'MC') || examParts.find(t => t.code === 'FE') || examParts[0];
                             if (defaultType) {
                                 await this.prisma.subjectPart.upsert({
                                     where: {
@@ -856,7 +884,7 @@ export class ExamImportProcessor {
                     const openTime = parseTime(startStr);
                     const closeTime = parseTime(endStr);
 
-                    const room = await this.prisma.examRoom.findUnique({
+                    const room = await this.prisma.examRoom.findFirst({
                         where: { roomNumber: String(c.examRoom) }
                     });
 

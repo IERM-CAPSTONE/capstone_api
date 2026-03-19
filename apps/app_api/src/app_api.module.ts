@@ -18,6 +18,8 @@ import { SemestersModule } from './features/semesters/semesters.module';
 import { AppCacheModule } from '@app/cache';
 import { DevicesModule } from './features/devices';
 import { DeviceApplicationsModule } from './features/device-applications';
+import { TicketsCoreModule } from '@app/tickets';
+import { TicketsModule } from './features/tickets/tickets.module';
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import { DeviceApplicationsModule } from './features/device-applications';
     SemestersModule,
     DevicesModule,
     DeviceApplicationsModule,
+    TicketsCoreModule,
+    TicketsModule,
   ],
   providers: [],
   exports: [],

@@ -54,19 +54,20 @@ export class ExportExamSessionsHandler {
 
         const worksheet = workbook.addWorksheet('Student Report');
 
-        // Define columns (template minus CCCD and USB)
+        // Define columns (matching exact template)
         worksheet.columns = [
             { header: 'Ca thi', key: 'session', width: 38 },
             { header: 'Mã SV', key: 'studentCode', width: 14 },
             { header: 'MemberCode', key: 'username', width: 22 },
             { header: 'Họ tên', key: 'fullName', width: 28 },
+            { header: 'CCCD', key: 'cccd', width: 20 },
             { header: 'STT', key: 'stt', width: 6 },
             { header: 'Môn thi', key: 'subject', width: 14 },
             { header: 'Điểm danh', key: 'attendance', width: 22 },
             { header: 'Ghi chú điểm danh', key: 'attendanceNote', width: 22 },
             { header: 'Nộp bài', key: 'submission', width: 22 },
             { header: 'Ghi chú nộp bài', key: 'submissionNote', width: 22 },
-            { header: 'Nộp bài phần thi', key: 'partSubmission', width: 26 },
+            { header: 'Nộp bài phần thi', key: 'partSubmission', width: 35 },
             { header: 'Chữ ký phần thi', key: 'partSignature', width: 26 },
             { header: 'Điểm', key: 'grade', width: 10 },
             { header: 'Ghi chú', key: 'note', width: 20 },
@@ -95,22 +96,26 @@ export class ExportExamSessionsHandler {
 
             // Format: 26/12/2025.13h30-15h00.ALPHA 201
             const caThi = `${format(openTime, 'dd/MM/yyyy')}.${format(openTime, 'HH')}h${format(openTime, 'mm')}-${format(closeTime, 'HH')}h${format(closeTime, 'mm')}.${roomName}`;
+            const partSubmissionText = se.parts && se.parts.length > 0
+                ? se.parts.map((p: any) => `(${p.examPart?.code || 'P'}: KHÔNG NỘP BÀI)`).join('\n')
+                : '(KHÔNG NỘP BÀI)';
 
             const row = worksheet.addRow({
                 session: caThi,
                 studentCode: se.student.code,
                 username: se.student.username || se.student.code,
                 fullName: se.student.fullName,
+                cccd: '',
                 stt: se.stt ?? se.seatNumber,
                 subject: session.subjectCode,
-                attendance: null,
-                attendanceNote: null,
-                submission: null,
-                submissionNote: null,
-                partSubmission: null,
-                partSignature: null,
-                grade: null,
-                note: null,
+                attendance: 'KHÔNG ĐIỂM DANH',
+                attendanceNote: '',
+                submission: 'KHÔNG NỘP BÀI',
+                submissionNote: '',
+                partSubmission: partSubmissionText,
+                partSignature: '',
+                grade: '',
+                note: '',
             });
 
             // Alternating row color

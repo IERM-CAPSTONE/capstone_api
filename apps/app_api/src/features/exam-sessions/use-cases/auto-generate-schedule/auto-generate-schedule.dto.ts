@@ -21,13 +21,13 @@ export class AutoGenerateScheduleDto {
     @IsString({ each: true })
     campus: string[];
 
-    @ApiProperty({ example: 11, description: 'Normal Final exam week' })
-    @IsNumber() @Min(1)
-    finalWeek: number;
+    @ApiProperty({ example: 11, description: 'Normal Final exam week (Optional)', required: false })
+    @IsNumber() @Min(1) @IsOptional()
+    finalWeek?: number;
 
-    @ApiProperty({ example: 12, description: 'Normal Retake exam week' })
-    @IsNumber() @Min(1)
-    retakeWeek: number;
+    @ApiProperty({ example: 12, description: 'Normal Retake exam week (Optional)', required: false })
+    @IsNumber() @Min(1) @IsOptional()
+    retakeWeek?: number;
 
     @ApiProperty({ example: 9, description: 'PE / Practical exam week (Optional)', required: false })
     @IsNumber() @Min(1) @IsOptional()
@@ -56,4 +56,8 @@ export class AutoGenerateScheduleDto {
     @ApiProperty({ type: [CampusFileDto], description: 'Per-campus student class schedule files', required: false })
     @IsArray() @ValidateNested({ each: true }) @Type(() => CampusFileDto) @IsOptional()
     classScheduleFiles?: CampusFileDto[];
+
+    @ApiProperty({ example: 6, description: 'Number of exam days in a week (6 or 7)', required: false })
+    @IsNumber() @IsOptional()
+    examDays?: number;
 }

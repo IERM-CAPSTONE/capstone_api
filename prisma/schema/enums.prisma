@@ -5,6 +5,7 @@ enum Role {
   PROCTOR
   STUDENT
   IT_SUPPORT
+  HALL_INVIGILATOR
 }
 
 enum Campus {

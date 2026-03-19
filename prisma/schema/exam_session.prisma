@@ -14,8 +14,9 @@ model ExamSession {
   examType          ExamType?
   examCode          String?
   openCode          String?
-  note              String?
-  semesterId        String?
+  note                String?
+  hasStudentsImported Boolean           @default(false)
+  semesterId          String?
   campus            Campus?
   examParts         ExamPart[]
   semester          Semester?           @relation(fields: [semesterId], references: [id])

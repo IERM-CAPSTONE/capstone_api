@@ -18,6 +18,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             campus: session.campus as any,
             examType: session.examType as any,
             note: session.note,
+            hasStudentsImported: false, // Default or map from entity if exist
             updatedAt: session.updatedAt,
         };
 
@@ -297,6 +298,17 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             where: {
                 semesterId,
                 campus: campus as any,
+                status: 'Draft'
+            },
+            data: { status: 'Scheduled' }
+        });
+        return result.count;
+    }
+
+    async publishAllDraftsForSemester(semesterId: string): Promise<number> {
+        const result = await this.prisma.examSession.updateMany({
+            where: {
+                semesterId,
                 status: 'Draft'
             },
             data: { status: 'Scheduled' }

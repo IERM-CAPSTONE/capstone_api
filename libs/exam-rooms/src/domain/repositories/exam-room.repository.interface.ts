@@ -44,6 +44,11 @@ export interface IExamRoomRepository {
      * Delete an exam room by ID
      */
     delete(id: string): Promise<void>;
+
+    /**
+     * Delete multiple exam rooms matching criteria
+     */
+    deleteMany(query: { roomNumber?: string; campus?: string }): Promise<number>;
 }
 
 /**

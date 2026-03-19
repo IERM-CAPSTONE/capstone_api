@@ -20,6 +20,9 @@ import { ExportExamSessionsHandler, ExportExamSessionsEndpoint } from './use-cas
 @Module({
     imports: [ExamSessionsCoreModule, ExamSeatsModule],
     controllers: [
+        // ExportExamSessionsEndpoint MUST come before GetExamSessionEndpoint
+        // because NestJS matches /:id greedily and would treat "export" as an id
+        ExportExamSessionsEndpoint,
         CreateExamSessionEndpoint,
         UpdateExamSessionEndpoint,
         DeleteExamSessionEndpoint,
@@ -32,7 +35,6 @@ import { ExportExamSessionsHandler, ExportExamSessionsEndpoint } from './use-cas
         FinalizeSeatAssignmentsEndpoint,
         AutoGenerateScheduleEndpoint,
         PublishExamSessionsEndpoint,
-        ExportExamSessionsEndpoint,
     ],
     providers: [
         CreateExamSessionHandler,

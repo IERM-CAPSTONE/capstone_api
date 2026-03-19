@@ -17,6 +17,7 @@ export class ExportExamSessionsDto {
     @IsString()
     examType?: string;
 
+
     @ApiProperty({ required: false })
     @IsOptional()
     @IsString()

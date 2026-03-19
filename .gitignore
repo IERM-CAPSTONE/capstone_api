@@ -30,3 +30,4 @@ lerna-debug.log*
 # .env.development
 # *.development
 # .env.development
+.env.development

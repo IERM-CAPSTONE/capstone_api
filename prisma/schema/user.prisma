@@ -18,6 +18,7 @@ model User {
   proctorApplications     ProctorApplication[] @relation("teacherApplications")
   proctorAssignments      ProctorAssignment[]  @relation("proctorAssignments")
   notificationsSent       Notification[]       @relation("notificationFrom")
+  notificationsReceived   Notification[]       @relation("notificationTo")
   proctorSessions         ExamSession[]        @relation("proctor")
   hallInvigilatorSessions ExamSession[]        @relation("hallInvigilator")
   ownedDevices            Device[]             @relation("deviceOwner")
