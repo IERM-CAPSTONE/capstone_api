@@ -8,6 +8,12 @@ export class DeviceApplicationResponse {
     @ApiProperty({ example: 'uuid', description: 'Device ID' })
     deviceId: string;
 
+    @ApiProperty({ example: 'Samsung Galaxy S21', description: 'Device name', nullable: true })
+    deviceName: string | null;
+
+    @ApiProperty({ example: 'R5CX204WXYZ', description: 'Device serial number', nullable: true })
+    deviceSerial: string | null;
+
     @ApiProperty({ example: 'uuid', description: 'Registered by user ID' })
     registeredBy: string;
 
@@ -51,6 +57,8 @@ export function toDeviceApplicationResponse(application: DeviceApplication): Dev
     return {
         id: application.id,
         deviceId: application.deviceId,
+        deviceName: (application as any).deviceName ?? null,
+        deviceSerial: (application as any).deviceSerial ?? null,
         registeredBy: application.registeredBy,
         status: application.status,
         approvedBy: application.approvedBy,
