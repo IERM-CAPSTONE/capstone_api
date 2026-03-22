@@ -14,7 +14,7 @@ export class BulkProcessTicketEndpoint {
     constructor(private readonly handler: BulkProcessTicketHandler) { }
 
     @Post('bulk-process')
-    @Roles(RoleType.EXAM_OFFICER)
+    @Roles(RoleType.EXAM_OFFICER, RoleType.IT_SUPPORT, RoleType.HALL_INVIGILATOR)
     @ApiOperation({ summary: 'Bulk process multiple tickets at once (resolve/assign). Notifies each reporter individually.' })
     async handle(
         @Body() dto: BulkProcessTicketDto,

@@ -26,7 +26,7 @@ export class BulkProcessTicketHandler {
             select: { fullName: true },
         });
 
-        const newStatus = dto.action === BulkProcessAction.RESOLVE ? 'SOLVED' : 'IN_PROGRESS';
+        const newStatus = dto.action === BulkProcessAction.RESOLVE ? 'SOLVED' : 'OPEN';
         const officerName = officer?.fullName ?? 'Exam Officer';
 
         const details: BulkProcessResult['details'] = [];
@@ -62,8 +62,8 @@ export class BulkProcessTicketHandler {
                             },
                         });
 
-                        // Emit real-time WebSocket event to the reporter (proctor)
-                        this.notificationGateway.sendToAll('ticket:resolved', {
+                        // Emit real-time WebSocket event directly to the reporter (proctor)
+                        this.notificationGateway.sendToUser(ticket.reporterId, 'ticket:resolved', {
                             ticketId,
                             issueName: ticket.issueName,
                             studentCode: (ticket as any).studentCode ?? null,
@@ -71,6 +71,16 @@ export class BulkProcessTicketHandler {
                             officerName,
                             reporterId: ticket.reporterId,
                         });
+
+                        // Also notify the assignee (IT Support) so their list updates in real-time
+                        const assigneeId = (ticket as any).assigneeId;
+                        if (assigneeId) {
+                            this.notificationGateway.sendToUser(assigneeId, 'ticket:updated', {
+                                ticketId,
+                                status: newStatus,
+                                resolveNote: dto.resolveNote,
+                            });
+                        }
                     } else if (dto.assigneeId) {
                         await this.prisma.notification.create({
                             data: {
@@ -84,8 +94,8 @@ export class BulkProcessTicketHandler {
                             },
                         });
 
-                        // Emit real-time socket event - broadcast, client filters by assigneeId
-                        this.notificationGateway.sendToAll('ticket:assigned', {
+                        // Emit real-time socket event directly to the assignee's user room
+                        this.notificationGateway.sendToUser(dto.assigneeId, 'ticket:assigned', {
                             ticketId,
                             assigneeId: dto.assigneeId,
                             issueName: ticket.issueName,
