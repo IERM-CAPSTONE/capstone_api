@@ -16,13 +16,28 @@ describe('CreateTicketHandler', () => {
     const savedTicket = { id: 'ticket-001', ...baseDto, status: 'OPEN', reporterId: REPORTER_ID, createdAt: new Date() };
     const reporter = { fullName: 'Nguyen Van A', role: 'PROCTOR' };
 
+    /** Returns a session mock whose time window always passes the handler's guard.
+     *  Uses ±24h window to absorb the 7h UTC+7 timezone re-parsing in toVNDate(). */
+    const mockSession = (campus: string | null = null) => ({
+        examOpenTime: new Date(Date.now() - 24 * 60 * 60 * 1000),   // 24h ago
+        examCloseTime: new Date(Date.now() + 24 * 60 * 60 * 1000),  // 24h from now
+        campus,
+    });
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 CreateTicketHandler,
                 { provide: TICKET_REPOSITORY, useValue: { save: jest.fn(), findById: jest.fn(), findMany: jest.fn() } },
-                { provide: PrismaService, useValue: { user: { findUnique: jest.fn(), findMany: jest.fn() }, notification: { createMany: jest.fn() } } },
-                { provide: NotificationGateway, useValue: { sendToAll: jest.fn(), sendToUser: jest.fn() } },
+                {
+                    provide: PrismaService,
+                    useValue: {
+                        examSession: { findUnique: jest.fn() },
+                        user: { findUnique: jest.fn(), findMany: jest.fn() },
+                        notification: { createMany: jest.fn() },
+                    },
+                },
+                { provide: NotificationGateway, useValue: { sendToAll: jest.fn(), sendToUser: jest.fn(), sendToCampus: jest.fn() } },
             ],
         }).compile();
         handler = module.get(CreateTicketHandler);
@@ -33,6 +48,7 @@ describe('CreateTicketHandler', () => {
 
     // UTC01 - Normal: all fields
     it('UTC01: should save ticket with all fields and notify officers', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockResolvedValue(savedTicket);
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([{ id: 'off-1' }, { id: 'off-2' }]);
@@ -40,14 +56,14 @@ describe('CreateTicketHandler', () => {
         const result = await handler.execute(baseDto, REPORTER_ID);
         expect(result).toEqual(savedTicket);
         expect(ticketRepo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'OPEN', issueName: baseDto.issueName }));
-        expect(gateway.sendToAll).toHaveBeenCalledWith('ticket:created', { ticket: savedTicket, reporter });
         expect(prisma.notification.createMany).toHaveBeenCalled();
         expect(prisma.notification.createMany.mock.calls[0][0].data).toHaveLength(2);
     });
 
     // UTC02 - Normal: required fields only
     it('UTC02: should default priority to Medium when not provided', async () => {
-        const dto = { issueName: 'Room Too Hot', issueType: IssueTypeEnum.ROOM_MANAGEMENT };
+        const dto = { issueName: 'Room Too Hot', issueType: IssueTypeEnum.ROOM_MANAGEMENT, sessionId: 'sess-001' };
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockImplementation(async (d) => ({ ...d, id: 'new-id' }));
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([]);
@@ -57,6 +73,7 @@ describe('CreateTicketHandler', () => {
 
     // UTC03 - Normal: each IssueType
     it.each([IssueTypeEnum.ACADEMIC_VIOLATION, IssueTypeEnum.TECHNICAL_ISSUE, IssueTypeEnum.ROOM_MANAGEMENT, IssueTypeEnum.FACE_MISMATCH])('UTC03: should accept issueType = %s', async (issueType) => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockImplementation(async (d) => ({ ...d, id: 'new-id' }));
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([]);
@@ -66,6 +83,7 @@ describe('CreateTicketHandler', () => {
 
     // UTC04 - Normal: each Priority
     it.each([PriorityEnum.LOW, PriorityEnum.MEDIUM, PriorityEnum.HIGH, PriorityEnum.URGENT])('UTC04: should accept priority = %s', async (priority) => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockImplementation(async (d) => ({ ...d, id: 'new-id' }));
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([]);
@@ -75,21 +93,25 @@ describe('CreateTicketHandler', () => {
 
     // UTC05 - Normal: no exam officers
     it('UTC05: should skip notification when no exam officers exist', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockResolvedValue(savedTicket);
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([]);
         await handler.execute(baseDto, REPORTER_ID);
         expect(prisma.notification.createMany).not.toHaveBeenCalled();
+        // sendToAll called because mockSession() returns campus: null
         expect(gateway.sendToAll).toHaveBeenCalled();
     });
 
     // UTC06 - Normal: reporter not found
     it('UTC06: should use null reporter and fallback name', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockResolvedValue(savedTicket);
         prisma.user.findUnique.mockResolvedValue(null);
         prisma.user.findMany.mockResolvedValue([{ id: 'off-1' }]);
         prisma.notification.createMany.mockResolvedValue({ count: 1 });
         await handler.execute(baseDto, REPORTER_ID);
+        // campus null → sendToAll
         expect(gateway.sendToAll).toHaveBeenCalledWith('ticket:created', { ticket: savedTicket, reporter: null });
         const msg = prisma.notification.createMany.mock.calls[0][0].data[0].message;
         expect(msg).toContain('Giám thị');
@@ -97,6 +119,7 @@ describe('CreateTicketHandler', () => {
 
     // UTC07 - Abnormal: repo save error
     it('UTC07: should propagate repository save error', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockRejectedValue(new Error('DB connection failed'));
         await expect(handler.execute(baseDto, REPORTER_ID)).rejects.toThrow('DB connection failed');
         expect(gateway.sendToAll).not.toHaveBeenCalled();
@@ -104,6 +127,7 @@ describe('CreateTicketHandler', () => {
 
     // UTC08 - Abnormal: notification error
     it('UTC08: should propagate notification error', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockResolvedValue(savedTicket);
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([{ id: 'off-1' }]);
@@ -113,6 +137,7 @@ describe('CreateTicketHandler', () => {
 
     // UTC09 - Boundary: empty issueName
     it('UTC09: should pass empty issueName through', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockImplementation(async (d) => ({ ...d, id: 'new-id' }));
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([]);
@@ -123,6 +148,7 @@ describe('CreateTicketHandler', () => {
     // UTC10 - Boundary: long description
     it('UTC10: should pass very long description without truncation', async () => {
         const long = 'A'.repeat(5000);
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockImplementation(async (d) => ({ ...d, id: 'new-id' }));
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([]);
@@ -132,6 +158,7 @@ describe('CreateTicketHandler', () => {
 
     // UTC11 - Boundary: notification content
     it('UTC11: should include correct content in notification', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockResolvedValue(savedTicket);
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([{ id: 'off-1' }]);
@@ -145,10 +172,68 @@ describe('CreateTicketHandler', () => {
 
     // UTC12 - Boundary: status always OPEN
     it('UTC12: should always set status to OPEN', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockImplementation(async (d) => ({ ...d, id: 'new-id' }));
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([]);
         await handler.execute(baseDto, REPORTER_ID);
         expect(ticketRepo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'OPEN' }));
+    });
+    // UTC-C01 - Campus: session with DN campus → notify only DN officers + sendToCampus
+    it('UTC-C01: should sendToCampus and filter officers by campus when session has campus', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession('DN'));
+        ticketRepo.save.mockResolvedValue(savedTicket);
+        prisma.user.findUnique.mockResolvedValue(reporter);
+        prisma.user.findMany.mockResolvedValue([{ id: 'dn-officer-1' }]);
+        prisma.notification.createMany.mockResolvedValue({ count: 1 });
+
+        await handler.execute(baseDto, REPORTER_ID);
+
+        // Should use sendToCampus, NOT sendToAll
+        expect(gateway.sendToCampus).toHaveBeenCalledWith('DN', 'ticket:created', expect.objectContaining({ ticket: savedTicket }));
+        expect(gateway.sendToAll).not.toHaveBeenCalled();
+
+        // Should filter officers by campus DN
+        expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+            where: expect.objectContaining({ role: 'EXAM_OFFICER', campus: 'DN' }),
+        }));
+        expect(prisma.notification.createMany.mock.calls[0][0].data).toHaveLength(1);
+    });
+
+    // UTC-C02 - Campus: session with no campus → sendToAll fallback + notify all officers
+    it('UTC-C02: should fallback to sendToAll and notify all officers when session has no campus', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession(null));
+        ticketRepo.save.mockResolvedValue(savedTicket);
+        prisma.user.findUnique.mockResolvedValue(reporter);
+        prisma.user.findMany.mockResolvedValue([{ id: 'off-1' }, { id: 'off-2' }, { id: 'off-3' }]);
+        prisma.notification.createMany.mockResolvedValue({ count: 3 });
+
+        await handler.execute(baseDto, REPORTER_ID);
+
+        // Should use sendToAll, NOT sendToCampus
+        expect(gateway.sendToAll).toHaveBeenCalledWith('ticket:created', expect.objectContaining({ ticket: savedTicket }));
+        expect(gateway.sendToCampus).not.toHaveBeenCalled();
+
+        // Should NOT filter by campus (no campus field in where clause)
+        expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+            where: { role: 'EXAM_OFFICER' },
+        }));
+    });
+
+    // UTC-C03 - Campus: different campus officers not notified
+    it('UTC-C03: should not include HN officers when session campus is DN', async () => {
+        prisma.examSession.findUnique.mockResolvedValue(mockSession('DN'));
+        ticketRepo.save.mockResolvedValue(savedTicket);
+        prisma.user.findUnique.mockResolvedValue(reporter);
+        // Simulate: only 1 DN officer returned (HN officers already filtered out by Prisma)
+        prisma.user.findMany.mockResolvedValue([{ id: 'dn-officer-1' }]);
+        prisma.notification.createMany.mockResolvedValue({ count: 1 });
+
+        await handler.execute(baseDto, REPORTER_ID);
+
+        expect(gateway.sendToCampus).toHaveBeenCalledWith('DN', 'ticket:created', expect.anything());
+        // WebSocket campus room only emits to clients who joined campus:DN
+        expect(prisma.notification.createMany.mock.calls[0][0].data).toHaveLength(1);
+        expect(prisma.notification.createMany.mock.calls[0][0].data[0].toUserId).toBe('dn-officer-1');
     });
 });

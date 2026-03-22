@@ -52,11 +52,15 @@ export class ProcessTicketHandler {
 
 
         // 2. Update the ticket
-        const newStatus = dto.action === ProcessAction.RESOLVE ? 'SOLVED' : 'IN_PROGRESS';
+        const newStatus =
+            dto.action === ProcessAction.RESOLVE ? 'SOLVED' :
+            dto.action === ProcessAction.START   ? 'IN_PROGRESS' : 'OPEN'; // ASSIGN keeps OPEN
+
         const updatedTicket = await this.ticketRepository.save({
             id: ticketId,
             status: newStatus,
-            resolveNote: dto.resolveNote,
+            // IT Support writes to techNote; Exam Officer's resolveNote stays untouched
+            techNote: dto.action === ProcessAction.RESOLVE ? dto.resolveNote : undefined,
             assigneeId: dto.action === ProcessAction.ASSIGN ? dto.assigneeId : undefined,
         });
 
@@ -81,8 +85,8 @@ export class ProcessTicketHandler {
                 },
             });
 
-            // Emit real-time to reporter
-            this.notificationGateway.sendToAll('ticket:resolved', {
+            // Emit real-time directly to reporter
+            this.notificationGateway.sendToUser(ticket.reporterId, 'ticket:resolved', {
                 ticketId,
                 issueName: ticket.issueName,
                 studentCode: (ticket as any).studentCode ?? null,
@@ -90,8 +94,26 @@ export class ProcessTicketHandler {
                 officerName,
                 reporterId: ticket.reporterId,
             });
+        } else if (dto.action === ProcessAction.START) {
+            // IT Support self-starts: notify themselves so UI updates
+            this.notificationGateway.sendToUser(officerId, 'ticket:updated', {
+                ticketId,
+                status: 'IN_PROGRESS',
+                startedAt: new Date().toISOString(),
+            });
+            // Also notify the reporter (proctor) so their page updates and they get a toast
+            if (ticket.reporterId) {
+                this.notificationGateway.sendToUser(ticket.reporterId, 'ticket:updated', {
+                    ticketId,
+                    status: 'IN_PROGRESS',
+                    officerName,
+                    issueName: ticket.issueName,
+                    studentCode: (ticket as any).studentCode ?? null,
+                    reporterId: ticket.reporterId,
+                });
+            }
         } else {
-            // Notify the assignee (DB)
+            // ASSIGN: Notify the assignee (DB)
             await this.prisma.notification.create({
                 data: {
                     id: uuidv4(),
@@ -104,8 +126,8 @@ export class ProcessTicketHandler {
                 },
             });
 
-            // Emit real-time socket event - broadcast, client filters by assigneeId
-            this.notificationGateway.sendToAll('ticket:assigned', {
+            // Emit real-time socket event directly to the assignee
+            this.notificationGateway.sendToUser(dto.assigneeId!, 'ticket:assigned', {
                 ticketId,
                 assigneeId: dto.assigneeId!,
                 issueName: ticket.issueName,

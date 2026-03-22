@@ -44,7 +44,7 @@ export class CreateTicketHandler {
 
         const session = await this.prisma.examSession.findUnique({
             where: { id: dto.sessionId },
-            select: { examOpenTime: true, examCloseTime: true },
+            select: { examOpenTime: true, examCloseTime: true, campus: true },
         });
 
         if (!session) {
@@ -92,19 +92,40 @@ export class CreateTicketHandler {
             select: { fullName: true, role: true },
         });
 
-        // 3. Emit real-time WebSocket event → exam officer ticket page updates instantly
-        this.notificationGateway.sendToAll('ticket:created', {
-            ticket,
-            reporter: reporter ?? null,
-        });
+        // 3. Emit real-time WebSocket event → only to exam officers on the same campus
+        //    Fallback to sendToAll when session has no campus (backward-compatible)
+        const sessionCampus = session?.campus;
+        if (sessionCampus) {
+            this.notificationGateway.sendToCampus(sessionCampus, 'ticket:created', {
+                ticket,
+                reporter: reporter ?? null,
+            });
+        } else {
+            this.notificationGateway.sendToAll('ticket:created', {
+                ticket,
+                reporter: reporter ?? null,
+            });
+        }
 
-        // 4. Fetch all Exam Officers for in-app notification
+        // 4. Fetch Exam Officers — filtered by campus when available
         const examOfficers = await this.prisma.user.findMany({
-            where: { role: 'EXAM_OFFICER' },
+            where: {
+                role: 'EXAM_OFFICER',
+                // Only notify exam officers at the same campus; if campus unknown → notify all
+                ...(sessionCampus ? { campus: sessionCampus } : {}),
+            },
             select: { id: true },
         });
 
-        // 5. Create in-app notifications for each Exam Officer
+        // 5. Emit real-time WebSocket event directly to each Exam Officer's personal room
+        //    This is more reliable than campus-room broadcast because it doesn't depend on
+        //    the client having joined the campus room.
+        const notifyPayload = { ticket, reporter: reporter ?? null };
+        for (const eo of examOfficers) {
+            this.notificationGateway.sendToUser(eo.id, 'ticket:created', notifyPayload);
+        }
+
+        // 6. Create in-app notifications for each Exam Officer
         if (examOfficers.length > 0) {
             await this.prisma.notification.createMany({
                 data: examOfficers.map(eo => ({

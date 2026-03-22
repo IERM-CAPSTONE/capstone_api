@@ -10,6 +10,8 @@ model IssueTicket {
   studentCode       String?
   priority          String?           @default("Medium")
   resolveNote       String?
+  /// Technical resolution note added by IT Support
+  techNote          String?
   sessionId         String?
   status            IssueStatus       @default(PENDING)
   /// Attachment URL (evidence for the ticket)

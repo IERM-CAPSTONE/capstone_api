@@ -31,31 +31,53 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
     }
 
     /**
-     * Client gửi event 'join_room' với userId sau khi connect
-     * để backend có thể sendToUser() đúng người
+     * Client gửi event 'join_room' sau khi connect.
+     *
+     * Payload có thể là:
+     *   - string (legacy): userId
+     *   - object: { userId: string; campus?: string }
+     *
+     * Nếu campus được cung cấp, client cũng join room "campus:<CAMPUS>"
+     * để backend có thể sendToCampus() chính xác.
      */
     @SubscribeMessage('join_room')
     handleJoinRoom(
         @ConnectedSocket() client: Socket,
-        @MessageBody() userId: string,
+        @MessageBody() payload: string | { userId: string; campus?: string },
     ) {
+        // Backward-compatible: accept both plain string and object
+        const userId = typeof payload === 'string' ? payload : payload?.userId;
+        const campus = typeof payload === 'object' ? payload?.campus : undefined;
+
         if (userId) {
             client.join(userId);
-            this.logger.log(`Client ${client.id} joined room: ${userId}`);
+            this.logger.log(`Client ${client.id} joined user room: ${userId}`);
+        }
+
+        if (campus) {
+            const campusRoom = `campus:${campus}`;
+            client.join(campusRoom);
+            this.logger.log(`Client ${client.id} joined campus room: ${campusRoom}`);
         }
     }
 
-    /**
-     * Gửi thông báo tới toàn bộ clients hoặc theo room (userId)
-     */
+    /** Gửi thông báo tới toàn bộ clients */
     sendToAll(event: string, data: any) {
         this.server.emit(event, data);
     }
 
-    /**
-     * Gửi cho một user cụ thể (giả sử họ join room là userId)
-     */
+    /** Gửi cho một user cụ thể qua room userId */
     sendToUser(userId: string, event: string, data: any) {
         this.server.to(userId).emit(event, data);
+    }
+
+    /**
+     * Gửi tới tất cả clients đã join room "campus:<campus>".
+     * Dùng cho ticket notifications: chỉ notify exam officers cùng campus.
+     */
+    sendToCampus(campus: string, event: string, data: any) {
+        const campusRoom = `campus:${campus}`;
+        this.server.to(campusRoom).emit(event, data);
+        this.logger.log(`Emitted '${event}' to campus room: ${campusRoom}`);
     }
 }

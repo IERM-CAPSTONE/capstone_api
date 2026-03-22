@@ -15,10 +15,11 @@ export class PrismaTicketRepository implements ITicketRepository {
                     status: data.status,
                     assigneeId: data.assigneeId,
                     resolveNote: data.resolveNote,
+                    techNote: data.techNote,
                     priority: data.priority,
                     description: data.description,
                     attachment: data.attachment,
-                },
+                } as any,
                 include: {
                     reporter: true,
                     assignee: true,

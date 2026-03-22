@@ -3,7 +3,8 @@ import { IsString, IsEnum, IsOptional } from 'class-validator';
 
 export enum ProcessAction {
     RESOLVE = 'resolve',
-    ASSIGN = 'assign',
+    ASSIGN  = 'assign',
+    START   = 'start',   // IT Support self-starts: sets IN_PROGRESS + records startedAt
 }
 
 export class ProcessTicketDto {
