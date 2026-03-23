@@ -1,11 +1,116 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { ExamSession } from '../domain/entities';
-import { IExamSessionRepository } from '../domain/repositories';
+import { IExamSessionRepository, SubjectMonitorSummary, SessionRoomDetail } from '../domain/repositories';
 
 @Injectable()
 export class PrismaExamSessionRepository implements IExamSessionRepository {
     constructor(private readonly prisma: PrismaService) { }
+
+    async getMonitorSummary(query: {
+        campus?: string;
+        semesterId?: string;
+        date?: Date;
+    }): Promise<SubjectMonitorSummary[]> {
+        const targetDate = query.date || new Date();
+        const startOfDay = new Date(targetDate);
+        startOfDay.setDate(startOfDay.getDate() - 1); 
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(targetDate);
+        endOfDay.setDate(endOfDay.getDate() + 1); 
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const where: any = {
+            campus: query.campus as any,
+            semesterId: query.semesterId,
+            examOpenTime: {
+                gte: startOfDay,
+                lte: endOfDay,
+            },
+        };
+
+        // Fetch all relevant sessions with their counts and related data
+        const sessions = await this.prisma.examSession.findMany({
+            where,
+            include: {
+                examRoom: true,
+                proctor: true,
+                hallInvigilator: true,
+                _count: {
+                    select: {
+                        studentExams: true,
+                        tickets: {
+                            where: {
+                                status: { in: ['PENDING', 'OPEN', 'IN_PROGRESS'] }
+                            }
+                        }
+                    }
+                },
+                examSeats: {
+                    where: {
+                        status: 'Present'
+                    },
+                    select: {
+                        id: true
+                    }
+                }
+            }
+        });
+
+        // Group by subjectCode
+        const groups = new Map<string, SubjectMonitorSummary>();
+
+        for (const s of sessions) {
+            const subjectCode = s.subjectCode || 'Unknown';
+            let summary = groups.get(subjectCode);
+
+            const sessionDetail: SessionRoomDetail = {
+                sessionId: s.id,
+                roomNumber: s.examRoom?.roomNumber || 'N/A',
+                proctorName: s.proctor?.fullName || null,
+                proctorOnline: false, // Placeholder: implement real heartbeat logic if available
+                hallInvigilatorName: s.hallInvigilator?.fullName || null,
+                hallInvigilatorOnline: false,
+                checkedIn: s.examSeats.length,
+                totalStudents: s._count.studentExams,
+                pendingTickets: s._count.tickets,
+            };
+
+            if (!summary) {
+                summary = {
+                    subjectCode,
+                    examOpenTime: s.examOpenTime || startOfDay,
+                    examCloseTime: s.examCloseTime || endOfDay,
+                    status: s.status as any,
+                    totalProctors: 0,
+                    presentProctors: 0,
+                    totalHallInvigilators: 0,
+                    presentHallInvigilators: 0,
+                    totalStudents: 0,
+                    checkedInStudents: 0,
+                    pendingTickets: 0,
+                    sessions: [],
+                };
+                groups.set(subjectCode, summary);
+            }
+
+            summary.totalProctors += s.proctorId ? 1 : 0;
+            summary.presentProctors += s.proctorId ? 1 : 0; // Simplified: considering assigned as present for now, unless we have login logic
+            summary.totalHallInvigilators += s.hallInvigilatorId ? 1 : 0;
+            summary.presentHallInvigilators += s.hallInvigilatorId ? 1 : 0;
+            summary.totalStudents += sessionDetail.totalStudents;
+            summary.checkedInStudents += sessionDetail.checkedIn;
+            summary.pendingTickets += sessionDetail.pendingTickets;
+            summary.sessions.push(sessionDetail);
+
+            // Special case: if at least one session is Ongoing, the subject status is Ongoing
+            if (s.status === 'Ongoing') {
+                summary.status = 'Ongoing';
+            }
+        }
+
+        return Array.from(groups.values());
+    }
 
     async save(session: ExamSession): Promise<ExamSession> {
         const data = {

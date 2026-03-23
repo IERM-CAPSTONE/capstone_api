@@ -15,6 +15,7 @@ import { FinalizeSeatAssignmentsHandler, FinalizeSeatAssignmentsEndpoint } from 
 import { AutoGenerateScheduleHandler, AutoGenerateScheduleEndpoint } from './use-cases/auto-generate-schedule';
 import { PublishExamSessionsHandler, PublishExamSessionsEndpoint } from './use-cases/publish-exam-sessions';
 import { ExportExamSessionsHandler, ExportExamSessionsEndpoint } from './use-cases/export-exam-sessions';
+import { MonitorSummaryHandler, MonitorSummaryEndpoint } from './use-cases/monitor-summary';
 
 
 @Module({
@@ -23,6 +24,7 @@ import { ExportExamSessionsHandler, ExportExamSessionsEndpoint } from './use-cas
         // ExportExamSessionsEndpoint MUST come before GetExamSessionEndpoint
         // because NestJS matches /:id greedily and would treat "export" as an id
         ExportExamSessionsEndpoint,
+        MonitorSummaryEndpoint,
         CreateExamSessionEndpoint,
         UpdateExamSessionEndpoint,
         DeleteExamSessionEndpoint,
@@ -50,6 +52,7 @@ import { ExportExamSessionsHandler, ExportExamSessionsEndpoint } from './use-cas
         AutoGenerateScheduleHandler,
         PublishExamSessionsHandler,
         ExportExamSessionsHandler,
+        MonitorSummaryHandler,
     ],
 })
 export class ExamSessionsModule { }

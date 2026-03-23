@@ -16,6 +16,7 @@ export class User {
         private _avatarUrl: string | null,
         private _isActive: boolean,
         private _role: Role | null,
+        private _campus: string | null,
         private readonly _createdAt: Date,
         private _updatedAt: Date,
     ) { }
@@ -54,6 +55,10 @@ export class User {
         return this._role;
     }
 
+    get campus(): string | null {
+        return this._campus;
+    }
+
     get createdAt(): Date {
         return this._createdAt;
     }
@@ -75,6 +80,7 @@ export class User {
         code?: string;
         avatarUrl?: string;
         role?: RoleType;
+        campus?: string;
         isActive?: boolean;
     }): User {
         const email = props.email ? Email.create(props.email) : null;
@@ -90,6 +96,7 @@ export class User {
             props.avatarUrl ?? null,
             props.isActive ?? true,
             role,
+            props.campus ?? null,
             new Date(),
             new Date(),
         );
@@ -107,6 +114,7 @@ export class User {
         avatarUrl: string | null;
         isActive: boolean;
         role: string | null;
+        campus: string | null;
         createdAt: Date;
         updatedAt: Date;
     }): User {
@@ -119,6 +127,7 @@ export class User {
             props.avatarUrl,
             props.isActive,
             props.role ? Role.create(props.role as RoleType) : null,
+            props.campus,
             props.createdAt,
             props.updatedAt,
         );
@@ -137,6 +146,7 @@ export class User {
         username?: string;
         code?: string;
         avatarUrl?: string;
+        campus?: string;
     }): void {
         if (props.email !== undefined) {
             this._email = props.email ? Email.create(props.email) : null;
@@ -152,6 +162,9 @@ export class User {
         }
         if (props.avatarUrl !== undefined) {
             this._avatarUrl = props.avatarUrl || null;
+        }
+        if (props.campus !== undefined) {
+            this._campus = props.campus || null;
         }
         this._updatedAt = new Date();
     }

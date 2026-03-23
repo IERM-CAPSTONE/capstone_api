@@ -1,4 +1,5 @@
 import { ExamSession } from '../entities';
+import { SubjectMonitorSummary } from './monitor-summary.types';
 
 export interface IExamSessionRepository {
     save(session: ExamSession): Promise<ExamSession>;
@@ -58,6 +59,12 @@ export interface IExamSessionRepository {
     updateStatusBulk(ids: string[], status: string): Promise<number>;
     publishGeneratedDrafts(semesterId: string, campus: string): Promise<number>;
     publishAllDraftsForSemester(semesterId: string): Promise<number>;
+
+    getMonitorSummary(query: {
+        campus?: string;
+        semesterId?: string;
+        date?: Date;
+    }): Promise<SubjectMonitorSummary[]>;
 
     delete(id: string): Promise<void>;
 }

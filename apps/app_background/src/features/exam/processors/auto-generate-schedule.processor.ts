@@ -132,7 +132,27 @@ export class AutoGenerateScheduleProcessor {
 
             const totalScheduledSessionsCount = allScheduledSessions.length;
 
+            // 4. Compute summary statistics (count registrations, not unique students)
+            // A student may appear in multiple sessions (FE + PE + RE different subjects)
+            let scheduledRegistrations = 0;
+            allScheduledSessions.forEach(s => scheduledRegistrations += s.studentCodes.length);
+
+            let unscheduledRegistrations = 0;
+            totalFailedPools.forEach(f => unscheduledRegistrations += (f._failStudents || []).length);
+
+            const totalRegistered = excelData.length;
+
             this.logger.log(`📊 All campuses processed. Total: ${allScheduledSessions.length} sessions, ${totalFailedPools.length} failed pools.`);
+            this.logger.log(`📊 [STATS] Registered: ${totalRegistered} records | Scheduled registrations: ${scheduledRegistrations} | Unscheduled registrations: ${unscheduledRegistrations}`);
+            if (totalFailedPools.length > 0) {
+                const byReason = totalFailedPools.reduce<Record<string, number>>((acc, f) => {
+                    acc[f.reason] = (acc[f.reason] || 0) + 1;
+                    return acc;
+                }, {});
+                Object.entries(byReason).forEach(([reason, count]) =>
+                    this.logger.warn(`📊 [STATS]   ❌ ${reason}: ${count} subject(s)`)
+                );
+            }
 
             // Emit early calculated event so UI can display errors while DB is saving
             // Resolve room IDs → room numbers for readable error messages
@@ -154,10 +174,42 @@ export class AutoGenerateScheduleProcessor {
                     : undefined,
             }));
 
+            const summary = {
+                totalRegistered: totalRegistered,
+                scheduledCount: scheduledRegistrations,
+                failedCount: unscheduledRegistrations,
+                failedSubjects: totalFailedPools.length,
+                reasonStats: totalFailedPools.reduce<Record<string, number>>((acc, f) => {
+                    acc[f.reason] = (acc[f.reason] || 0) + 1;
+                    return acc;
+                }, {}),
+            };
+
+            // INJECT SUMMARY ROWS INTO EXCEL DATA
+            const summaryRows = [
+                { subjectCode: '=== SUMMARY STATISTICS ===', examType: '', campus: '', reason: 'VALUE', note: '' },
+                { subjectCode: 'Total Excel Records', examType: '', campus: '', reason: summary.totalRegistered.toString(), note: '' },
+                { subjectCode: 'Successfully Scheduled Students', examType: '', campus: '', reason: summary.scheduledCount.toString(), note: '' },
+                { subjectCode: 'Unscheduled Students', examType: '', campus: '', reason: summary.failedCount.toString(), note: '' },
+                { subjectCode: 'Total Failed Subject Pools', examType: '', campus: '', reason: summary.failedSubjects.toString(), note: '' },
+                ...Object.entries(summary.reasonStats).map(([reason, count]) => ({
+                    subjectCode: `Count by Reason: ${reason}`,
+                    examType: '',
+                    campus: '',
+                    reason: count.toString(),
+                    note: ''
+                })),
+                { subjectCode: '==========================', examType: '', campus: '', reason: '', note: '' },
+                { subjectCode: '', examType: '', campus: '', reason: '', note: '' }, // empty row for spacing
+            ];
+
+            const finalFailureDisplay = [...summaryRows, ...enrichedFailedItems];
+
             this.apiEventClient.emit(MESSAGE_PATTERNS.EXAM.AUTO_GENERATE_CALCULATED, {
                 semesterId: data.semesterId,
                 failedCount: totalFailedPools.length,
-                failedItems: enrichedFailedItems,
+                failedItems: finalFailureDisplay,
+                summary: summary
             });
             // 5. Save everything to Database
             const allStudentCodes = new Set<string>();
@@ -303,7 +355,8 @@ export class AutoGenerateScheduleProcessor {
                 sessionCount: totalScheduledSessionsCount,
                 failedCount: totalFailedPools.length,
                 failedItems: totalFailedPools,
-                success: true
+                success: true,
+                summary: summary
             });
 
             channel.ack(originalMsg);

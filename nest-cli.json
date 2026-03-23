@@ -78,6 +78,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/tickets/tsconfig.lib.json"
       }
+    },
+    "announcement-templates": {
+      "type": "library",
+      "root": "libs/announcement-templates",
+      "entryFile": "index",
+      "sourceRoot": "libs/announcement-templates/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/announcement-templates/tsconfig.lib.json"
+      }
     }
   }
 }

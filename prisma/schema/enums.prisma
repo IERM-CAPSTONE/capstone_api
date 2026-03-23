@@ -99,3 +99,9 @@ enum ExamType {
   TE
   RE
 }
+
+enum AnnouncementType {
+  INFO
+  WARNING
+  URGENT
+}

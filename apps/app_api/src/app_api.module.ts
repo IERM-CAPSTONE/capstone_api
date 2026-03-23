@@ -18,6 +18,7 @@ import { SemestersModule } from './features/semesters/semesters.module';
 import { AppCacheModule } from '@app/cache';
 import { TicketsCoreModule } from '@app/tickets';
 import { TicketsModule } from './features/tickets/tickets.module';
+import { AnnouncementTemplatesModule } from './features/announcement-templates/announcement-templates.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { TicketsModule } from './features/tickets/tickets.module';
     SemestersModule,
     TicketsCoreModule,
     TicketsModule,
+    AnnouncementTemplatesModule,
   ],
   providers: [],
   exports: [],

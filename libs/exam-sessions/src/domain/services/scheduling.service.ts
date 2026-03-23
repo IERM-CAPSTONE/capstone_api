@@ -85,13 +85,30 @@ export class SchedulingService {
             fetched.forEach(s => this.subjectCache.set(s.code.toUpperCase(), s));
         }
 
-        const subjectsInDb = csvSubjectCodes.map(code => this.subjectCache.get(code)).filter(Boolean);
+        const failedPools: any[] = [];
+        const subjectsInDb: any[] = [];
+
+        for (const code of csvSubjectCodes) {
+            const sub = this.subjectCache.get(code);
+            if (!sub) {
+                const affectedStudents = Array.from(subjectToCampusToStudents.get(code)?.values() || []).flat();
+                failedPools.push({
+                    subjectCode: code,
+                    examType: 'ALL',
+                    campus: Array.from(subjectToCampusToStudents.get(code)?.keys() || []).join(', '),
+                    reason: 'Subject code not found in database',
+                    note: 'Please import or check subject code',
+                    _failStudents: affectedStudents,
+                });
+                continue;
+            }
+            subjectsInDb.push(sub);
+        }
+
         const allRoomsInDb = await this.prisma.examRoom.findMany({ where: { id: { in: constraints.roomIds } } });
-        
         const campusRooms = new Map<Campus, string[]>();
         const roomCapacityMap = new Map<string, number>();
         const campusCapacityMap = new Map<Campus, number>();
-
         allRoomsInDb.forEach(r => {
             const camp = r.campus as Campus;
             if (!campusRooms.has(camp)) campusRooms.set(camp, []);
@@ -136,13 +153,29 @@ export class SchedulingService {
                 };
             };
 
-            const pe = buildSession('PE', peParts, constraints.practicalWeek); if (pe) allPools.push(pe);
-            if (sub.isCoursera) {
-                const cf = buildSession('FE', feParts, constraints.courseraWeek ?? constraints.finalWeek); if (cf) allPools.push(cf);
-                const cr = buildSession('RE', reParts.length > 0 ? reParts : feParts, constraints.courseraRetakeWeek ?? constraints.retakeWeek); if (cr) allPools.push(cr);
-            } else {
-                const f = buildSession('FE', feParts, constraints.finalWeek); if (f) allPools.push(f);
-                const r = buildSession('RE', reParts.length > 0 ? reParts : feParts, constraints.retakeWeek); if (r) allPools.push(r);
+            const pe = buildSession('PE', peParts, constraints.practicalWeek);
+            const fe = sub.isCoursera
+                ? buildSession('FE', feParts, constraints.courseraWeek ?? constraints.finalWeek)
+                : buildSession('FE', feParts, constraints.finalWeek);
+            const re = sub.isCoursera
+                ? buildSession('RE', reParts.length > 0 ? reParts : feParts, constraints.courseraRetakeWeek ?? constraints.retakeWeek)
+                : buildSession('RE', reParts.length > 0 ? reParts : feParts, constraints.retakeWeek);
+
+            if (pe) allPools.push(pe);
+            if (fe) allPools.push(fe);
+            if (re) allPools.push(re);
+
+            // Report subject that generated zero pools (no parts or no week selected)
+            if (!pe && !fe && !re) {
+                const affectedStudents = Array.from(campusToStudents.values()).flat();
+                failedPools.push({
+                    subjectCode: sub.code,
+                    examType: 'ALL',
+                    campus: Array.from(campusToStudents.keys()).join(', '),
+                    reason: 'No exam parts configured or exam week not selected',
+                    note: 'Check Subject Exam Parts configuration',
+                    _failStudents: affectedStudents,
+                });
             }
         }
 
@@ -170,7 +203,6 @@ export class SchedulingService {
             dayCounter = (dayCounter + 1) % daysToTry.length;
         }
 
-        const failedPools: any[] = [];
         allPools.forEach((pool, idx) => {
             if (!assignedPoolIndices.has(idx)) {
                 failedPools.push({
@@ -190,7 +222,12 @@ export class SchedulingService {
         const weekStates = new Map<number, any>();
         const getOrCreateState = (week: number) => {
             if (!weekStates.has(week)) {
-                weekStates.set(week, { roomTimelines: new Map(), studentIntervals: new Map(), studentDayCounts: new Map() });
+                weekStates.set(week, {
+                    roomTimelines: new Map(),
+                    studentIntervals: new Map(),
+                    studentDayCounts: new Map(),
+                    slotLoad: new Map() // campus_day_slot -> count
+                });
             }
             return weekStates.get(week);
         };
@@ -202,7 +239,7 @@ export class SchedulingService {
             const poolsOnDay = dayAssignments.get(day);
             this.logger.log(`[HYBRID_SOLVER] Day ${day}: Scheduling ${poolsOnDay.length} subject pools...`);
             poolsOnDay.sort((a, b) => b.duration - a.duration);
-            
+
             for (const pool of poolsOnDay) {
                 const state = getOrCreateState(pool.weekNum);
                 const results = this.assignSyncedSpecificDay(pool, campusRooms, semester.startDate, pool.weekNum, day, state, roomCapacityMap, constraints.busySlots, constraints.examDays || 6);
@@ -228,7 +265,20 @@ export class SchedulingService {
             }
         }
 
-        this.logger.log(`[HYBRID_SOLVER] Optimization complete. Successfully scheduled ${finalSchedule.length} sessions. Failed: ${failedPools.length}`);
+        // Compute summary statistics
+        const totalFailedStudents = new Set<string>();
+        failedPools.forEach(f => (f._failStudents || []).forEach((s: string) => totalFailedStudents.add(s)));
+        this.logger.log(`[HYBRID_SOLVER] Optimization complete. Successfully scheduled ${finalSchedule.length} sessions.`);
+        this.logger.log(`[STATS] ❌ Failed pools: ${failedPools.length} subjects | Affected students: ${totalFailedStudents.size}`);
+        if (failedPools.length > 0) {
+            const byReason = failedPools.reduce<Record<string, number>>((acc, f) => {
+                acc[f.reason] = (acc[f.reason] || 0) + 1;
+                return acc;
+            }, {});
+            Object.entries(byReason).forEach(([reason, count]) =>
+                this.logger.warn(`[STATS]   - ${reason}: ${count} subject(s)`)
+            );
+        }
         return { sessions: finalSchedule, failedPools };
     }
 
@@ -246,7 +296,8 @@ export class SchedulingService {
         state: {
             roomTimelines: Map<string, Map<number, number>>,
             studentIntervals: Map<string, Map<number, { start: number, end: number }[]>>,
-            studentDayCounts: Map<string, Map<number, number>>
+            studentDayCounts: Map<string, Map<number, number>>,
+            slotLoad: Map<string, number>
         },
         allowSpill: boolean,
         roomCapacityMap?: Map<string, number>,
@@ -281,7 +332,20 @@ export class SchedulingService {
                 const dayStart = this.getStartOfDayTime(semStartDate, weekNum, day).getTime();
                 const SLOT_DURATION_MS = 90 * 60000; // 60m exam + 30m break
 
-                for (let slotIndex = 0; slotIndex < 7; slotIndex++) {
+                // BALANCING LOGIC: Sort slots by current load across all involved campuses
+                const slotIndices = Array.from({ length: 7 }, (_, i) => i);
+                slotIndices.sort((a, b) => {
+                    let loadA = 0;
+                    let loadB = 0;
+                    for (const camp of Object.keys(session.campusNeeds)) {
+                        loadA += state.slotLoad.get(`${camp}_${day}_${a}`) || 0;
+                        loadB += state.slotLoad.get(`${camp}_${day}_${b}`) || 0;
+                    }
+                    if (loadA !== loadB) return loadA - loadB;
+                    return a - b; // Tie-break: earlier slots first
+                });
+
+                for (const slotIndex of slotIndices) {
                     const currentAttemptStart = dayStart + slotIndex * SLOT_DURATION_MS;
                     const sessionDurationMs = session.duration * 60000;
 
@@ -325,10 +389,10 @@ export class SchedulingService {
                     if (!attemptIsPossible || roomsToUse.length === 0) continue;
 
                     // 2. Adjust attempt start to respect room availability
-                    const earliestPossibleStart = isPE 
-                        ? currentAttemptStart 
+                    const earliestPossibleStart = isPE
+                        ? currentAttemptStart
                         : Math.max(currentAttemptStart, ...roomsToUse.map(r => r.nextAvailable));
-                    
+
                     if (earliestPossibleStart + sessionDurationMs > dayStart + 7 * SLOT_DURATION_MS) break; // Out of bounds for the day
 
                     // 3. PHASE 3: Iteratively schedule
@@ -338,7 +402,7 @@ export class SchedulingService {
                         const proposedEnd = proposedStart + sessionDurationMs;
                         const roomCap = roomCapacityMap?.get(roomInfo.roomId) || 30;
                         const need = session.campusNeeds[roomInfo.camp];
-                        
+
                         const roomIdx = roomsToUse.filter(r => r.camp === roomInfo.camp).indexOf(roomInfo);
                         const roomStudents = need.studentCodes.slice(roomIdx * roomCap, (roomIdx + 1) * roomCap);
 
@@ -395,7 +459,7 @@ export class SchedulingService {
                         dayResults.push({
                             weekNum,
                             dayIndex: day,
-                            slotIndex: slotIndex, 
+                            slotIndex: slotIndex,
                             subjectCode: session.subjectCode,
                             studentCodes: roomStudents,
                             roomId: roomInfo.roomId,
@@ -407,7 +471,7 @@ export class SchedulingService {
                             duration: session.duration,
                             note: session.note
                         });
-                        
+
                         if (isPE) subjectSequencePointer = proposedEnd + this.MIN_GAP_MINUTES * 60000;
                     }
 
@@ -424,6 +488,9 @@ export class SchedulingService {
                                 const counts = state.studentDayCounts.get(s);
                                 counts.set(day, (counts.get(day) || 0) + 1);
                             }
+                            // Update slot load for balancing
+                            const loadKey = `${res.campus}_${day}_${res.slotIndex}`;
+                            state.slotLoad.set(loadKey, (state.slotLoad.get(loadKey) || 0) + 1);
                         }
                         results.push(...dayResults);
                         scheduledForSubject = true;
@@ -434,12 +501,12 @@ export class SchedulingService {
         }
         return { sessions: results };
     }
-     private getStartOfDayTime(semStart: Date, weekNum: number, dayOffset: number): Date {
+    private getStartOfDayTime(semStart: Date, weekNum: number, dayOffset: number): Date {
         const date = new Date(semStart);
         // Ensure calculations run relative to UTC to prevent local timezone shifts causing 00:30 displays
         const currentDay = date.getUTCDay();
         const diffToMonday = currentDay === 0 ? 6 : currentDay - 1;
-        
+
         date.setUTCDate(date.getUTCDate() - diffToMonday + (weekNum - 1) * 7 + dayOffset);
         date.setUTCHours(this.START_HOUR, this.START_MINUTE, 0, 0);
 

@@ -26,6 +26,9 @@ export class UserResponse {
     @ApiProperty({ example: true, description: 'Whether the user account is active' })
     isActive: boolean;
 
+    @ApiProperty({ example: 'HCM', description: 'Campus', nullable: true })
+    campus: string | null;
+
     @ApiProperty({ example: 'STUDENT', enum: ['ADMIN', 'EXAM_OFFICER', 'PROCTOR', 'STUDENT'], description: 'User role', nullable: true })
     role: RoleType | null;
 
@@ -48,6 +51,7 @@ export function toUserResponse(user: User): UserResponse {
         code: user.code?.value ?? null,
         avatarUrl: user.avatarUrl,
         isActive: user.isActive,
+        campus: user.campus ?? null,
         role: user.role?.value ?? null,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,

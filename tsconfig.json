@@ -103,6 +103,12 @@
       ],
       "@app/tickets/*": [
         "libs/tickets/src/*"
+      ],
+      "@app/announcement-templates": [
+        "libs/announcement-templates/src"
+      ],
+      "@app/announcement-templates/*": [
+        "libs/announcement-templates/src/*"
       ]
     }
   },
@@ -115,4 +121,4 @@
     "node_modules",
     "dist"
   ]
-}
+}

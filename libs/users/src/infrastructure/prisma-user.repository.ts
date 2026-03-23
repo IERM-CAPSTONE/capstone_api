@@ -19,12 +19,13 @@ export class PrismaUserRepository implements IUserRepository {
 
     async save(user: User): Promise<User> {
         const data = {
-            email: user.email?.value ?? null,
+            email: user.email?.value,
             fullName: user.fullName,
             username: user.username,
-            code: user.code?.value ?? null,
+            code: user.code?.value,
             avatarUrl: user.avatarUrl,
             isActive: user.isActive,
+            campus: user.campus as any,
             role: (user.role?.value as PrismaRole) ?? null,
         };
 
@@ -121,7 +122,7 @@ export class PrismaUserRepository implements IUserRepository {
         return where;
     }
 
-    private toDomain(data: {
+    private toDomain(model: {
         id: string;
         email: string | null;
         fullName: string | null;
@@ -130,20 +131,22 @@ export class PrismaUserRepository implements IUserRepository {
         avatarUrl: string | null;
         isActive: boolean;
         role: PrismaRole | null;
+        campus: string | null;
         createdAt: Date;
         updatedAt: Date;
     }): User {
         return User.fromPersistence({
-            id: data.id,
-            email: data.email,
-            fullName: data.fullName,
-            username: data.username,
-            code: data.code,
-            avatarUrl: data.avatarUrl,
-            isActive: data.isActive,
-            role: data.role,
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt,
+            id: model.id,
+            email: model.email,
+            fullName: model.fullName,
+            username: model.username,
+            code: model.code,
+            avatarUrl: model.avatarUrl,
+            isActive: model.isActive,
+            role: model.role,
+            campus: model.campus,
+            createdAt: model.createdAt,
+            updatedAt: model.updatedAt,
         });
     }
 }
