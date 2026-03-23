@@ -105,3 +105,12 @@ enum AnnouncementType {
   WARNING
   URGENT
 }
+
+
+
+
+enum DeviceApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

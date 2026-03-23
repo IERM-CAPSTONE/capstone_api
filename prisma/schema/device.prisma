@@ -1,16 +1,16 @@
 /// Stores registered devices (camera/check-in tablet/etc.) used in exam rooms
 model Device {
-  id           String           @id @default(uuid())
+  id           String               @id @default(uuid())
   name         String
-  serial       String           @unique
-  location     String?
-  registeredBy String
+  serial       String               @unique
+  ownerId      String
   metadata     Json?
-  isActive     Boolean          @default(true)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  admin        User             @relation("deviceRegisteredBy", fields: [registeredBy], references: [id])
+  isActive     Boolean              @default(true)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  owner        User                 @relation("deviceOwner", fields: [ownerId], references: [id])
   enrollments  FaceEnrollment[]
+  applications DeviceApplication[]
 
-  @@index([registeredBy])
+  @@index([ownerId])
 }

@@ -1,5 +1,29 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+type StudentMeta = {
+    fullName?: string | null;
+    code?: string | null;
+    email?: string | null;
+    avatarUrl?: string | null;
+};
+
+type StudentExamWithMeta = {
+    id: string;
+    examSessionId: string;
+    studentId: string;
+    seatNumber: string | null;
+    seatPosition: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    studentName: string | null;
+    studentCode: string | null;
+    stt: number | null;
+    studentEmail: string | null;
+    studentAvatarUrl?: string | null;
+    student?: StudentMeta | null;
+    parts: any[];
+};
+
 export class StudentExamResponse {
     @ApiProperty()
     id: string;
@@ -33,6 +57,9 @@ export class StudentExamResponse {
 
     @ApiProperty({ nullable: true })
     studentEmail: string | null;
+
+    @ApiProperty({ nullable: true })
+    studentAvatarUrl: string | null;
 
     @ApiProperty({
         description: 'Attendance/submission status per exam part',
@@ -73,7 +100,9 @@ export class PaginatedStudentExamResponse {
     totalPages: number;
 }
 
-export function toStudentExamResponse(studentExam: any): StudentExamResponse {
+export function toStudentExamResponse(
+    studentExam: StudentExamWithMeta,
+): StudentExamResponse {
     return {
         id: studentExam.id,
         examSessionId: studentExam.examSessionId,
@@ -82,9 +111,11 @@ export function toStudentExamResponse(studentExam: any): StudentExamResponse {
         seatPosition: studentExam.seatPosition ?? null,
         createdAt: studentExam.createdAt,
         updatedAt: studentExam.updatedAt,
-        studentName: studentExam.studentName,
-        studentCode: studentExam.studentCode,
-        studentEmail: studentExam.studentEmail,
+        studentName: studentExam.studentName ?? studentExam.student?.fullName ?? null,
+        studentCode: studentExam.studentCode ?? studentExam.student?.code ?? null,
+        studentEmail: studentExam.studentEmail ?? studentExam.student?.email ?? null,
+        studentAvatarUrl:
+            studentExam.studentAvatarUrl ?? studentExam.student?.avatarUrl ?? null,
         stt: studentExam.stt,
         parts: (studentExam.parts || []).map((p: any) => ({
             id: p.id,
