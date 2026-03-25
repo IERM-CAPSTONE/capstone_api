@@ -3,6 +3,7 @@ import {
     Post,
     Body,
     UseGuards,
+    Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard, RolesGuard } from '../../../../common/guards';
@@ -22,7 +23,11 @@ export class BroadcastAnnouncementEndpoint {
     @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
     @ApiOperation({ summary: 'Broadcast an announcement' })
     @ApiResponse({ status: 200, description: 'Broadcasted' })
-    async handle(@Body() dto: BroadcastAnnouncementDto) {
-        return await this.handler.execute(dto);
+    async handle(@Body() dto: BroadcastAnnouncementDto, @Req() req: any) {
+        return await this.handler.execute({
+            ...dto,
+            senderId: req.user?.id,
+            senderName: req.user?.fullName,
+        });
     }
 }

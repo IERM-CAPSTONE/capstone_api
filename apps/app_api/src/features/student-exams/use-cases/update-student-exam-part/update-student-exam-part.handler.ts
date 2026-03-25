@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { UpdateStudentExamPartDto } from './update-student-exam-part.dto';
+import { logSessionActivity } from '../../../../common/utils/activity-history.util';
 
 @Injectable()
 export class UpdateStudentExamPartHandler {
@@ -27,6 +28,38 @@ export class UpdateStudentExamPartHandler {
                 examPart: true,
             }
         });
+
+        const studentExam = await this.prisma.studentExam.findUnique({
+            where: { id: updated.studentExamId },
+            select: {
+                examSessionId: true,
+                studentId: true,
+                student: {
+                    select: {
+                        studentCode: true,
+                    },
+                },
+            },
+        });
+
+        if (studentExam && dto.isCheckedIn !== undefined && existing.isCheckedIn !== dto.isCheckedIn) {
+            await logSessionActivity(this.prisma, {
+                sessionId: studentExam.examSessionId,
+                activityType: dto.isCheckedIn ? 'CHECKED_IN' : 'MOVED',
+                payload: {
+                    event: dto.isCheckedIn ? 'STUDENT_CHECKED_IN' : 'STUDENT_LEFT_EXAM_ROOM',
+                    title: dto.isCheckedIn ? 'Student Checked In' : 'Student Left Room',
+                    message: dto.isCheckedIn
+                        ? `Student ${studentExam.student?.studentCode ?? studentExam.studentId} checked in`
+                        : `Student ${studentExam.student?.studentCode ?? studentExam.studentId} was marked as left room`,
+                    meta: {
+                        studentExamId: updated.studentExamId,
+                        examPartId: updated.examPartId,
+                        isCheckedIn: updated.isCheckedIn,
+                    },
+                },
+            });
+        }
 
         return {
             id: updated.id,

@@ -4,6 +4,7 @@ import { PrismaService } from '@app/prisma';
 import { TICKET_REPOSITORY, ITicketRepository } from '@app/tickets';
 import { CreateTicketDto } from './create-ticket.dto';
 import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
+import { logSessionActivity } from '../../../../common/utils/activity-history.util';
 
 @Injectable()
 export class CreateTicketHandler {
@@ -139,6 +140,24 @@ export class CreateTicketHandler {
                 })),
             });
         }
+
+        await logSessionActivity(this.prisma, {
+            sessionId: dto.sessionId,
+            ticketId: ticket.id,
+            activityType: 'MOVED',
+            payload: {
+                event: 'TICKET_CREATED',
+                title: 'Ticket Created',
+                message: `${reporter?.fullName ?? 'Staff'} created ticket ${ticket.issueName}`,
+                meta: {
+                    ticketId: ticket.id,
+                    issueName: ticket.issueName,
+                    issueType: ticket.issueType,
+                    priority: ticket.priority,
+                    reporterName: reporter?.fullName ?? null,
+                },
+            },
+        });
 
         return ticket;
     }

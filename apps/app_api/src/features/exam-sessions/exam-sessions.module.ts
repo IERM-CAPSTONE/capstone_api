@@ -16,6 +16,8 @@ import { AutoGenerateScheduleHandler, AutoGenerateScheduleEndpoint } from './use
 import { PublishExamSessionsHandler, PublishExamSessionsEndpoint } from './use-cases/publish-exam-sessions';
 import { ExportExamSessionsHandler, ExportExamSessionsEndpoint } from './use-cases/export-exam-sessions';
 import { MonitorSummaryHandler, MonitorSummaryEndpoint } from './use-cases/monitor-summary';
+import { MonitorActivitiesHandler, MonitorActivitiesEndpoint } from './use-cases/monitor-activities';
+import { NotificationGateway } from '../../common/gateways/notification.gateway';
 
 
 @Module({
@@ -25,6 +27,7 @@ import { MonitorSummaryHandler, MonitorSummaryEndpoint } from './use-cases/monit
         // because NestJS matches /:id greedily and would treat "export" as an id
         ExportExamSessionsEndpoint,
         MonitorSummaryEndpoint,
+        MonitorActivitiesEndpoint,
         CreateExamSessionEndpoint,
         UpdateExamSessionEndpoint,
         DeleteExamSessionEndpoint,
@@ -53,6 +56,8 @@ import { MonitorSummaryHandler, MonitorSummaryEndpoint } from './use-cases/monit
         PublishExamSessionsHandler,
         ExportExamSessionsHandler,
         MonitorSummaryHandler,
+        MonitorActivitiesHandler,
+        NotificationGateway,
     ],
 })
 export class ExamSessionsModule { }
