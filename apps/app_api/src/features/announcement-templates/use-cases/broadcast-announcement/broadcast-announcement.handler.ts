@@ -127,6 +127,65 @@ export class BroadcastAnnouncementHandler {
             });
         }
 
+        // 4. Create dual-channel notifications for proctors (PUSH_APP + IN_APP)
+        const proctorIds = Array.from(
+            new Set(sessions.map(s => s.proctorId).filter((id): id is string => id !== null))
+        );
+        
+        if (proctorIds.length > 0) {
+            const deliveriesForProctorMeta = sessions.map((session) => ({
+                sessionId: session.id,
+                subjectCode: session.subjectCode,
+                roomNumber: session.examRoom?.roomNumber ?? 'N/A',
+                campus: String(session.campus),
+            }));
+
+            // Create 2 notifications per proctor (PUSH_APP + IN_APP)
+            const proctorNotifications = [];
+            proctorIds.forEach(proctorId => {
+                proctorNotifications.push({
+                    id: uuidv4(),
+                    toUserId: proctorId,
+                    fromId: command.senderId || null,
+                    title: command.title || 'Official Announcement',
+                    message: command.content,
+                    channel: 'PUSH_APP',
+                    meta: {
+                        eventType: 'BROADCAST_ANNOUNCEMENT',
+                        type: command.type,
+                        senderId: command.senderId ?? null,
+                        senderName: command.senderName ?? null,
+                        subjectCodes: command.subjectCodes,
+                        deliveries: deliveriesForProctorMeta,
+                        sentAt: notificationData.sentAt,
+                    },
+                });
+                proctorNotifications.push({
+                    id: uuidv4(),
+                    toUserId: proctorId,
+                    fromId: command.senderId || null,
+                    title: command.title || 'Official Announcement',
+                    message: command.content,
+                    channel: 'IN_APP',
+                    meta: {
+                        eventType: 'BROADCAST_ANNOUNCEMENT',
+                        type: command.type,
+                        senderId: command.senderId ?? null,
+                        senderName: command.senderName ?? null,
+                        subjectCodes: command.subjectCodes,
+                        deliveries: deliveriesForProctorMeta,
+                        sentAt: notificationData.sentAt,
+                    },
+                });
+            });
+
+            if (proctorNotifications.length > 0) {
+                await this.prisma.notification.createMany({
+                    data: proctorNotifications,
+                });
+            }
+        }
+
         await Promise.all(
             sessions.map((session) =>
                 logSessionActivity(this.prisma, {
