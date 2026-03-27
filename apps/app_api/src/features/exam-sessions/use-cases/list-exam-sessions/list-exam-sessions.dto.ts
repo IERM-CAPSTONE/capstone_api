@@ -75,6 +75,11 @@ export class ListExamSessionsDto {
     @ApiProperty({ required: false })
     @IsOptional()
     @IsString()
+    hallInvigilatorId?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
     studentId?: string;
 
     @ApiProperty({ required: false, enum: ['HCM', 'HN', 'DN', 'QN', 'CT'] })

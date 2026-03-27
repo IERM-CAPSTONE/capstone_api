@@ -15,7 +15,7 @@ export class UpdateStudentExamEndpoint {
     constructor(private readonly handler: UpdateStudentExamHandler) { }
 
     @Put(':id')
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR)
+    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR, RoleType.IT_SUPPORT, RoleType.HALL_INVIGILATOR)
     @ApiOperation({ summary: 'Update student exam' })
     @ApiResponse({ status: 200, description: 'Student exam updated', type: StudentExamResponse })
     async handle(@Param('id') id: string, @Body() dto: UpdateStudentExamDto): Promise<StudentExamResponse> {

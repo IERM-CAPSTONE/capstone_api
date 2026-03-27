@@ -303,6 +303,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
 
         if (query?.examRoomId) where.examRoomId = query.examRoomId;
         if (query?.proctorId) where.proctorId = query.proctorId;
+        if (query?.hallInvigilatorId) where.hallInvigilatorId = query.hallInvigilatorId;
         if (query?.semesterId) where.semesterId = query.semesterId;
         if (query?.campus) where.campus = query.campus;
         if (query?.examType) where.examType = query.examType;
@@ -384,6 +385,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         endTime?: string;
         examRoomId?: string;
         proctorId?: string;
+        hallInvigilatorId?: string;
         studentId?: string;
     }): Promise<number> {
         const where = this.buildWhere(query);
