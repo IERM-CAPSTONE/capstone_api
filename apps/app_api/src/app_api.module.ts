@@ -21,6 +21,8 @@ import { DeviceApplicationsModule } from './features/device-applications';
 import { TicketsCoreModule } from '@app/tickets';
 import { TicketsModule } from './features/tickets/tickets.module';
 import { AnnouncementTemplatesModule } from './features/announcement-templates/announcement-templates.module';
+import { CloudinaryModule } from './common/cloudinary/cloudinary.module';
+import { NotificationsModule } from './features/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -54,6 +56,8 @@ import { AnnouncementTemplatesModule } from './features/announcement-templates/a
     TicketsCoreModule,
     TicketsModule,
     AnnouncementTemplatesModule,
+    CloudinaryModule,
+    NotificationsModule,
   ],
   providers: [],
   exports: [],

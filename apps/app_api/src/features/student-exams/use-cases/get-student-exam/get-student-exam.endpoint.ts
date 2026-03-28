@@ -14,7 +14,7 @@ export class GetStudentExamEndpoint {
     constructor(private readonly handler: GetStudentExamHandler) { }
 
     @Get(':id')
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR)
+    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR, RoleType.IT_SUPPORT, RoleType.HALL_INVIGILATOR)
     @ApiOperation({ summary: 'Get student exam by ID' })
     @ApiResponse({ status: 200, description: 'Student exam retrieved', type: StudentExamResponse })
     async handle(@Param('id') id: string): Promise<StudentExamResponse> {
