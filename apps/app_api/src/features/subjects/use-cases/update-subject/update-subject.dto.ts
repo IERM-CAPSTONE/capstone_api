@@ -4,6 +4,11 @@ import { Type } from 'class-transformer';
 import { CreateSubjectPartDto } from '../create-subject/create-subject.dto';
 
 export class UpdateSubjectDto {
+    @ApiProperty({ example: 'PRN231', description: 'Subject code', required: false })
+    @IsString()
+    @IsOptional()
+    code?: string;
+
     @ApiProperty({ example: 'Java Desktop Application Updated', description: 'Subject name', required: false })
     @IsString()
     @IsOptional()

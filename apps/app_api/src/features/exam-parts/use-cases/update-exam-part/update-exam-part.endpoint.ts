@@ -20,10 +20,11 @@ import { UpdateExamPartHandler } from './update-exam-part.handler';
 @Controller('exam-parts')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UpdateExamPartEndpoint {
+        Z
     constructor(private readonly handler: UpdateExamPartHandler) { }
 
     @Patch(':id')
-    @Roles(RoleType.EXAM_OFFICER)
+    @Roles(RoleType.ADMIN)
     @ApiOperation({ summary: 'Update an exam type' })
     @ApiBody({ type: UpdateExamPartDto })
     @ApiResponse({ status: 200, description: 'Exam type updated successfully', type: ExamPartResponse })

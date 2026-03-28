@@ -32,6 +32,9 @@ export class ExamSessionResponse {
     @ApiProperty({ example: 'Scheduled', enum: ['Ongoing', 'Ended', 'Scheduled'], description: 'Session status' })
     status: string;
 
+    @ApiProperty({ nullable: true })
+    proctorCheckedInAt: Date | null;
+
     @ApiProperty({ example: ['L', 'R'] })
     examPart: string[];
 
@@ -90,6 +93,7 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         examOpenTime: session.examTime.openTime,
         examCloseTime: session.examTime.closeTime,
         status: session.status,
+        proctorCheckedInAt: session.proctorCheckedInAt,
         examPart: session.examPart,
         semesterId: session.semesterId,
         semesterName: session.semesterName,

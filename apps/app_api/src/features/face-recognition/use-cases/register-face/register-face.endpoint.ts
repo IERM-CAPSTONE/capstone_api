@@ -23,7 +23,7 @@ export class RegisterFaceEndpoint {
   constructor(private readonly handler: RegisterFaceHandler) { }
 
   @Post('register')
-  @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.STUDENT)
+  @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.STUDENT, RoleType.PROCTOR, RoleType.IT_SUPPORT, RoleType.HALL_INVIGILATOR)
   @ApiOperation({ summary: 'Register face with encrypted images' })
   @ApiBody({ type: RegisterFaceDto })
   @ApiResponse({ status: 201, description: 'Face registered successfully' })

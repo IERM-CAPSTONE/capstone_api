@@ -177,6 +177,8 @@ export class AuthenticateFaceHandler {
           studentId: result.student_id,
           studentCode,
           studentName,
+          examSessionId: dto.examSessionId,
+          examPartCode: dto.examPartCode,
           confidence: result.confidence,
           isCorrectRoom,
           status: 'success',

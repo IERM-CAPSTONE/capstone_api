@@ -23,7 +23,7 @@ export class ImportSubjectsEndpoint {
     constructor(private readonly handler: ImportSubjectsHandler) { }
 
     @Post('import')
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
+    @Roles(RoleType.ADMIN)
     @ApiOperation({ summary: 'Import subjects from Excel file' })
     @ApiConsumes('multipart/form-data')
     @ApiBody({

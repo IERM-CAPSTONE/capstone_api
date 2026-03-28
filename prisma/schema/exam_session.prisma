@@ -8,6 +8,7 @@ model ExamSession {
   subjectCode       String?
   examOpenTime      DateTime?
   examCloseTime     DateTime?
+  proctorCheckedInAt DateTime?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   status            ExamSessionStatus   @default(Draft)

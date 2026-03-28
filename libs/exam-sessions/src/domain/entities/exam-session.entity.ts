@@ -12,6 +12,7 @@ export class ExamSession {
         public readonly examCode: string | null,
         public readonly openCode: string | null,
         public readonly status: string,
+        public readonly proctorCheckedInAt: Date | null,
         public readonly examPart: string[],
         public readonly semesterId: string | null,
         public readonly campus: string | null,
@@ -41,6 +42,7 @@ export class ExamSession {
         examCode?: string | null;
         openCode?: string | null;
         status?: string;
+        proctorCheckedInAt?: Date | null;
         examPart?: string[];
         semesterId?: string | null;
         campus?: string | null;
@@ -57,6 +59,7 @@ export class ExamSession {
             props.examCode ?? null,
             props.openCode ?? null,
             props.status ?? 'Scheduled',
+            props.proctorCheckedInAt ?? null,
             props.examPart ?? [],
             props.semesterId ?? null,
             props.campus ?? null,
@@ -86,6 +89,7 @@ export class ExamSession {
         examCode: string | null;
         openCode: string | null;
         status: string;
+        proctorCheckedInAt: Date | null;
         examPart: string[];
         semesterId: string | null;
         campus: string | null;
@@ -112,6 +116,7 @@ export class ExamSession {
             props.examCode,
             props.openCode,
             props.status,
+            props.proctorCheckedInAt,
             props.examPart,
             props.semesterId,
             props.campus,
@@ -142,6 +147,7 @@ export class ExamSession {
             examCode: found.examCode,
             openCode: found.openCode,
             status: found.status,
+            proctorCheckedInAt: found.proctorCheckedInAt,
             examPart: found.examParts ? found.examParts.map((et: any) => et.code) : [],
             semesterId: found.semesterId,
             campus: found.campus,
@@ -170,6 +176,7 @@ export class ExamSession {
         examCode?: string | null;
         openCode?: string | null;
         status?: string;
+        proctorCheckedInAt?: Date | null;
         examPart?: string[];
         semesterId?: string | null;
         campus?: string | null;
@@ -189,6 +196,7 @@ export class ExamSession {
             props.examCode !== undefined ? props.examCode : this.examCode,
             props.openCode !== undefined ? props.openCode : this.openCode,
             props.status !== undefined ? props.status : this.status,
+            props.proctorCheckedInAt !== undefined ? props.proctorCheckedInAt : this.proctorCheckedInAt,
             props.examPart !== undefined ? props.examPart : this.examPart,
             props.semesterId !== undefined ? props.semesterId : this.semesterId,
             props.campus !== undefined ? props.campus : this.campus,

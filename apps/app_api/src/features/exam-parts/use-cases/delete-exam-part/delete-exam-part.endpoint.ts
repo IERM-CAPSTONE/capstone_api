@@ -21,7 +21,7 @@ export class DeleteExamPartEndpoint {
     constructor(private readonly handler: DeleteExamPartHandler) { }
 
     @Delete(':id')
-    @Roles(RoleType.EXAM_OFFICER)
+    @Roles(RoleType.ADMIN)
     @HttpCode(204)
     @ApiOperation({ summary: 'Delete an exam type' })
     @ApiResponse({ status: 204, description: 'Exam type deleted successfully' })

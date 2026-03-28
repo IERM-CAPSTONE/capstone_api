@@ -22,7 +22,7 @@ export class CreateSubjectEndpoint {
     constructor(private readonly handler: CreateSubjectHandler) { }
 
     @Post()
-    @Roles(RoleType.EXAM_OFFICER)
+    @Roles(RoleType.ADMIN)
     @ApiOperation({ summary: 'Create a new subject' })
     @ApiBody({ type: CreateSubjectDto })
     @ApiResponse({ status: 201, description: 'Subject created successfully', type: SubjectResponse })

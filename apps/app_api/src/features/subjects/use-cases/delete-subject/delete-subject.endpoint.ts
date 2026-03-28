@@ -21,7 +21,7 @@ export class DeleteSubjectEndpoint {
     constructor(private readonly handler: DeleteSubjectHandler) { }
 
     @Delete(':id')
-    @Roles(RoleType.EXAM_OFFICER)
+    @Roles(RoleType.ADMIN)
     @HttpCode(204)
     @ApiOperation({ summary: 'Delete a subject' })
     @ApiResponse({ status: 204, description: 'Subject deleted successfully' })

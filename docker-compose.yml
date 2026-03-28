@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Database
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: capstone-db
     restart: always
     environment:
@@ -44,61 +44,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-
-  # API Service
-  app-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: capstone-api
-    command: node dist/apps/app_api/main
-    ports:
-      - '${API_PORT_EXTERNAL:-3000}:3000'
-    environment:
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-capstone_db}?schema=public
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin123}@rabbitmq:5672
-      - REDIS_URL=redis://redis:6379
-      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
-      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://localhost:3000/api/auth/google/callback}
-      - NODE_ENV=production
-    depends_on:
-      db:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    restart: always
-
-  # Background Worker Service
-  app-background:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: capstone-background
-    command: node dist/apps/app_background/main
-    environment:
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-capstone_db}?schema=public
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin123}@rabbitmq:5672
-      - REDIS_URL=redis://redis:6379
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
-      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
-      - NODE_ENV=production
-    depends_on:
-      db:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    restart: always
 
 volumes:
   postgres_data:

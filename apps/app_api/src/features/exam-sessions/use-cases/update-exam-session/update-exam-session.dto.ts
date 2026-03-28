@@ -49,6 +49,11 @@ export class UpdateExamSessionDto {
 
     @ApiProperty({ required: false, nullable: true })
     @IsOptional()
+    @IsDateString()
+    proctorCheckedInAt?: Date | null;
+
+    @ApiProperty({ required: false, nullable: true })
+    @IsOptional()
     @IsArray()
     examPart?: string[];
 

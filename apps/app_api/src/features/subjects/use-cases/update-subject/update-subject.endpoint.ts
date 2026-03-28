@@ -23,7 +23,7 @@ export class UpdateSubjectEndpoint {
     constructor(private readonly handler: UpdateSubjectHandler) { }
 
     @Patch(':id')
-    @Roles(RoleType.EXAM_OFFICER)
+    @Roles(RoleType.ADMIN)
     @ApiOperation({ summary: 'Update a subject' })
     @ApiBody({ type: UpdateSubjectDto })
     @ApiResponse({ status: 200, description: 'Subject updated successfully', type: SubjectResponse })

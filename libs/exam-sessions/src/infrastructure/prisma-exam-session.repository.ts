@@ -68,7 +68,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 sessionId: s.id,
                 roomNumber: s.examRoom?.roomNumber || 'N/A',
                 proctorName: s.proctor?.fullName || null,
-                proctorOnline: false, // Placeholder: implement real heartbeat logic if available
+                proctorOnline: !!s.proctorCheckedInAt,
                 hallInvigilatorName: s.hallInvigilator?.fullName || null,
                 hallInvigilatorOnline: false,
                 checkedIn: s.examSeats.length,
@@ -95,7 +95,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             }
 
             summary.totalProctors += s.proctorId ? 1 : 0;
-            summary.presentProctors += s.proctorId ? 1 : 0; // Simplified: considering assigned as present for now, unless we have login logic
+            summary.presentProctors += s.proctorCheckedInAt ? 1 : 0;
             summary.totalHallInvigilators += s.hallInvigilatorId ? 1 : 0;
             summary.presentHallInvigilators += s.hallInvigilatorId ? 1 : 0;
             summary.totalStudents += sessionDetail.totalStudents;
@@ -120,6 +120,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             examCode: session.examCode,
             openCode: session.openCode,
             status: session.status as any,
+            proctorCheckedInAt: session.proctorCheckedInAt,
             campus: session.campus as any,
             examType: session.examType as any,
             note: session.note,

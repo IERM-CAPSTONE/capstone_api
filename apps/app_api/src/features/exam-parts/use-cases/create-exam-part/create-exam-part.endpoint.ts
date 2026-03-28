@@ -22,7 +22,7 @@ export class CreateExamPartEndpoint {
     constructor(private readonly handler: CreateExamPartHandler) { }
 
     @Post()
-    @Roles(RoleType.EXAM_OFFICER)
+    @Roles(RoleType.ADMIN)
     @ApiOperation({ summary: 'Create a new exam type' })
     @ApiBody({ type: CreateExamPartDto })
     @ApiResponse({ status: 201, description: 'Exam type created successfully', type: ExamPartResponse })
