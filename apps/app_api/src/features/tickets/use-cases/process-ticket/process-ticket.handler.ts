@@ -4,6 +4,7 @@ import { PrismaService } from '@app/prisma';
 import { TICKET_REPOSITORY, ITicketRepository } from '@app/tickets';
 import { ProcessTicketDto, ProcessAction } from './process-ticket.dto';
 import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
+import { logSessionActivity } from '../../../../common/utils/activity-history.util';
 
 @Injectable()
 export class ProcessTicketHandler {
@@ -134,6 +135,32 @@ export class ProcessTicketHandler {
                 studentCode: (ticket as any).studentCode ?? null,
                 officerName,
                 reporterId: ticket.reporterId,
+            });
+        }
+
+        if ((ticket as any).sessionId) {
+            const event = dto.action === ProcessAction.RESOLVE
+                ? 'TICKET_CLOSED'
+                : dto.action === ProcessAction.START
+                    ? 'TICKET_UPDATED'
+                    : 'TICKET_ASSIGNED';
+
+            await logSessionActivity(this.prisma, {
+                sessionId: (ticket as any).sessionId,
+                ticketId,
+                activityType: 'MOVED',
+                payload: {
+                    event,
+                    title: 'Ticket Processed',
+                    message: `${officerName} performed ${dto.action} on ticket ${ticket.issueName}`,
+                    meta: {
+                        ticketId,
+                        action: dto.action,
+                        officerName,
+                        assigneeId: dto.assigneeId ?? null,
+                        note: dto.resolveNote,
+                    },
+                },
             });
         }
 

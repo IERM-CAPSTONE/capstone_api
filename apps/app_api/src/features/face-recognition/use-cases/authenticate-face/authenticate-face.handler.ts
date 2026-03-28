@@ -9,6 +9,7 @@ import {
 import { EncryptionUtils } from '@app/queue/encryption.utils';
 import { IUserRepository, USER_REPOSITORY } from '@app/users';
 import { IStudentExamRepository, STUDENT_EXAM_REPOSITORY } from '@app/student-exams';
+import { PrismaService } from '@app/prisma';
 import { AuthenticateFaceDto } from './authenticate-face.dto';
 import { NotificationGateway } from '../../../../common/gateways';
 
@@ -36,6 +37,7 @@ export class AuthenticateFaceHandler {
     private readonly faceClient: ClientProxy,
     @Inject(USER_REPOSITORY) private readonly userRepository: IUserRepository,
     @Inject(STUDENT_EXAM_REPOSITORY) private readonly studentExamRepository: IStudentExamRepository,
+    private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly notificationGateway: NotificationGateway,
   ) {
@@ -145,6 +147,31 @@ export class AuthenticateFaceHandler {
       }
 
       if (!isCorrectRoom && studentCode) {
+        let anomalyCampus: string | null = null;
+        if (dto.examSessionId) {
+          const session = await this.prisma.examSession.findUnique({
+            where: { id: dto.examSessionId },
+            select: { campus: true },
+          });
+          anomalyCampus = session?.campus ?? null;
+        }
+
+        const anomalyPayload = {
+          eventType: 'student_wrong_room',
+          examSessionId: dto.examSessionId,
+          studentId: result.student_id,
+          studentCode,
+          studentName,
+          confidence: result.confidence,
+          timestamp: new Date().toISOString(),
+        };
+
+        if (anomalyCampus) {
+          this.notificationGateway.sendToCampus(anomalyCampus, 'monitor:student_anomaly', anomalyPayload);
+        } else {
+          this.notificationGateway.sendToAll('monitor:student_anomaly', anomalyPayload);
+        }
+
         return {
           status: 'error',
           message: `Student ${studentName} (${studentCode}) does not belong to this exam room!`,

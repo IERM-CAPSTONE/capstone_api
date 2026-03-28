@@ -1,5 +1,6 @@
 import { Injectable, Inject, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
+import { logSessionActivity } from '../../../../common/utils/activity-history.util';
 
 interface SwapSeatsDto {
   targetSeatId: string;
@@ -95,6 +96,22 @@ export class SwapSeatsHandler {
         });
 
         this.logger.log(`Successfully swapped seats ${sourceSeatId} <-> ${targetSeatId}`);
+
+        await logSessionActivity(this.prisma, {
+            sessionId: examSessionId,
+            activityType: 'SEAT_MOVED',
+            payload: {
+                event: 'STUDENT_SWAPPED_SEATS',
+                title: 'Seat Swap',
+                message: `Seats were swapped (${sourceSeatId} <-> ${targetSeatId})`,
+                meta: {
+                    sourceSeatId,
+                    targetSeatId,
+                    sourceStudentId: sourceStudent?.studentId ?? null,
+                    targetStudentId: targetStudent?.studentId ?? null,
+                },
+            },
+        });
 
         return {
             success: true,

@@ -10,12 +10,14 @@ import { UpdateTemplateHandler } from './use-cases/update-template/update-templa
 import { DeleteTemplateHandler } from './use-cases/delete-template/delete-template.handler';
 import { BroadcastAnnouncementEndpoint } from './use-cases/broadcast-announcement/broadcast-announcement.endpoint';
 import { BroadcastAnnouncementHandler } from './use-cases/broadcast-announcement/broadcast-announcement.handler';
+import { ListBroadcastMessagesEndpoint, ListBroadcastMessagesHandler } from './use-cases/list-broadcast-messages';
 
 @Module({
     imports: [AnnouncementTemplatesCoreModule, ExamSessionsCoreModule],
     controllers: [
         AnnouncementTemplatesController,
         BroadcastAnnouncementEndpoint,
+        ListBroadcastMessagesEndpoint,
     ],
     providers: [
         CreateTemplateHandler,
@@ -23,6 +25,7 @@ import { BroadcastAnnouncementHandler } from './use-cases/broadcast-announcement
         UpdateTemplateHandler,
         DeleteTemplateHandler,
         BroadcastAnnouncementHandler,
+        ListBroadcastMessagesHandler,
         NotificationGateway,
     ],
 })

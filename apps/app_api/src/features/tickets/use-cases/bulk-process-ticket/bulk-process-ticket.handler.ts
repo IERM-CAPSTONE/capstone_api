@@ -4,6 +4,7 @@ import { PrismaService } from '@app/prisma';
 import { TICKET_REPOSITORY, ITicketRepository } from '@app/tickets';
 import { BulkProcessTicketDto, BulkProcessAction } from './bulk-process-ticket.dto';
 import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
+import { logSessionActivity } from '../../../../common/utils/activity-history.util';
 
 export interface BulkProcessResult {
     processed: number;
@@ -102,6 +103,25 @@ export class BulkProcessTicketHandler {
                             studentCode: (ticket as any).studentCode ?? null,
                             officerName,
                             reporterId: ticket.reporterId,
+                        });
+                    }
+
+                    if ((ticket as any).sessionId) {
+                        await logSessionActivity(this.prisma, {
+                            sessionId: (ticket as any).sessionId,
+                            ticketId,
+                            activityType: 'MOVED',
+                            payload: {
+                                event: dto.action === BulkProcessAction.RESOLVE ? 'TICKET_CLOSED' : 'TICKET_ASSIGNED',
+                                title: 'Ticket Processed (Bulk)',
+                                message: `${officerName} processed ticket ${ticket.issueName} in bulk mode`,
+                                meta: {
+                                    ticketId,
+                                    action: dto.action,
+                                    assigneeId: dto.assigneeId ?? null,
+                                    resolveNote: dto.resolveNote,
+                                },
+                            },
                         });
                     }
 

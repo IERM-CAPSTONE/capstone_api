@@ -73,15 +73,26 @@ export class PrismaAnnouncementTemplateRepository implements AnnouncementTemplat
             where.campus = campus;
         }
 
-        const [items, total] = await Promise.all([
-            (this.prisma as any).announcementTemplate.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-            }),
-            (this.prisma as any).announcementTemplate.count({ where }),
-        ]);
+        let items: any[] = [];
+        let total = 0;
+        try {
+            [items, total] = await Promise.all([
+                (this.prisma as any).announcementTemplate.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' },
+                }),
+                (this.prisma as any).announcementTemplate.count({ where }),
+            ]);
+        } catch (error: any) {
+            // P2021: table does not exist. Return empty result so broadcast UI still works.
+            if (error?.code === 'P2021') {
+                console.warn('[WARN] AnnouncementTemplate table missing; returning empty template list.');
+                return { items: [], total: 0 };
+            }
+            throw error;
+        }
 
         console.log(`[DEBUG] Found ${items.length} templates out of ${total} total for campus: ${campus || 'ALL'}`);
         
