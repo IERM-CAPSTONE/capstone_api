@@ -97,15 +97,7 @@ export class PrismaAnnouncementTemplateRepository implements AnnouncementTemplat
         console.log(`[DEBUG] Found ${items.length} templates out of ${total} total for campus: ${campus || 'ALL'}`);
         
         return {
-            items: items.map(t => ({
-                id: t.id,
-                title: t.title,
-                content: t.content,
-                type: t.type,
-                campus: t.campus,
-                createdAt: t.createdAt,
-                updatedAt: t.updatedAt,
-            })),
+            items: items.map(t => AnnouncementTemplate.mapFromPrisma(t)),
             total,
         };
     }
