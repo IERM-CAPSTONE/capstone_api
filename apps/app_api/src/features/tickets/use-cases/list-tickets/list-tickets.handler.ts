@@ -13,6 +13,9 @@ export class ListTicketsHandler {
         reporterId?: string;
         assigneeId?: string;
         issueType?: string;
+        sessionId?: string;
+        fromDate?: string;
+        toDate?: string;
     }): Promise<any[]> {
         return this.ticketRepository.findMany(filters);
     }

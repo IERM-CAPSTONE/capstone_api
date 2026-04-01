@@ -8,5 +8,8 @@ export interface ITicketRepository {
         reporterId?: string;
         assigneeId?: string;
         issueType?: string;
+        sessionId?: string;
+        fromDate?: string;
+        toDate?: string;
     }): Promise<any[]>;
 }
