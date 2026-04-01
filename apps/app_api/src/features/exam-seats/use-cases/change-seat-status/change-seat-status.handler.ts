@@ -1,6 +1,7 @@
 import { Inject, Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ExamSeat, IExamSeatRepository } from '@app/exam-seats';
 import { IExamSessionRepository, EXAM_SESSION_REPOSITORY } from '@app/exam-sessions';
+import { PrismaService } from '@app/prisma';
 import { ExamSeatResponse, toExamSeatResponse } from '../../shared/exam-seat.response';
 import { ChangeExamSeatStatusDto } from './change-seat-status.dto';
 
@@ -11,6 +12,7 @@ export class ChangeExamSeatStatusHandler {
         private readonly examSeatRepository: IExamSeatRepository,
         @Inject(EXAM_SESSION_REPOSITORY)
         private readonly examSessionRepository: IExamSessionRepository,
+        private readonly prisma: PrismaService,
     ) { }
 
     async execute(dto: ChangeExamSeatStatusDto, userRole: string): Promise<ExamSeatResponse> {
@@ -24,6 +26,17 @@ export class ChangeExamSeatStatusHandler {
         const examSession = await this.examSessionRepository.findById(examSeat.examSessionId);
         if (!examSession) {
             throw new BadRequestException(`Exam session not found`);
+        }
+
+        if (userRole === 'EXAM_OFFICER') {
+            const sessionState = await this.prisma.examSession.findUnique({
+                where: { id: examSeat.examSessionId },
+                select: { hasStudentsImported: true },
+            });
+
+            if (sessionState?.hasStudentsImported) {
+                throw new ForbiddenException('Seat layout is locked after students are assigned. Only swapping is allowed.');
+            }
         }
 
         // User is allowed to edit layout based on role transition logic only
@@ -58,6 +71,7 @@ export class ChangeExamSeatStatusHandler {
                     `Exam Officers can only toggle Available ↔ Locked for unassigned seats.`
                 );
             }
+            return;
         }
 
         // For Proctor (during exam operations)
@@ -76,8 +90,13 @@ export class ChangeExamSeatStatusHandler {
                     `Proctors can only: Assigned → Present (check-in), Present → Absent (no-show).`
                 );
             }
+            return;
         }
 
-        // For Admin or other roles, allow all transitions (if needed)
+        if (userRole === 'ADMIN') {
+            return;
+        }
+
+        throw new ForbiddenException('You do not have permission to update seat status.');
     }
 }

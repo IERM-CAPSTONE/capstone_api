@@ -23,6 +23,10 @@ export class FinalizeSeatAssignmentsHandler {
             throw new BadRequestException('Exam session not found');
         }
 
+        if (session.hasStudentsImported) {
+            throw new BadRequestException('Students are already assigned to seats for this session');
+        }
+
         // 2. Get students without seat assignments
         const students = await this.prisma.studentExam.findMany({
             where: {
@@ -92,6 +96,11 @@ export class FinalizeSeatAssignmentsHandler {
                     data: { status: 'Assigned' }
                 });
             }
+
+            await tx.examSession.update({
+                where: { id: examSessionId },
+                data: { hasStudentsImported: true },
+            });
         });
 
         this.logger.log(`Successfully assigned ${students.length} students to seats`);

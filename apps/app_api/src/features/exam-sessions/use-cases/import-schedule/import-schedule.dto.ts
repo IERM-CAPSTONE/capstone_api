@@ -1,6 +1,11 @@
 import { IsArray, IsEnum, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
+export enum ImportValidationMode {
+    IMPORT = 'import',
+    PREVIEW = 'preview',
+}
+
 export class ScheduleItemDto {
     @IsOptional()
     @IsString()
@@ -71,6 +76,10 @@ export class StudentItemDto {
 export class ImportScheduleDto {
     @IsEnum(['schedule'])
     importType: 'schedule';
+
+    @IsOptional()
+    @IsEnum(ImportValidationMode)
+    validationMode?: ImportValidationMode;
 
     @IsArray()
     @ValidateNested({ each: true })

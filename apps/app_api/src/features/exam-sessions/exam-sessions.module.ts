@@ -12,6 +12,8 @@ import { ImportProctorHandler, ImportProctorEndpoint } from './use-cases/import-
 import { ImportExamCodeHandler, ImportExamCodeEndpoint } from './use-cases/import-exam-code';
 import { ArchiveExamSessionHandler, ArchiveExamSessionEndpoint } from './use-cases/archive-exam-session';
 import { FinalizeSeatAssignmentsHandler, FinalizeSeatAssignmentsEndpoint } from './use-cases/finalize-seats';
+import { ApplySeatTemplateHandler, ApplySeatTemplateEndpoint } from './use-cases/apply-seat-template';
+import { BulkAssignStudentsHandler, BulkAssignStudentsEndpoint } from './use-cases/bulk-assign-students';
 import { AutoGenerateScheduleHandler, AutoGenerateScheduleEndpoint } from './use-cases/auto-generate-schedule';
 import { PublishExamSessionsHandler, PublishExamSessionsEndpoint } from './use-cases/publish-exam-sessions';
 import { ExportExamSessionsHandler, ExportExamSessionsEndpoint } from './use-cases/export-exam-sessions';
@@ -38,6 +40,8 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         ImportExamCodeEndpoint,
         ArchiveExamSessionEndpoint,
         FinalizeSeatAssignmentsEndpoint,
+        ApplySeatTemplateEndpoint,
+        BulkAssignStudentsEndpoint,
         AutoGenerateScheduleEndpoint,
         PublishExamSessionsEndpoint,
     ],
@@ -52,6 +56,8 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         ImportExamCodeHandler,
         ArchiveExamSessionHandler,
         FinalizeSeatAssignmentsHandler,
+        ApplySeatTemplateHandler,
+        BulkAssignStudentsHandler,
         AutoGenerateScheduleHandler,
         PublishExamSessionsHandler,
         ExportExamSessionsHandler,
