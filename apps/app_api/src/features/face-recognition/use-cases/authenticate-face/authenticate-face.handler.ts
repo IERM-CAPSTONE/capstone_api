@@ -172,6 +172,20 @@ export class AuthenticateFaceHandler {
           this.notificationGateway.sendToAll('monitor:student_anomaly', anomalyPayload);
         }
 
+        await this.prisma.attendanceLog.create({
+          data: {
+            uid: result.uid ?? null,
+            studentId: result.student_id ?? null,
+            studentCode: studentCode ?? null,
+            studentName: studentName ?? null,
+            examSessionId: dto.examSessionId ?? null,
+            status: 'ERROR',
+            confidence: result.confidence ?? null,
+            isCorrectRoom: false,
+            message: `Student ${studentName} (${studentCode}) does not belong to this exam room!`,
+          },
+        });
+
         return {
           status: 'error',
           message: `Student ${studentName} (${studentCode}) does not belong to this exam room!`,
@@ -184,6 +198,20 @@ export class AuthenticateFaceHandler {
           },
         };
       }
+
+      await this.prisma.attendanceLog.create({
+        data: {
+          uid: result?.uid ?? null,
+          studentId: result?.student_id ?? null,
+          studentCode: studentCode ?? null,
+          studentName: studentName ?? null,
+          examSessionId: dto.examSessionId ?? null,
+          status: 'SUCCESS',
+          confidence: result?.confidence ?? null,
+          isCorrectRoom,
+          message: 'Face authenticated successfully',
+        },
+      });
 
       const response: AuthenticateFaceResponse = {
         status: 'success',
@@ -217,9 +245,20 @@ export class AuthenticateFaceHandler {
     } catch (error) {
       this.logger.error('Face authentication failed:', error);
 
+      const errorMessage = error instanceof Error ? error.message : 'Face authentication failed';
+
+      await this.prisma.attendanceLog.create({
+        data: {
+          examSessionId: dto.examSessionId ?? null,
+          status: 'ERROR',
+          isCorrectRoom: null,
+          message: errorMessage,
+        },
+      });
+
       const errorResponse: AuthenticateFaceResponse = {
         status: 'error',
-        message: error.message || 'Face authentication failed',
+        message: errorMessage,
       };
       this.logger.error(`Authentication failed: ${JSON.stringify(errorResponse)}`);
       return errorResponse;

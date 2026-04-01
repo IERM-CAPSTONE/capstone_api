@@ -25,6 +25,7 @@ model User {
   deviceApplications      DeviceApplication[]  @relation("deviceApplicationRegisteredBy")
   deviceApprovals         DeviceApplication[]  @relation("deviceApplicationApprovedBy")
   proctorAssignmentsMade  ProctorAssignment[]  @relation("assignmentCreator")
+  attendanceLogs          AttendanceLog[]
 
   @@index([role])
   @@index([campus])

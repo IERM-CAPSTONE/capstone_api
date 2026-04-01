@@ -13,6 +13,7 @@ import {
   IExamSessionRepository,
 } from '@app/exam-sessions';
 import { NotificationGateway } from '../../../../common/gateways';
+import { PrismaService } from '@app/prisma';
 import { ProctorCheckInDto } from './proctor-check-in.dto';
 
 export interface ProctorCheckInResponse {
@@ -41,6 +42,7 @@ export class ProctorCheckInHandler {
     @Inject(EXAM_SESSION_REPOSITORY)
     private readonly examSessionRepository: IExamSessionRepository,
     private readonly notificationGateway: NotificationGateway,
+    private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
     this.encryptionKey = this.configService.get<string>(
@@ -124,6 +126,19 @@ export class ProctorCheckInHandler {
         });
       }
 
+      await this.prisma.attendanceLog.create({
+        data: {
+          studentId: currentUserId,
+          studentCode: user?.code?.value ?? null,
+          studentName: user?.fullName || null,
+          examSessionId: dto.examSessionId,
+          status: 'SUCCESS',
+          confidence: result.confidence ?? null,
+          isCorrectRoom: true,
+          message: 'Proctor check-in successful',
+        },
+      });
+
       return {
         status: 'success',
         message: 'Proctor check-in successful',
@@ -138,9 +153,21 @@ export class ProctorCheckInHandler {
       };
     } catch (error) {
       this.logger.error('Proctor face check-in failed:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Proctor check-in failed';
+
+      await this.prisma.attendanceLog.create({
+        data: {
+          examSessionId: dto.examSessionId ?? null,
+          status: 'ERROR',
+          isCorrectRoom: null,
+          message: errorMessage,
+        },
+      });
+
       return {
         status: 'error',
-        message: error instanceof Error ? error.message : 'Proctor check-in failed',
+        message: errorMessage,
       };
     }
   }
