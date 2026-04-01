@@ -68,6 +68,9 @@ export class PrismaTicketRepository implements ITicketRepository {
         reporterId?: string;
         assigneeId?: string;
         issueType?: string;
+        sessionId?: string;
+        fromDate?: string;
+        toDate?: string;
     }): Promise<any[]> {
         const where: any = {};
 
@@ -75,6 +78,17 @@ export class PrismaTicketRepository implements ITicketRepository {
         if (filters.reporterId) where.reporterId = filters.reporterId;
         if (filters.assigneeId) where.assigneeId = filters.assigneeId;
         if (filters.issueType) where.issueType = filters.issueType;
+        if (filters.sessionId) where.sessionId = filters.sessionId;
+
+        if (filters.fromDate || filters.toDate) {
+            where.createdAt = {};
+            if (filters.fromDate) where.createdAt.gte = new Date(filters.fromDate);
+            if (filters.toDate) {
+                const to = new Date(filters.toDate);
+                to.setHours(23, 59, 59, 999);
+                where.createdAt.lte = to;
+            }
+        }
 
         return this.prisma.issueTicket.findMany({
             where,
@@ -82,7 +96,11 @@ export class PrismaTicketRepository implements ITicketRepository {
             include: {
                 reporter: { select: { id: true, fullName: true, email: true, role: true } },
                 assignee: { select: { id: true, fullName: true, email: true, role: true } },
-                session: { include: { examRoom: { select: { id: true, roomNumber: true } } } },
+                session: {
+                    include: {
+                        examRoom: { select: { id: true, roomNumber: true } },
+                    },
+                },
             },
         });
     }

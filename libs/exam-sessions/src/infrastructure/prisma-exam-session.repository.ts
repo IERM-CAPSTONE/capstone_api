@@ -14,10 +14,10 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
     }): Promise<SubjectMonitorSummary[]> {
         const targetDate = query.date || new Date();
         const startOfDay = new Date(targetDate);
-        startOfDay.setDate(startOfDay.getDate() - 1); 
+        startOfDay.setDate(startOfDay.getDate() - 1);
         startOfDay.setHours(0, 0, 0, 0);
         const endOfDay = new Date(targetDate);
-        endOfDay.setDate(endOfDay.getDate() + 1); 
+        endOfDay.setDate(endOfDay.getDate() + 1);
         endOfDay.setHours(23, 59, 59, 999);
 
         const where: any = {
