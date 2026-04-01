@@ -1,0 +1,24 @@
+model AttendanceLog {
+  id            String       @id @default(uuid())
+  uid           Int?
+  studentId     String?
+  studentCode   String?
+  studentName   String?
+  examSessionId String?
+  status        AttendanceLogStatus
+  confidence    Float?
+  isCorrectRoom Boolean?
+  timestamp     DateTime     @default(now())
+  message       String?
+  deviceId      String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  student       User?        @relation(fields: [studentId], references: [id])
+  examSession   ExamSession? @relation(fields: [examSessionId], references: [id])
+  device        Device?      @relation(fields: [deviceId], references: [id])
+
+  @@index([studentId])
+  @@index([examSessionId])
+  @@index([deviceId])
+}

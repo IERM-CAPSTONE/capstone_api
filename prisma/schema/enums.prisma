@@ -106,11 +106,13 @@ enum AnnouncementType {
   URGENT
 }
 
-
-
-
 enum DeviceApplicationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum AttendanceLogStatus {
+  SUCCESS
+  ERROR
 }
