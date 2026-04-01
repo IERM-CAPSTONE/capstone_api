@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { IExamSessionRepository, EXAM_SESSION_REPOSITORY } from '@app/exam-sessions';
 import { PrismaService } from '@app/prisma';
 
@@ -15,55 +15,98 @@ export class GetAvailableDatesHandler {
         private readonly prisma: PrismaService,
     ) { }
 
-    /**
-     * Calculate current semester based on date
-     * SP: Jan-Apr (months 1-4)
-     * SU: May-Aug (months 5-8)
-     * FA: Sep-Dec (months 9-12)
-     */
-    private getCurrentSemester(): string {
+    private async resolveSemesterId(semesterId?: string): Promise<string> {
+        if (semesterId) {
+            const semEntity = await this.prisma.semester.findUnique({
+                where: { id: semesterId },
+                select: { id: true },
+            });
+
+            if (!semEntity) {
+                throw new BadRequestException(`Semester id ${semesterId} was not found.`);
+            }
+
+            return semEntity.id;
+        }
+
         const now = new Date();
-        const month = now.getMonth() + 1; // 1-12
-        const year = now.getFullYear();
-        const shortYear = year.toString().slice(-2); // "2026" -> "26"
-
-        if (month >= 1 && month <= 4) return `SP${shortYear}`;
-        if (month >= 5 && month <= 8) return `SU${shortYear}`;
-        return `FA${shortYear}`;
-    }
-
-    async execute(semesterCode?: string): Promise<AvailableDateResponse[]> {
-        // Use provided semester or auto-calculate current semester
-        const semester = semesterCode || this.getCurrentSemester();
-
-        // Find semesterId by code
-        const semEntity = await this.prisma.semester.findFirst({
-            where: { code: semester }
+        const currentSemester = await this.prisma.semester.findFirst({
+            where: {
+                startDate: { lte: now },
+                endDate: { gte: now },
+            },
+            orderBy: { startDate: 'desc' },
+            select: { id: true },
         });
 
-        if (!semEntity) {
-            return [];
+        if (currentSemester) {
+            return currentSemester.id;
         }
+
+        // Fallback 1: use the most recently created exam session that already has semesterId.
+        const sessionWithSemester = await this.prisma.examSession.findFirst({
+            where: {
+                semesterId: { not: null },
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { semesterId: true },
+        });
+
+        if (sessionWithSemester?.semesterId) {
+            return sessionWithSemester.semesterId;
+        }
+
+        // Fallback 2: use the latest semester by endDate if no exam session is linked yet.
+        const latestSemester = await this.prisma.semester.findFirst({
+            orderBy: { endDate: 'desc' },
+            select: { id: true },
+        });
+
+        if (latestSemester) {
+            return latestSemester.id;
+        }
+
+        throw new BadRequestException('No active semester found for current date.');
+    }
+
+    async execute(semesterId?: string): Promise<AvailableDateResponse[]> {
+        const resolvedSemesterId = await this.resolveSemesterId(semesterId);
 
         // Get exam sessions filtered by semesterId
         const examSessions = await this.examSessionRepository.findMany({
-            semesterId: semEntity.id,
+            semesterId: resolvedSemesterId,
         });
+
+        if (examSessions.length === 0) {
+            throw new BadRequestException('No exam sessions found for selected semester.');
+        }
 
         // Group by date
         const dateMap = new Map<string, number>();
 
         for (const session of examSessions) {
-            if (session.examTime?.openTime) {
-                const dateStr = session.examTime.openTime.toISOString().split('T')[0]; // YYYY-MM-DD
-                dateMap.set(dateStr, (dateMap.get(dateStr) || 0) + 1);
+            const openDate = session.examTime?.openTime ?? null;
+            const closeDate = session.examTime?.closeTime ?? null;
+            const chosenDate = openDate ?? closeDate;
+
+            if (!chosenDate) {
+                continue;
             }
+
+            const dateStr = chosenDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            dateMap.set(dateStr, (dateMap.get(dateStr) || 0) + 1);
         }
 
         // Convert to array and sort
         const result: AvailableDateResponse[] = Array.from(dateMap.entries())
             .map(([date, count]) => ({ date, count }))
             .sort((a, b) => a.date.localeCompare(b.date));
+
+        if (result.length === 0) {
+            throw new BadRequestException(
+                'No scheduled exam dates are available for selected semester.',
+            );
+        }
 
         return result;
     }

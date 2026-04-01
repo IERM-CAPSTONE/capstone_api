@@ -15,7 +15,7 @@ export class GetAvailableDatesEndpoint {
     @Get('available-dates')
     @Roles(RoleType.PROCTOR, RoleType.ADMIN, RoleType.EXAM_OFFICER)
     @ApiOperation({ summary: 'Get available dates from exam sessions for application' })
-    @ApiQuery({ name: 'semester', required: false, type: String, description: 'Filter by semester code' })
+    @ApiQuery({ name: 'semesterId', required: false, type: String, description: 'Filter by semester id' })
     @ApiResponse({ status: 200, description: 'Available dates retrieved', schema: {
         type: 'array',
         items: {
@@ -26,7 +26,7 @@ export class GetAvailableDatesEndpoint {
             },
         },
     } })
-    async handle(@Query('semester') semester?: string): Promise<AvailableDateResponse[]> {
-        return this.handler.execute(semester);
+    async handle(@Query('semesterId') semesterId?: string): Promise<AvailableDateResponse[]> {
+        return this.handler.execute(semesterId);
     }
 }

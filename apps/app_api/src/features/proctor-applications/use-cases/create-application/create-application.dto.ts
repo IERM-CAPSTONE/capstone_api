@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsEnum, IsOptional, IsDateString } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsOptional, IsDateString, IsArray, ArrayUnique } from 'class-validator';
 
 export class CreateProctorApplicationDto {
     @ApiProperty({ example: 'MORNING', enum: ['MORNING', 'AFTERNOON'], description: 'Preferred shift' })
@@ -12,10 +12,18 @@ export class CreateProctorApplicationDto {
     @IsNotEmpty()
     preferredType: string;
 
-    @ApiProperty({ example: '2026-02-15T00:00:00.000Z', description: 'Preferred date', required: false, nullable: true })
+    @ApiProperty({
+        example: ['2026-02-15', '2026-02-18'],
+        description: 'One or many preferred dates',
+        required: false,
+        nullable: true,
+        type: [String],
+    })
     @IsOptional()
-    @IsDateString()
-    preferredDate?: Date | null;
+    @IsArray()
+    @ArrayUnique()
+    @IsDateString({}, { each: true })
+    preferredDates?: string[];
 
     @ApiProperty({ example: 'Available on this date', description: 'Additional notes', required: false, nullable: true })
     @IsOptional()

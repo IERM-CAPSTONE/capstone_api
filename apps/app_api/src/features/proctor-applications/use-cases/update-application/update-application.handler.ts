@@ -22,19 +22,19 @@ export class UpdateProctorApplicationHandler {
             throw new Error('Unauthorized: You can only update your own applications');
         }
 
-        // Validate preferredDate if provided
-        if (dto.preferredDate !== undefined && dto.preferredDate !== null) {
-            const date = new Date(dto.preferredDate);
-            if (isNaN(date.getTime())) {
-                throw new Error('Invalid preferred date');
-            }
+        const preferredDates = dto.preferredDates !== undefined
+            ? dto.preferredDates.map((value) => new Date(value))
+            : undefined;
+
+        if (preferredDates && preferredDates.some((date) => Number.isNaN(date.getTime()))) {
+            throw new Error('Invalid preferred date');
         }
 
         // Update using domain method (will check if status is PENDING)
         const updatedApplication = application.update({
             preferredShift: dto.preferredShift,
             preferredType: dto.preferredType,
-            preferredDate: dto.preferredDate !== undefined ? (dto.preferredDate ? new Date(dto.preferredDate) : null) : undefined,
+            preferredDates,
             notes: dto.notes !== undefined ? dto.notes : undefined,
         });
 

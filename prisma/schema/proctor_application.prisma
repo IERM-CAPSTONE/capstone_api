@@ -4,7 +4,8 @@ model ProctorApplication {
   teacherId      String
   preferredShift PreferredShift
   preferredType  PreferredType
-  preferredDate  DateTime?
+  /// Stores one or many preferred dates as ISO date strings in JSON array format: ["2026-02-15", "2026-02-18"]
+  preferredDate  String?
   notes          String?
   status         ProctorApplicationStatus @default(PENDING)
   createdAt      DateTime                 @default(now())

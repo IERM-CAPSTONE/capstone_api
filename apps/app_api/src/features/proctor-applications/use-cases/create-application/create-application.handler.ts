@@ -12,12 +12,12 @@ export class CreateProctorApplicationHandler {
     ) { }
 
     async execute(dto: CreateProctorApplicationDto, teacherId: string): Promise<ProctorApplicationResponse> {
-        // Validate preferredDate if provided
-        if (dto.preferredDate) {
-            const date = new Date(dto.preferredDate);
-            if (isNaN(date.getTime())) {
-                throw new Error('Invalid preferred date');
-            }
+        const preferredDates = dto.preferredDates && dto.preferredDates.length > 0
+            ? dto.preferredDates.map((value) => new Date(value))
+            : [];
+
+        if (preferredDates.some((date) => Number.isNaN(date.getTime()))) {
+            throw new Error('Invalid preferred date');
         }
 
         // Create aggregate using factory
@@ -26,7 +26,7 @@ export class CreateProctorApplicationHandler {
             teacherId,
             preferredShift: dto.preferredShift,
             preferredType: dto.preferredType,
-            preferredDate: dto.preferredDate ? new Date(dto.preferredDate) : null,
+            preferredDates,
             notes: dto.notes ?? null,
             status: 'PENDING',
         });

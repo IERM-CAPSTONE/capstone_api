@@ -10,6 +10,7 @@ export interface IProctorApplicationRepository {
         teacherId?: string;
         status?: string;
         semesterCode?: string;
+        // Date range filters any selected preferred date in multi-date mode.
         preferredDateStart?: Date;
         preferredDateEnd?: Date;
         page?: number;

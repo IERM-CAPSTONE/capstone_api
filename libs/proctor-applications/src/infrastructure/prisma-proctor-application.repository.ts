@@ -7,6 +7,22 @@ import { IProctorApplicationRepository } from '../domain/repositories';
 export class PrismaProctorApplicationRepository implements IProctorApplicationRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private toDomain(item: any): ProctorApplication {
+        return ProctorApplication.reconstitute({
+            id: item.id,
+            teacherId: item.teacherId,
+            preferredShift: item.preferredShift,
+            preferredType: item.preferredType,
+            preferredDate: item.preferredDate,
+            notes: item.notes,
+            status: item.status,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+            teacherName: item.teacher?.fullName,
+            teacherCode: item.teacher?.code,
+        });
+    }
+
     async save(application: ProctorApplication): Promise<ProctorApplication> {
         const data = {
             teacherId: application.teacherId,
@@ -36,19 +52,7 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
             },
         });
 
-        return ProctorApplication.reconstitute({
-            id: saved.id,
-            teacherId: saved.teacherId,
-            preferredShift: saved.preferredShift,
-            preferredType: saved.preferredType,
-            preferredDate: saved.preferredDate,
-            notes: saved.notes,
-            status: saved.status,
-            createdAt: saved.createdAt,
-            updatedAt: saved.updatedAt,
-            teacherName: saved.teacher?.fullName,
-            teacherCode: saved.teacher?.code,
-        });
+        return this.toDomain(saved);
     }
 
     async findById(id: string): Promise<ProctorApplication | null> {
@@ -66,19 +70,7 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
 
         if (!found) return null;
 
-        return ProctorApplication.reconstitute({
-            id: found.id,
-            teacherId: found.teacherId,
-            preferredShift: found.preferredShift,
-            preferredType: found.preferredType,
-            preferredDate: found.preferredDate,
-            notes: found.notes,
-            status: found.status,
-            createdAt: found.createdAt,
-            updatedAt: found.updatedAt,
-            teacherName: found.teacher?.fullName,
-            teacherCode: found.teacher?.code,
-        });
+        return this.toDomain(found);
     }
 
     async findByTeacherId(teacherId: string): Promise<ProctorApplication[]> {
@@ -95,19 +87,7 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
             orderBy: { createdAt: 'desc' },
         });
 
-        return results.map(item => ProctorApplication.reconstitute({
-            id: item.id,
-            teacherId: item.teacherId,
-            preferredShift: item.preferredShift,
-            preferredType: item.preferredType,
-            preferredDate: item.preferredDate,
-            notes: item.notes,
-            status: item.status,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            teacherName: item.teacher?.fullName,
-            teacherCode: item.teacher?.code,
-        }));
+        return results.map((item) => this.toDomain(item));
     }
 
     async findMany(criteria?: {
@@ -136,10 +116,10 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
         if (criteria?.preferredDateStart || criteria?.preferredDateEnd) {
             where.preferredDate = {};
             if (criteria.preferredDateStart) {
-                where.preferredDate.gte = criteria.preferredDateStart;
+                where.preferredDate.gte = criteria.preferredDateStart.toISOString().split('T')[0];
             }
             if (criteria.preferredDateEnd) {
-                where.preferredDate.lte = criteria.preferredDateEnd;
+                where.preferredDate.lte = criteria.preferredDateEnd.toISOString().split('T')[0];
             }
         }
 
@@ -164,19 +144,7 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
             this.prisma.proctorApplication.count({ where }),
         ]);
 
-        const data = results.map(item => ProctorApplication.reconstitute({
-            id: item.id,
-            teacherId: item.teacherId,
-            preferredShift: item.preferredShift,
-            preferredType: item.preferredType,
-            preferredDate: item.preferredDate,
-            notes: item.notes,
-            status: item.status,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            teacherName: item.teacher?.fullName,
-            teacherCode: item.teacher?.code,
-        }));
+        const data = results.map((item) => this.toDomain(item));
 
         return { data, total };
     }

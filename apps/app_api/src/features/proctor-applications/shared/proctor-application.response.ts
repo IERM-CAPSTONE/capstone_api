@@ -20,8 +20,13 @@ export class ProctorApplicationResponse {
     @ApiProperty({ example: 'ROOM', enum: ['ROOM', 'HALL'], description: 'Preferred type' })
     preferredType: string;
 
-    @ApiProperty({ example: '2026-02-15T00:00:00.000Z', description: 'Preferred date', nullable: true })
-    preferredDate: Date | null;
+    @ApiProperty({
+        example: ['2026-02-15T00:00:00.000Z', '2026-02-18T00:00:00.000Z'],
+        description: 'One or many preferred dates',
+        nullable: true,
+        type: [String],
+    })
+    preferredDates: Date[];
 
     @ApiProperty({ example: 'Available on this date', description: 'Additional notes', nullable: true })
     notes: string | null;
@@ -61,7 +66,7 @@ export function toProctorApplicationResponse(application: ProctorApplication): P
         teacherCode: application.teacherCode,
         preferredShift: application.preferredShift,
         preferredType: application.preferredType,
-        preferredDate: application.preferredDate,
+        preferredDates: application.preferredDates,
         notes: application.notes,
         status: application.status,
         createdAt: application.createdAt,
