@@ -9,10 +9,13 @@ export enum IssueTypeEnum {
 }
 
 export enum PriorityEnum {
-    LOW = 'Low',
-    MEDIUM = 'Medium',
-    HIGH = 'High',
+    NORMAL = 'Normal',
     URGENT = 'Urgent',
+}
+
+export enum AssignmentTypeEnum {
+    HALL_INVIGILATOR = 'HALL_INVIGILATOR',
+    EXAM_OFFICER = 'EXAM_OFFICER',
 }
 
 export class CreateTicketDto {
@@ -29,7 +32,7 @@ export class CreateTicketDto {
     @IsString()
     description?: string;
 
-    @ApiPropertyOptional({ enum: PriorityEnum, default: PriorityEnum.MEDIUM })
+    @ApiPropertyOptional({ enum: PriorityEnum, default: PriorityEnum.NORMAL })
     @IsOptional()
     @IsEnum(PriorityEnum)
     priority?: PriorityEnum;
@@ -48,4 +51,52 @@ export class CreateTicketDto {
     @IsOptional()
     @IsString()
     studentCode?: string;
+
+    @ApiPropertyOptional({ example: 'Need re-assign, already registered', description: 'OCR text extracted from the attachment' })
+    @IsOptional()
+    @IsString()
+    ocrText?: string;
+
+    @ApiPropertyOptional({ example: 'needReassign' })
+    @IsOptional()
+    @IsString()
+    aiPredictedIssueName?: string;
+
+    @ApiPropertyOptional({ example: 'Technical Issue' })
+    @IsOptional()
+    @IsString()
+    aiPredictedIssueType?: string;
+
+    @ApiPropertyOptional({ example: 0.82 })
+    @IsOptional()
+    aiConfidence?: number;
+
+    @ApiPropertyOptional({ example: 'Ảnh có dấu hiệu tài khoản đã đăng nhập trước đó và cần re-assign.' })
+    @IsOptional()
+    @IsString()
+    aiDisplayMessage?: string;
+
+    @ApiPropertyOptional({ example: 'need re-assign, already registered' })
+    @IsOptional()
+    @IsString()
+    aiEvidenceText?: string;
+
+    @ApiPropertyOptional({ example: 'text_baseline_v1' })
+    @IsOptional()
+    @IsString()
+    aiModelVersion?: string;
+
+    @ApiPropertyOptional({ example: 'HALL_INVIGILATOR', description: 'AI-recommended assignment type' })
+    @IsOptional()
+    @IsString()
+    aiRecommendedAssignmentType?: string;
+
+    @ApiPropertyOptional({ 
+        enum: AssignmentTypeEnum, 
+        example: AssignmentTypeEnum.HALL_INVIGILATOR,
+        description: 'User-confirmed assignment type (HALL_INVIGILATOR or EXAM_OFFICER)'
+    })
+    @IsOptional()
+    @IsEnum(AssignmentTypeEnum)
+    confirmedAssignmentType?: AssignmentTypeEnum;
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { StudentExam } from '../domain/entities';
 import { IStudentExamRepository } from '../domain/repositories';
@@ -146,6 +146,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
     async findMany(criteria?: {
         examSessionId?: string;
         studentId?: string;
+        studentCode?: string;
+        status?: string;
         page?: number;
         limit?: number;
     }): Promise<{ data: StudentExam[]; total: number }> {
@@ -156,6 +158,15 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
         const where: any = {};
         if (criteria?.examSessionId) where.examSessionId = criteria.examSessionId;
         if (criteria?.studentId) where.studentId = criteria.studentId;
+        if (criteria?.status) where.status = criteria.status;
+        if (criteria?.studentCode) {
+            where.student = {
+                code: {
+                    equals: criteria.studentCode,
+                    mode: 'insensitive',
+                },
+            };
+        }
 
         const [results, total] = await Promise.all([
             this.prisma.studentExam.findMany({
@@ -216,6 +227,33 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
         });
 
         if (!studentExam) return;
+
+        const examSession = await this.prisma.examSession.findUnique({
+            where: { id: examSessionId },
+            select: {
+                examOpenTime: true,
+                examCloseTime: true,
+            },
+        });
+
+        const examOpenTime = examSession?.examOpenTime ? new Date(examSession.examOpenTime) : null;
+        const examCloseTime = examSession?.examCloseTime ? new Date(examSession.examCloseTime) : null;
+
+        if (!examOpenTime || !examCloseTime) {
+            throw new BadRequestException('Exam session time is not configured');
+        }
+
+        const now = new Date();
+        const attendanceOpenAt = new Date(examOpenTime.getTime() - 40 * 60 * 1000);
+        const attendanceCloseAt = new Date(examOpenTime.getTime() + 10 * 60 * 1000);
+
+        if (now < attendanceOpenAt) {
+            throw new BadRequestException('Attendance has not opened yet');
+        }
+
+        if (now > attendanceCloseAt || now >= examCloseTime) {
+            throw new BadRequestException('Attendance is already locked');
+        }
 
         // 2. Prepare the update condition
         const whereClause: any = { studentExamId: studentExam.id };

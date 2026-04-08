@@ -10,6 +10,7 @@ export interface IStudentExamRepository {
     findMany(criteria?: {
         examSessionId?: string;
         studentId?: string;
+        studentCode?: string;
         status?: string;
         page?: number;
         limit?: number;

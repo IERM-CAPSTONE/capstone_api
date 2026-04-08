@@ -31,6 +31,7 @@ import { ImportStudentHandler, ImportStudentEndpoint, ImportFinishedProcessor } 
 import { TestTokenHandler, TestTokenEndpoint } from './use-cases/test-token';
 import { NotificationGateway } from '../../common/gateways/notification.gateway';
 import { MeEndpoint } from './use-cases/me';
+import { PushTokensEndpoint, PushTokensHandler } from './use-cases/push-tokens';
 
 @Module({
     imports: [
@@ -56,6 +57,7 @@ import { MeEndpoint } from './use-cases/me';
         ImportFinishedProcessor,
         TestTokenEndpoint,
         MeEndpoint,
+        PushTokensEndpoint,
     ],
     providers: [
         // Infrastructure - Auth
@@ -79,6 +81,7 @@ import { MeEndpoint } from './use-cases/me';
         LogoutHandler,
         ImportStudentHandler,
         TestTokenHandler,
+        PushTokensHandler,
         NotificationGateway,
     ],
 })

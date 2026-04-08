@@ -5,6 +5,7 @@ import {
     UseInterceptors,
     UseGuards,
     BadRequestException,
+    Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -24,6 +25,30 @@ import { CloudinaryService } from './cloudinary.service';
 @UseGuards(JwtAuthGuard)
 export class UploadEndpoint {
     constructor(private readonly cloudinaryService: CloudinaryService) { }
+
+    @Post('image/presign')
+    @ApiOperation({ summary: 'Return signed upload params so clients can upload directly to Cloudinary' })
+    @ApiResponse({
+        status: 201,
+        description: 'Returns signed upload payload for direct upload',
+        schema: {
+            example: {
+                cloudName: 'demo',
+                apiKey: '123456',
+                timestamp: 1700000000,
+                expiresAt: 1700000300,
+                folder: 'tickets',
+                publicId: 'tickets/1700000000_abcdef123456',
+                signature: 'abcdef123456',
+                uploadUrl: 'https://api.cloudinary.com/v1_1/demo/image/upload',
+            },
+        },
+    })
+    async getImageUploadPresign(
+        @Body('folder') folder?: string,
+    ) {
+        return this.cloudinaryService.createSignedUploadParams(folder || 'tickets');
+    }
 
     @Post('image')
     @ApiOperation({ summary: 'Upload an image and get back its Cloudinary URL' })

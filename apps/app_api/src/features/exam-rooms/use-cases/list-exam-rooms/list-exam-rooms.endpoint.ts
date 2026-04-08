@@ -20,7 +20,7 @@ export class ListExamRoomsEndpoint {
     constructor(private readonly handler: ListExamRoomsHandler) { }
 
     @Get()
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR)
+    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
     @ApiOperation({ summary: 'List exam rooms with pagination' })
     @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
     @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })

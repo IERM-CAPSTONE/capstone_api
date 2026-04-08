@@ -2,8 +2,9 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsEnum, IsOptional, IsString, ArrayNotEmpty } from 'class-validator';
 
 export enum BulkProcessAction {
-    RESOLVE = 'resolve',
     ASSIGN = 'assign',
+    CHANGE_STATUS = 'change_status',
+    RESOLVE = 'resolve',
 }
 
 export class BulkProcessTicketDto {
@@ -13,16 +14,27 @@ export class BulkProcessTicketDto {
     @IsString({ each: true })
     ticketIds: string[];
 
-    @ApiProperty({ enum: BulkProcessAction, description: '"resolve" or "assign"' })
+    @ApiProperty({ enum: BulkProcessAction, description: '"assign" or "change_status"' })
     @IsEnum(BulkProcessAction)
     action: BulkProcessAction;
 
-    @ApiProperty({ example: 'Student verified. IT notified. Issue resolved.' })
+    @ApiPropertyOptional({ example: 'Đổi trạng thái hàng loạt theo yêu cầu vận hành.' })
+    @IsOptional()
     @IsString()
-    resolveNote: string;
+    note?: string;
+
+    @ApiPropertyOptional({ example: 'Legacy resolve note for backward compatibility' })
+    @IsOptional()
+    @IsString()
+    resolveNote?: string;
 
     @ApiPropertyOptional({ description: 'Required when action is "assign"' })
     @IsOptional()
     @IsString()
     assigneeId?: string;
+
+    @ApiPropertyOptional({ example: 'IN_PROGRESS', description: 'Required when action is "change_status"' })
+    @IsOptional()
+    @IsString()
+    status?: string;
 }

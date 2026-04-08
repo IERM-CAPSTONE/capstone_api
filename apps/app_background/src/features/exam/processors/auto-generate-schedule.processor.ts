@@ -12,6 +12,7 @@ import { Campus, ExamSessionStatus } from '@prisma/client';
 interface AutoGenerateScheduleJob {
     semesterId: string;
     campus: Campus[];
+    selectedType?: 'FE' | 'RE' | 'PE' | 'COURSERA_FE' | 'COURSERA_RE';
     finalWeek?: number;
     retakeWeek?: number;
     practicalWeek?: number;
@@ -119,6 +120,7 @@ export class AutoGenerateScheduleProcessor {
             const { sessions: allScheduledSessions, failedPools: totalFailedPools } = await this.schedulingService.generateSchedule({
                 semesterId: data.semesterId,
                 campus: activeCampuses[0],           // primary campus (used as fallback only)
+                selectedType: data.selectedType,
                 finalWeek: data.finalWeek,
                 retakeWeek: data.retakeWeek,
                 practicalWeek: data.practicalWeek,

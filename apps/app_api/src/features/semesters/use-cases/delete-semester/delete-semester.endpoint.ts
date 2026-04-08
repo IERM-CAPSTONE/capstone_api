@@ -20,9 +20,9 @@ export class DeleteSemesterEndpoint {
     constructor(private readonly handler: DeleteSemesterHandler) { }
 
     @Delete(':id')
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
+    @Roles(RoleType.ADMIN)
     @HttpCode(HttpStatus.NO_CONTENT)
-    @ApiOperation({ summary: 'Delete a semester (Admin & Officer)' })
+    @ApiOperation({ summary: 'Delete a semester (Admin only)' })
     @ApiResponse({ status: 204, description: 'Semester deleted' })
     @ApiResponse({ status: 404, description: 'Semester not found' })
     async handle(@Param('id') id: string): Promise<void> {

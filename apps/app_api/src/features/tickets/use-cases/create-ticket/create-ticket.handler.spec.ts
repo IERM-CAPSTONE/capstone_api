@@ -12,7 +12,7 @@ describe('CreateTicketHandler', () => {
     let gateway: any;
 
     const REPORTER_ID = 'reporter-001';
-    const baseDto = { issueName: 'Suspected Cheating', issueType: IssueTypeEnum.ACADEMIC_VIOLATION, description: 'Desc', priority: PriorityEnum.HIGH, sessionId: 'sess-001', attachment: 'https://img.jpg', studentCode: 'SE140001' };
+    const baseDto = { issueName: 'Suspected Cheating', issueType: IssueTypeEnum.ACADEMIC_VIOLATION, description: 'Desc', priority: PriorityEnum.NORMAL, sessionId: 'sess-001', attachment: 'https://img.jpg', studentCode: 'SE140001' };
     const savedTicket = { id: 'ticket-001', ...baseDto, status: 'OPEN', reporterId: REPORTER_ID, createdAt: new Date() };
     const reporter = { fullName: 'Nguyen Van A', role: 'PROCTOR' };
 
@@ -61,14 +61,14 @@ describe('CreateTicketHandler', () => {
     });
 
     // UTC02 - Normal: required fields only
-    it('UTC02: should default priority to Medium when not provided', async () => {
+    it('UTC02: should default priority to Normal when not provided', async () => {
         const dto = { issueName: 'Room Too Hot', issueType: IssueTypeEnum.ROOM_MANAGEMENT, sessionId: 'sess-001' };
         prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockImplementation(async (d) => ({ ...d, id: 'new-id' }));
         prisma.user.findUnique.mockResolvedValue(reporter);
         prisma.user.findMany.mockResolvedValue([]);
         await handler.execute(dto as any, REPORTER_ID);
-        expect(ticketRepo.save).toHaveBeenCalledWith(expect.objectContaining({ priority: 'Medium' }));
+        expect(ticketRepo.save).toHaveBeenCalledWith(expect.objectContaining({ priority: 'Normal' }));
     });
 
     // UTC03 - Normal: each IssueType
@@ -82,7 +82,7 @@ describe('CreateTicketHandler', () => {
     });
 
     // UTC04 - Normal: each Priority
-    it.each([PriorityEnum.LOW, PriorityEnum.MEDIUM, PriorityEnum.HIGH, PriorityEnum.URGENT])('UTC04: should accept priority = %s', async (priority) => {
+    it.each([PriorityEnum.NORMAL, PriorityEnum.URGENT])('UTC04: should accept priority = %s', async (priority) => {
         prisma.examSession.findUnique.mockResolvedValue(mockSession());
         ticketRepo.save.mockImplementation(async (d) => ({ ...d, id: 'new-id' }));
         prisma.user.findUnique.mockResolvedValue(reporter);

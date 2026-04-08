@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { UpdateStudentExamPartDto } from './update-student-exam-part.dto';
 import { logSessionActivity } from '../../../../common/utils/activity-history.util';
@@ -12,6 +12,47 @@ export class UpdateStudentExamPartHandler {
 
         if (!existing) {
             throw new NotFoundException(`StudentExamPart with id '${id}' not found`);
+        }
+
+        if (dto.isCheckedIn !== undefined && dto.isCheckedIn !== existing.isCheckedIn) {
+            const studentExamPart = await this.prisma.studentExamPart.findUnique({
+                where: { id },
+                select: {
+                    studentExam: {
+                        select: {
+                            examSession: {
+                                select: {
+                                    examOpenTime: true,
+                                    examCloseTime: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            const examOpenTime = studentExamPart?.studentExam?.examSession?.examOpenTime
+                ? new Date(studentExamPart.studentExam.examSession.examOpenTime)
+                : null;
+            const examCloseTime = studentExamPart?.studentExam?.examSession?.examCloseTime
+                ? new Date(studentExamPart.studentExam.examSession.examCloseTime)
+                : null;
+
+            if (!examOpenTime || !examCloseTime) {
+                throw new BadRequestException('Exam session time is not configured');
+            }
+
+            const now = new Date();
+            const attendanceOpenAt = new Date(examOpenTime.getTime() - 40 * 60 * 1000);
+            const attendanceCloseAt = new Date(examOpenTime.getTime() + 10 * 60 * 1000);
+
+            if (dto.isCheckedIn && now < attendanceOpenAt) {
+                throw new BadRequestException('Attendance has not opened yet');
+            }
+
+            if (dto.isCheckedIn && (now > attendanceCloseAt || now >= examCloseTime)) {
+                throw new BadRequestException('Attendance is already locked');
+            }
         }
 
         const updated = await this.prisma.studentExamPart.update({

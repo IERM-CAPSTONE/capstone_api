@@ -1,16 +1,20 @@
 /// Junction table: which student belongs to which exam session
 model ActivityHistory {
   id            String       @id @default(uuid())
-  studentExamId String
-  ticketId      String
+  studentExamId String?
+  ticketId      String?
   activityType  ActivityType
   description   String
+  actorId       String?
+  fromAssigneeId String?
+  toAssigneeId  String?
+  note          String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   studentExam   StudentExam? @relation(fields: [studentExamId], references: [id])
   ticket        IssueTicket? @relation(fields: [ticketId], references: [id])
 
-  @@unique([studentExamId, ticketId])
   @@index([studentExamId])
   @@index([ticketId])
+  @@index([actorId])
 }

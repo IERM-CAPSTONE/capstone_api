@@ -4,7 +4,7 @@ import { PrismaService } from '@app/prisma';
 import { TICKET_REPOSITORY, ITicketRepository } from '@app/tickets';
 import { CreateTicketDto } from './create-ticket.dto';
 import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
-import { logSessionActivity } from '../../../../common/utils/activity-history.util';
+import { FcmService } from '../../../../common/fcm/fcm.service';
 
 @Injectable()
 export class CreateTicketHandler {
@@ -13,22 +13,23 @@ export class CreateTicketHandler {
         private readonly ticketRepository: ITicketRepository,
         private readonly prisma: PrismaService,
         private readonly notificationGateway: NotificationGateway,
+        private readonly fcmService: FcmService,
     ) { }
 
     async execute(dto: CreateTicketDto, reporterId: string): Promise<any> {
         // Helper: parse DB time strings as Vietnam local time (UTC+7)
-        // DB stores "2026-03-12 08:30:00.000" (no Z) — Node.js treats this as UTC
+        // DB stores "2026-03-12 08:30:00.000" (no Z) - Node.js treats this as UTC
         // which would be wrong. We append +07:00 so JS parses it as Vietnam time.
         // DB stores Vietnam local time (UTC+7) as naive timestamps.
         // Prisma reads naive timestamps and returns Date objects assuming UTC.
-        // e.g. "2026-03-12 08:30:00" → Prisma Date of UTC 08:30 (= VN 15:30, WRONG)
+        // e.g. "2026-03-12 08:30:00" -> Prisma Date of UTC 08:30 (= VN 15:30, WRONG)
         // Fix: take the ISO string, strip the Z, re-add +07:00 to reinterpret as VN time.
         const toVNDate = (s: string | Date | null): Date | null => {
             if (!s) return null;
             // Get a plain date-time string without any timezone info
             let raw: string;
             if (s instanceof Date) {
-                // "2026-03-12T08:30:00.000Z" → strip Z → "2026-03-12T08:30:00.000"
+                // "2026-03-12T08:30:00.000Z" -> strip Z -> "2026-03-12T08:30:00.000"
                 raw = s.toISOString().replace('Z', '');
             } else {
                 raw = String(s).replace(/Z$/, '').replace(/[+-]\d{2}:?\d{2}$/, '').replace(' ', 'T');
@@ -45,7 +46,12 @@ export class CreateTicketHandler {
 
         const session = await this.prisma.examSession.findUnique({
             where: { id: dto.sessionId },
-            select: { examOpenTime: true, examCloseTime: true, campus: true },
+            select: { 
+                examOpenTime: true, 
+                examCloseTime: true, 
+                campus: true,
+                hallInvigilatorId: true,
+            },
         });
 
         if (!session) {
@@ -61,15 +67,57 @@ export class CreateTicketHandler {
         }
 
         const PRE_EXAM_MS = 15 * 60 * 1000;    // 15 min before start
-        const GRACE_PERIOD_MS = 30 * 60 * 1000; // 30 min after end
 
-        // Allow: [openTime - 15min] → [closeTime + 30min]
+                // Allow from 15 minutes before start onward.
         if (now < new Date(openTime.getTime() - PRE_EXAM_MS)) {
             throw new BadRequestException('Cannot create ticket: exam session starts in more than 15 minutes');
         }
 
-        if (now > new Date(closeTime.getTime() + GRACE_PERIOD_MS)) {
-            throw new BadRequestException('Cannot create ticket: exam session ended more than 30 minutes ago');
+        const confirmedAssignmentType =
+            dto.confirmedAssignmentType ??
+            ((dto.aiRecommendedAssignmentType === 'EXAM_OFFICER' || dto.aiRecommendedAssignmentType === 'HALL_INVIGILATOR')
+                ? dto.aiRecommendedAssignmentType
+                : 'HALL_INVIGILATOR');
+
+        // 1.5 Resolve assignee based on confirmedAssignmentType
+        let assigneeId: string | undefined = undefined;
+        let assignmentResolution = 'unassigned';
+
+        if (confirmedAssignmentType === 'HALL_INVIGILATOR') {
+            assigneeId = session.hallInvigilatorId ?? undefined;
+            assignmentResolution = assigneeId
+                ? 'hall_invigilator_session'
+                : 'hall_invigilator_missing';
+        } else if (confirmedAssignmentType === 'EXAM_OFFICER') {
+            if (session.campus) {
+                const officers = await this.prisma.user.findMany({
+                    where: {
+                        role: 'EXAM_OFFICER',
+                        campus: session.campus,
+                    },
+                    select: {
+                        id: true,
+                        assignedTickets: {
+                            where: {
+                                status: { in: ['OPEN', 'IN_PROGRESS'] },
+                            },
+                            select: { id: true },
+                        },
+                    },
+                });
+
+                if (officers.length > 0) {
+                    const leastLoaded = officers.reduce((prev, current) =>
+                        current.assignedTickets.length < prev.assignedTickets.length ? current : prev,
+                    );
+                    assigneeId = leastLoaded.id;
+                    assignmentResolution = 'least_loaded_exam_officer';
+                } else {
+                    assignmentResolution = 'exam_officer_not_found';
+                }
+            } else {
+                assignmentResolution = 'campus_missing';
+            }
         }
 
         // 1. Create the ticket
@@ -78,12 +126,22 @@ export class CreateTicketHandler {
             issueName: dto.issueName,
             issueType: dto.issueType,
             description: dto.description,
-            priority: dto.priority ?? 'Medium',
+            priority: dto.priority ?? 'Normal',
             status: 'OPEN',
             reporterId,
+            assigneeId,
             sessionId: dto.sessionId,
             attachment: dto.attachment,
             studentCode: dto.studentCode,
+            ocrText: dto.ocrText,
+            aiPredictedIssueName: dto.aiPredictedIssueName,
+            aiPredictedIssueType: dto.aiPredictedIssueType,
+            aiConfidence: dto.aiConfidence,
+            aiDisplayMessage: dto.aiDisplayMessage,
+            aiEvidenceText: dto.aiEvidenceText,
+            aiModelVersion: dto.aiModelVersion,
+            aiRecommendedAssignmentType: dto.aiRecommendedAssignmentType,
+            confirmedAssignmentType,
         });
 
 
@@ -93,71 +151,111 @@ export class CreateTicketHandler {
             select: { fullName: true, role: true },
         });
 
-        // 3. Emit real-time WebSocket event → only to exam officers on the same campus
-        //    Fallback to sendToAll when session has no campus (backward-compatible)
+        // 3. Emit real-time WebSocket events
+        //    - ticket:created is a SILENT event for list refresh only (not a user notification)
+        //    - monitor:ticket_count_changed for dashboard updates
         const sessionCampus = session?.campus;
         if (sessionCampus) {
             this.notificationGateway.sendToCampus(sessionCampus, 'ticket:created', {
                 ticket,
                 reporter: reporter ?? null,
+                isUserNotification: false,
+            });
+            this.notificationGateway.sendToCampus(sessionCampus, 'monitor:ticket_count_changed', {
+                ticketId: ticket.id,
+                sessionId: ticket.sessionId,
+                campus: sessionCampus,
+                action: 'created',
+                status: 'OPEN',
             });
         } else {
             this.notificationGateway.sendToAll('ticket:created', {
                 ticket,
                 reporter: reporter ?? null,
+                isUserNotification: false,
+            });
+            this.notificationGateway.sendToAll('monitor:ticket_count_changed', {
+                ticketId: ticket.id,
+                sessionId: ticket.sessionId,
+                action: 'created',
+                status: 'OPEN',
             });
         }
 
-        // 4. Fetch Exam Officers — filtered by campus when available
-        const examOfficers = await this.prisma.user.findMany({
-            where: {
-                role: 'EXAM_OFFICER',
-                // Only notify exam officers at the same campus; if campus unknown → notify all
-                ...(sessionCampus ? { campus: sessionCampus } : {}),
-            },
-            select: { id: true },
+        await this.prisma.activityHistory.create({
+            data: {
+                id: uuidv4(),
+                ticketId: ticket.id,
+                activityType: 'TICKET_CREATED' as any,
+                description: JSON.stringify({
+                    event: 'TICKET_CREATED',
+                    title: 'Ticket Created',
+                    message: `${reporter?.fullName ?? 'Staff'} created ticket ${ticket.issueName}`,
+                    meta: {
+                        ticketId: ticket.id,
+                        issueName: ticket.issueName,
+                        issueType: ticket.issueType,
+                        priority: ticket.priority,
+                        reporterName: reporter?.fullName ?? null,
+                        confirmedAssignmentType,
+                        aiRecommendedAssignmentType: dto.aiRecommendedAssignmentType ?? null,
+                        resolvedAssigneeId: assigneeId ?? null,
+                        assignmentResolution,
+                    },
+                }),
+                actorId: reporterId,
+            } as any,
         });
 
-        // 5. Emit real-time WebSocket event directly to each Exam Officer's personal room
-        //    This is more reliable than campus-room broadcast because it doesn't depend on
-        //    the client having joined the campus room.
-        const notifyPayload = { ticket, reporter: reporter ?? null };
-        for (const eo of examOfficers) {
-            this.notificationGateway.sendToUser(eo.id, 'ticket:created', notifyPayload);
-        }
-
-        // 6. Create in-app notifications for each Exam Officer
-        if (examOfficers.length > 0) {
-            await this.prisma.notification.createMany({
-                data: examOfficers.map(eo => ({
+        // 4. If ticket was assigned during creation, send notification to assignee
+        if (assigneeId) {
+            // Create DB notification
+            await this.prisma.notification.create({
+                data: {
                     id: uuidv4(),
-                    toUserId: eo.id,
+                    toUserId: assigneeId,
                     fromId: reporterId,
-                    title: `🎫 Ticket mới: ${dto.issueName}`,
-                    message: `${reporter?.fullName ?? 'Giám thị'} vừa tạo ticket mới: "${dto.issueName}". Độ ưu tiên: ${dto.priority ?? 'Medium'}.`,
+                    title: `New ticket assigned: ${ticket.issueName}`,
+                    message: `${reporter?.fullName ?? 'Staff'} created and assigned you a ticket.`,
                     channel: 'IN_APP',
-                    meta: { ticketId: ticket.id, issueType: dto.issueType },
-                })),
+                    meta: { 
+                        ticketId: ticket.id, 
+                        action: 'auto_assigned',
+                        assignmentType: confirmedAssignmentType,
+                    },
+                },
+            });
+
+            // Send WebSocket notification
+            this.notificationGateway.sendToUser(assigneeId, 'ticket:assigned', {
+                ticketId: ticket.id,
+                assigneeId,
+                issueName: ticket.issueName,
+                studentCode: ticket.studentCode ?? null,
+                actorName: reporter?.fullName ?? 'Staff',
+                reporterId,
+                note: `Auto-assigned based on ${confirmedAssignmentType}`,
+                action: 'auto_assigned',
+                isUserNotification: true,
+            });
+
+            // Send FCM push notification
+            await this.fcmService.sendToUser(assigneeId, {
+                title: `New ticket assigned: ${ticket.issueName}`,
+                body: `${reporter?.fullName ?? 'Staff'} created and assigned you a ticket.`,
+                data: {
+                    type: 'ticket_assigned',
+                    ticketId: ticket.id,
+                    assigneeId,
+                    issueName: ticket.issueName,
+                    studentCode: ticket.studentCode ?? '',
+                    reporterId,
+                    actorId: reporterId,
+                    actorName: reporter?.fullName ?? 'Staff',
+                    action: 'auto_assigned',
+                },
             });
         }
-
-        await logSessionActivity(this.prisma, {
-            sessionId: dto.sessionId,
-            ticketId: ticket.id,
-            activityType: 'MOVED',
-            payload: {
-                event: 'TICKET_CREATED',
-                title: 'Ticket Created',
-                message: `${reporter?.fullName ?? 'Staff'} created ticket ${ticket.issueName}`,
-                meta: {
-                    ticketId: ticket.id,
-                    issueName: ticket.issueName,
-                    issueType: ticket.issueType,
-                    priority: ticket.priority,
-                    reporterName: reporter?.fullName ?? null,
-                },
-            },
-        });
 
         return ticket;
     }

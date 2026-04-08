@@ -27,6 +27,11 @@ export class ListStudentExamsDto {
     @IsString()
     studentId?: string;
 
+    @ApiProperty({ required: false, description: 'Filter by student code' })
+    @IsOptional()
+    @IsString()
+    studentCode?: string;
+
     @ApiProperty({ required: false, enum: ['REGISTERED', 'CHECKEDIN', 'CHECKEDOUT', 'MOVED', 'REMOVED'] })
     @IsOptional()
     @IsEnum(['REGISTERED', 'CHECKEDIN', 'CHECKEDOUT', 'MOVED', 'REMOVED'])

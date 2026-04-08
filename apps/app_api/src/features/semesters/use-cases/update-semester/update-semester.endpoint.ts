@@ -21,8 +21,8 @@ export class UpdateSemesterEndpoint {
     constructor(private readonly handler: UpdateSemesterHandler) { }
 
     @Patch(':id')
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
-    @ApiOperation({ summary: 'Update a semester (Admin & Officer)' })
+    @Roles(RoleType.ADMIN)
+    @ApiOperation({ summary: 'Update a semester (Admin only)' })
     @ApiResponse({ status: 200, description: 'Semester updated', type: SemesterResponse })
     @ApiResponse({ status: 404, description: 'Semester not found' })
     async handle(

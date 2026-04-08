@@ -39,11 +39,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 _count: {
                     select: {
                         studentExams: true,
-                        tickets: {
-                            where: {
-                                status: { in: ['PENDING', 'OPEN', 'IN_PROGRESS'] }
-                            }
-                        }
+                        tickets: true,
                     }
                 },
                 examSeats: {

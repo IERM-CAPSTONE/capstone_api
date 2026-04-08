@@ -20,8 +20,8 @@ export class CreateSemesterEndpoint {
     constructor(private readonly handler: CreateSemesterHandler) { }
 
     @Post()
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
-    @ApiOperation({ summary: 'Create a new semester (Admin & Officer)' })
+    @Roles(RoleType.ADMIN)
+    @ApiOperation({ summary: 'Create a new semester (Admin only)' })
     @ApiResponse({ status: 201, description: 'Semester created', type: SemesterResponse })
     @ApiResponse({ status: 409, description: 'Semester code already exists' })
     async handle(@Body() dto: CreateSemesterDto): Promise<SemesterResponse> {

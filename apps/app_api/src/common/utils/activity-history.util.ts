@@ -14,6 +14,10 @@ export interface LogActivityInput {
     activityType: ActivityType;
     payload: ActivityHistoryPayload;
     ticketId?: string;
+    actorId?: string;
+    fromAssigneeId?: string;
+    toAssigneeId?: string;
+    note?: string;
 }
 
 export async function logSessionActivity(
@@ -29,6 +33,10 @@ export async function logSessionActivity(
                 ticketId: input.ticketId || uuidv4(),
                 activityType: input.activityType,
                 description: JSON.stringify(input.payload),
+                actorId: input.actorId,
+                fromAssigneeId: input.fromAssigneeId,
+                toAssigneeId: input.toAssigneeId,
+                note: input.note,
             },
         });
     } catch (error) {

@@ -19,6 +19,7 @@ model User {
   proctorAssignments      ProctorAssignment[]  @relation("proctorAssignments")
   notificationsSent       Notification[]       @relation("notificationFrom")
   notificationsReceived   Notification[]       @relation("notificationTo")
+  pushTokens              PushToken[]          @relation("userPushTokens")
   proctorSessions         ExamSession[]        @relation("proctor")
   hallInvigilatorSessions ExamSession[]        @relation("hallInvigilator")
   ownedDevices            Device[]             @relation("deviceOwner")

@@ -69,6 +69,9 @@ export class ExamSessionResponse {
     hallInvigilatorName: string | null;
 
     @ApiProperty({ nullable: true })
+    hallInvigilatorUsername: string | null;
+
+    @ApiProperty({ nullable: true })
     maxRows: number | null;
 
     @ApiProperty({ nullable: true })
@@ -105,6 +108,7 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         roomNumber: session.roomNumber,
         proctorName: session.proctorName,
         hallInvigilatorName: session.hallInvigilatorName,
+        hallInvigilatorUsername: session.hallInvigilatorUsername,
         maxRows: session.maxRows,
         maxColumns: session.maxColumns,
         totalSeats: session.totalSeats,

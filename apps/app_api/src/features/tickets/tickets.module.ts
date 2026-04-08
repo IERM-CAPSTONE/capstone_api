@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '@app/prisma';
 import { TicketsCoreModule } from '@app/tickets';
 import { NotificationGateway } from '../../common/gateways/notification.gateway';
+import { FcmService } from '../../common/fcm/fcm.service';
 
 // Create Ticket
 import { CreateTicketEndpoint } from './use-cases/create-ticket/create-ticket.endpoint';
@@ -18,6 +19,10 @@ import { ProcessTicketHandler } from './use-cases/process-ticket/process-ticket.
 // Bulk Process Ticket
 import { BulkProcessTicketEndpoint } from './use-cases/bulk-process-ticket/bulk-process-ticket.endpoint';
 import { BulkProcessTicketHandler } from './use-cases/bulk-process-ticket/bulk-process-ticket.handler';
+import { ReviewTicketEndpoint } from './use-cases/review-ticket/review-ticket.endpoint';
+import { ReviewTicketHandler } from './use-cases/review-ticket/review-ticket.handler';
+import { CommentTicketEndpoint } from './use-cases/comment-ticket/comment-ticket.endpoint';
+import { CommentTicketHandler } from './use-cases/comment-ticket/comment-ticket.handler';
 
 @Module({
     imports: [PrismaModule, TicketsCoreModule],
@@ -27,6 +32,8 @@ import { BulkProcessTicketHandler } from './use-cases/bulk-process-ticket/bulk-p
         GetTicketEndpoint,
         ProcessTicketEndpoint,
         BulkProcessTicketEndpoint,
+        ReviewTicketEndpoint,
+        CommentTicketEndpoint,
     ],
     providers: [
         CreateTicketHandler,
@@ -34,7 +41,10 @@ import { BulkProcessTicketHandler } from './use-cases/bulk-process-ticket/bulk-p
         GetTicketHandler,
         ProcessTicketHandler,
         BulkProcessTicketHandler,
+        ReviewTicketHandler,
+        CommentTicketHandler,
         NotificationGateway,
+        FcmService,
     ],
 })
 export class TicketsModule { }

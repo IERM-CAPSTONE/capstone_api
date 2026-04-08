@@ -24,6 +24,7 @@ export class ExamSession {
         public readonly roomNumber: string | null = null,
         public readonly proctorName: string | null = null,
         public readonly hallInvigilatorName: string | null = null,
+        public readonly hallInvigilatorUsername: string | null = null,
         public readonly semesterName: string | null = null,
         public readonly maxRows: number | null = null,
         public readonly maxColumns: number | null = null,
@@ -100,6 +101,7 @@ export class ExamSession {
         roomNumber?: string | null;
         proctorName?: string | null;
         hallInvigilatorName?: string | null;
+        hallInvigilatorUsername?: string | null;
         semesterName?: string | null;
         maxRows?: number | null;
         maxColumns?: number | null;
@@ -127,6 +129,7 @@ export class ExamSession {
             props.roomNumber ?? null,
             props.proctorName ?? null,
             props.hallInvigilatorName ?? null,
+            props.hallInvigilatorUsername ?? null,
             props.semesterName ?? null,
             props.maxRows ?? null,
             props.maxColumns ?? null,
@@ -158,6 +161,7 @@ export class ExamSession {
             roomNumber: found.examRoom?.roomNumber,
             proctorName: found.proctor?.fullName,
             hallInvigilatorName: found.hallInvigilator?.fullName,
+            hallInvigilatorUsername: found.hallInvigilator?.username,
             semesterName: found.semester?.name,
             maxRows: found.examRoom?.max_rows,
             maxColumns: found.examRoom?.max_columns,
@@ -207,6 +211,7 @@ export class ExamSession {
             this.roomNumber,
             this.proctorName,
             this.hallInvigilatorName,
+            this.hallInvigilatorUsername,
             this.semesterName,
             this.maxRows,
             this.maxColumns,

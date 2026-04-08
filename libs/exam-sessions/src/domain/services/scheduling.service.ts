@@ -2,12 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { Campus } from '@prisma/client';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const solver = require('javascript-lp-solver');
-
 export interface SchedulingConstraints {
     semesterId: string;
     campus: Campus;
+    selectedType?: 'FE' | 'RE' | 'PE' | 'COURSERA_FE' | 'COURSERA_RE';
     finalWeek?: number;
     retakeWeek?: number;
     practicalWeek?: number;
@@ -49,7 +47,10 @@ export class SchedulingService {
     private readonly START_HOUR = 7;
     private readonly START_MINUTE = 30;
     private readonly MIN_GAP_MINUTES = 40;
-    private readonly MINUTES_PER_DAY = 10 * 60;
+    private readonly FIXED_SLOT_START_OFFSETS_MINUTES = [0, 100, 200, 320, 420, 520];
+    private readonly SLOT_OCCUPANCY_MINUTES = 90;
+    private readonly MORNING_END_OFFSET_MINUTES = 260; // 11:50
+    private readonly AFTERNOON_START_OFFSET_MINUTES = 320; // 12:50
 
     private subjectCache = new Map<string, any>();
 
@@ -60,6 +61,9 @@ export class SchedulingService {
             where: { id: constraints.semesterId }
         });
         if (!semester) throw new Error(`Semester ${constraints.semesterId} not found`);
+        if (!constraints.selectedType) {
+            throw new Error('selectedType is required. Automatic FE/RE/PE splitting is no longer supported.');
+        }
 
         this.logger.log(`[CP_SOLVER] Starting High-Performance Constraint Solver for ${constraints.campus}...`);
 
@@ -147,33 +151,49 @@ export class SchedulingService {
                     duration: parts.reduce((acc, p) => acc + (p.duration || 60), 0),
                     examPartIds: parts.map(p => p.examPartId),
                     examType: type as any,
-                    isMajor: sub.isMajor || sub.isCoursera,
                     weekNum: week,
                     note: parts.map(p => p.examPart.code.toUpperCase()).join(', ')
                 };
             };
 
-            const pe = buildSession('PE', peParts, constraints.practicalWeek);
-            const fe = sub.isCoursera
-                ? buildSession('FE', feParts, constraints.courseraWeek ?? constraints.finalWeek)
-                : buildSession('FE', feParts, constraints.finalWeek);
-            const re = sub.isCoursera
-                ? buildSession('RE', reParts.length > 0 ? reParts : feParts, constraints.courseraRetakeWeek ?? constraints.retakeWeek)
-                : buildSession('RE', reParts.length > 0 ? reParts : feParts, constraints.retakeWeek);
+            let sessionPool: any = null;
 
-            if (pe) allPools.push(pe);
-            if (fe) allPools.push(fe);
-            if (re) allPools.push(re);
+            switch (constraints.selectedType) {
+                case 'PE':
+                    sessionPool = buildSession('PE', peParts, constraints.practicalWeek);
+                    break;
+                case 'FE':
+                    if (!sub.isCoursera) {
+                        sessionPool = buildSession('FE', feParts, constraints.finalWeek);
+                    }
+                    break;
+                case 'RE':
+                    if (!sub.isCoursera) {
+                        sessionPool = buildSession('RE', reParts.length > 0 ? reParts : feParts, constraints.retakeWeek);
+                    }
+                    break;
+                case 'COURSERA_FE':
+                    if (sub.isCoursera) {
+                        sessionPool = buildSession('FE', feParts, constraints.courseraWeek);
+                    }
+                    break;
+                case 'COURSERA_RE':
+                    if (sub.isCoursera) {
+                        sessionPool = buildSession('RE', reParts.length > 0 ? reParts : feParts, constraints.courseraRetakeWeek);
+                    }
+                    break;
+            }
 
-            // Report subject that generated zero pools (no parts or no week selected)
-            if (!pe && !fe && !re) {
+            if (sessionPool) {
+                allPools.push(sessionPool);
+            } else {
                 const affectedStudents = Array.from(campusToStudents.values()).flat();
                 failedPools.push({
                     subjectCode: sub.code,
-                    examType: 'ALL',
+                    examType: constraints.selectedType,
                     campus: Array.from(campusToStudents.keys()).join(', '),
-                    reason: 'No exam parts configured or exam week not selected',
-                    note: 'Check Subject Exam Parts configuration',
+                    reason: 'No matching exam parts or week configured for selected type',
+                    note: 'Check selected type and subject exam parts',
                     _failStudents: affectedStudents,
                 });
             }
@@ -330,10 +350,14 @@ export class SchedulingService {
                 if (scheduledForSubject) break;
 
                 const dayStart = this.getStartOfDayTime(semStartDate, weekNum, day).getTime();
-                const SLOT_DURATION_MS = 90 * 60000; // 60m exam + 30m break
+                const SLOT_DURATION_MS = this.SLOT_OCCUPANCY_MINUTES * 60000;
+                const slotIndices = Array.from({ length: this.FIXED_SLOT_START_OFFSETS_MINUTES.length }, (_, i) => i);
+                const actualDurationMs = (Number(session.duration) || 60) * 60000;
+                const requiredSlotCount = this.getRequiredSlotCount(Number(session.duration) || 60);
+                const sessionOccupiedMs = requiredSlotCount * SLOT_DURATION_MS;
+                const dayEnd = this.getDayEndTimestamp(dayStart);
 
                 // BALANCING LOGIC: Sort slots by current load across all involved campuses
-                const slotIndices = Array.from({ length: 7 }, (_, i) => i);
                 slotIndices.sort((a, b) => {
                     let loadA = 0;
                     let loadB = 0;
@@ -346,8 +370,7 @@ export class SchedulingService {
                 });
 
                 for (const slotIndex of slotIndices) {
-                    const currentAttemptStart = dayStart + slotIndex * SLOT_DURATION_MS;
-                    const sessionDurationMs = session.duration * 60000;
+                    const currentAttemptStart = this.getSlotStartTimestamp(dayStart, slotIndex);
 
                     const dayResults: ScheduledSession[] = [];
                     let attemptIsPossible = true;
@@ -389,19 +412,49 @@ export class SchedulingService {
                     if (!attemptIsPossible || roomsToUse.length === 0) continue;
 
                     // 2. Adjust attempt start to respect room availability
-                    const earliestPossibleStart = isPE
+                    const requestedStart = isPE
                         ? currentAttemptStart
                         : Math.max(currentAttemptStart, ...roomsToUse.map(r => r.nextAvailable));
+                    const snappedAttempt = this.snapToAllowedSlot(dayStart, requestedStart);
+                    if (!snappedAttempt) continue;
 
-                    if (earliestPossibleStart + sessionDurationMs > dayStart + 7 * SLOT_DURATION_MS) break; // Out of bounds for the day
+                    const earliestPossibleStart = snappedAttempt.start;
+                    const effectiveSlotIndex = snappedAttempt.slotIndex;
+
+                    if (earliestPossibleStart + sessionOccupiedMs > dayEnd) continue;
 
                     // 3. PHASE 3: Iteratively schedule
                     let subjectSequencePointer = earliestPossibleStart;
                     for (const roomInfo of roomsToUse) {
-                        let proposedStart = isPE ? Math.max(roomInfo.nextAvailable, subjectSequencePointer) : earliestPossibleStart;
-                        const proposedEnd = proposedStart + sessionDurationMs;
+                        const requestedRoomStart = isPE
+                            ? Math.max(roomInfo.nextAvailable, subjectSequencePointer)
+                            : earliestPossibleStart;
+                        const snappedRoomStart = this.snapToAllowedSlot(dayStart, requestedRoomStart);
+                        if (!snappedRoomStart) {
+                            attemptIsPossible = false;
+                            break;
+                        }
+
+                        const proposedStart = snappedRoomStart.start;
+                        const proposedEnd = proposedStart + actualDurationMs;
+                        const occupiedUntil = proposedStart + sessionOccupiedMs;
                         const roomCap = roomCapacityMap?.get(roomInfo.roomId) || 30;
                         const need = session.campusNeeds[roomInfo.camp];
+
+                        if (this.crossesLunchBreak(dayStart, proposedStart, proposedEnd)) {
+                            attemptIsPossible = false;
+                            session._failReason = 'Exam time crosses the lunch break (11:50-12:50).';
+                            break;
+                        }
+
+                        if (
+                            (Number(session.duration) || 60) >= 180 &&
+                            !this.isWithinSingleHalfDay(dayStart, proposedStart, proposedEnd)
+                        ) {
+                            attemptIsPossible = false;
+                            session._failReason = '180-minute exams must stay within a single morning or afternoon session.';
+                            break;
+                        }
 
                         const roomIdx = roomsToUse.filter(r => r.camp === roomInfo.camp).indexOf(roomInfo);
                         const roomStudents = need.studentCodes.slice(roomIdx * roomCap, (roomIdx + 1) * roomCap);
@@ -418,7 +471,7 @@ export class SchedulingService {
                             let hasTimeConflict = false;
                             const intervals = state.studentIntervals.get(s)?.get(day) || [];
                             for (const existing of intervals) {
-                                if (proposedStart < existing.end && proposedEnd > existing.start) {
+                                if (proposedStart < existing.end && occupiedUntil > existing.start) {
                                     hasTimeConflict = true;
                                     break;
                                 }
@@ -433,11 +486,11 @@ export class SchedulingService {
                             if (busySlots?.has(s)) {
                                 const searchDay = day === 7 ? 0 : day;
                                 const busySets = busySlots.get(s);
-                                for (let sl = 1; sl <= 6; sl++) {
+                                for (let sl = 1; sl <= this.FIXED_SLOT_START_OFFSETS_MINUTES.length; sl++) {
                                     if (busySets.has(`${searchDay}_${sl}`)) {
-                                        const bStart = dayStart + (sl - 1) * 100 * 60000;
-                                        const bEnd = bStart + 90 * 60000;
-                                        if (proposedStart < bEnd && proposedEnd > bStart) {
+                                        const bStart = this.getSlotStartTimestamp(dayStart, sl - 1);
+                                        const bEnd = bStart + SLOT_DURATION_MS;
+                                        if (proposedStart < bEnd && occupiedUntil > bStart) {
                                             studentConflict = true;
                                             conflictStudents.push(s);
                                             session._failReason = `Conflict with student's FAP daily timetable.`;
@@ -459,7 +512,7 @@ export class SchedulingService {
                         dayResults.push({
                             weekNum,
                             dayIndex: day,
-                            slotIndex: slotIndex,
+                            slotIndex: effectiveSlotIndex,
                             subjectCode: session.subjectCode,
                             studentCodes: roomStudents,
                             roomId: roomInfo.roomId,
@@ -472,18 +525,21 @@ export class SchedulingService {
                             note: session.note
                         });
 
-                        if (isPE) subjectSequencePointer = proposedEnd + this.MIN_GAP_MINUTES * 60000;
+                        if (isPE) subjectSequencePointer = occupiedUntil + this.MIN_GAP_MINUTES * 60000;
                     }
 
                     if (attemptIsPossible && dayResults.length === roomsToUse.length) {
                         for (const res of dayResults) {
                             const dayTimelines = state.roomTimelines.get(res.roomId);
-                            // Set room unavailable until the next strict slot boundary (or minimal 30m break)
-                            dayTimelines.set(day, Math.max(res.closeTime.getTime() + 30 * 60000, currentAttemptStart + SLOT_DURATION_MS));
+                            const blockedUntil = res.openTime.getTime() + sessionOccupiedMs;
+                            dayTimelines.set(day, blockedUntil);
                             for (const s of res.studentCodes) {
                                 if (!state.studentIntervals.has(s)) state.studentIntervals.set(s, new Map());
                                 if (!state.studentIntervals.get(s).has(day)) state.studentIntervals.get(s).set(day, []);
-                                state.studentIntervals.get(s).get(day).push({ start: res.openTime.getTime(), end: res.closeTime.getTime() });
+                                state.studentIntervals.get(s).get(day).push({
+                                    start: res.openTime.getTime(),
+                                    end: blockedUntil
+                                });
                                 if (!state.studentDayCounts.has(s)) state.studentDayCounts.set(s, new Map());
                                 const counts = state.studentDayCounts.get(s);
                                 counts.set(day, (counts.get(day) || 0) + 1);
@@ -511,6 +567,52 @@ export class SchedulingService {
         date.setUTCHours(this.START_HOUR, this.START_MINUTE, 0, 0);
 
         return date;
+    }
+
+    private getRequiredSlotCount(durationMinutes: number): number {
+        if (durationMinutes <= 60) return 1;
+        if (durationMinutes <= 90) return 2; // Assumption for the unresolved 90-minute case
+        if (durationMinutes <= 180) return 3;
+        return Math.max(1, Math.ceil(durationMinutes / 60));
+    }
+
+    private getSlotStartTimestamp(dayStart: number, slotIndex: number): number {
+        return dayStart + (this.FIXED_SLOT_START_OFFSETS_MINUTES[slotIndex] || 0) * 60000;
+    }
+
+    private getDayEndTimestamp(dayStart: number): number {
+        return this.getSlotStartTimestamp(dayStart, this.FIXED_SLOT_START_OFFSETS_MINUTES.length - 1)
+            + this.SLOT_OCCUPANCY_MINUTES * 60000;
+    }
+
+    private getMorningEndTimestamp(dayStart: number): number {
+        return dayStart + this.MORNING_END_OFFSET_MINUTES * 60000;
+    }
+
+    private getAfternoonStartTimestamp(dayStart: number): number {
+        return dayStart + this.AFTERNOON_START_OFFSET_MINUTES * 60000;
+    }
+
+    private crossesLunchBreak(dayStart: number, start: number, end: number): boolean {
+        const morningEnd = this.getMorningEndTimestamp(dayStart);
+        const afternoonStart = this.getAfternoonStartTimestamp(dayStart);
+        return start < afternoonStart && end > morningEnd;
+    }
+
+    private isWithinSingleHalfDay(dayStart: number, start: number, end: number): boolean {
+        const morningEnd = this.getMorningEndTimestamp(dayStart);
+        const afternoonStart = this.getAfternoonStartTimestamp(dayStart);
+        return (start >= dayStart && end <= morningEnd) || start >= afternoonStart;
+    }
+
+    private snapToAllowedSlot(dayStart: number, minTimestamp: number): { slotIndex: number; start: number } | null {
+        for (let i = 0; i < this.FIXED_SLOT_START_OFFSETS_MINUTES.length; i++) {
+            const start = this.getSlotStartTimestamp(dayStart, i);
+            if (start >= minTimestamp) {
+                return { slotIndex: i, start };
+            }
+        }
+        return null;
     }
 
     assignSeats(numStudents: number, maxRows: number, maxCols: number): { row: number; col: number }[] {

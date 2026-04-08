@@ -14,6 +14,7 @@ export class ListStudentExamsHandler {
         const { data, total } = await this.studentExamRepository.findMany({
             examSessionId: dto.examSessionId,
             studentId: dto.studentId,
+            studentCode: dto.studentCode,
             status: dto.status,
             page: dto.page,
             limit: dto.limit,

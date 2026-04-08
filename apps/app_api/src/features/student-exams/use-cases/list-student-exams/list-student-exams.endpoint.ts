@@ -21,6 +21,7 @@ export class ListStudentExamsEndpoint {
     @ApiQuery({ name: 'limit', required: false, type: Number })
     @ApiQuery({ name: 'examSessionId', required: false, type: String })
     @ApiQuery({ name: 'studentId', required: false, type: String })
+    @ApiQuery({ name: 'studentCode', required: false, type: String })
     @ApiQuery({ name: 'status', required: false, enum: ['REGISTERED', 'CHECKEDIN', 'CHECKEDOUT', 'MOVED', 'REMOVED'] })
     @ApiResponse({ status: 200, description: 'Student exams retrieved', type: PaginatedStudentExamResponse })
     async handle(@Query() query: ListStudentExamsDto): Promise<PaginatedStudentExamResponse> {

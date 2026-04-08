@@ -21,6 +21,16 @@ export class AutoGenerateScheduleDto {
     @IsString({ each: true })
     campus: string[];
 
+    @ApiProperty({
+        example: 'FE',
+        enum: ['FE', 'RE', 'PE', 'COURSERA_FE', 'COURSERA_RE'],
+        description: 'Selected exam type to generate',
+        required: false
+    })
+    @IsOptional()
+    @IsEnum(['FE', 'RE', 'PE', 'COURSERA_FE', 'COURSERA_RE'])
+    selectedType?: 'FE' | 'RE' | 'PE' | 'COURSERA_FE' | 'COURSERA_RE';
+
     @ApiProperty({ example: 11, description: 'Normal Final exam week (Optional)', required: false })
     @IsNumber() @Min(1) @IsOptional()
     finalWeek?: number;
