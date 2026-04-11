@@ -14,7 +14,12 @@ export class ProcessTicketEndpoint {
     constructor(private readonly handler: ProcessTicketHandler) { }
 
     @Patch(':id/process')
-    @Roles(RoleType.EXAM_OFFICER, RoleType.HALL_INVIGILATOR, RoleType.IT_SUPPORT)
+    @Roles(
+        RoleType.EXAM_OFFICER,
+        RoleType.HALL_INVIGILATOR,
+        RoleType.IT_SUPPORT,
+        RoleType.PROCTOR,
+    )
     @ApiOperation({ summary: 'Process a ticket: resolve (notify reporter) or assign (notify staff)' })
     async handle(
         @Param('id') id: string,

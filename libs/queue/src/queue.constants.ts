@@ -50,6 +50,7 @@ export const MESSAGE_PATTERNS = {
         AUTO_GENERATE_FINISHED: 'exam.auto_generate.finished',
         /** Thông báo thuật toán tạo lịch đã chạy xong */
         AUTO_GENERATE_CALCULATED: 'exam.auto_generate.calculated',
+        UPLOAD_ATTENDANCE_SNAPSHOT: 'exam.attendance_snapshot.upload',
     },
     // Face Recognition Patterns
     FACE: {

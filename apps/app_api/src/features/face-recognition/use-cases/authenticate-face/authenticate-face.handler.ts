@@ -6,10 +6,15 @@ import {
   RABBITMQ_CLIENTS,
   MESSAGE_PATTERNS,
 } from '@app/queue/queue.constants';
+import { AttendanceSnapshotUploadJobData } from '@app/queue';
 import { EncryptionUtils } from '@app/queue/encryption.utils';
 import { IUserRepository, USER_REPOSITORY } from '@app/users';
 import { IStudentExamRepository, STUDENT_EXAM_REPOSITORY } from '@app/student-exams';
 import { PrismaService } from '@app/prisma';
+import {
+  AttendanceActorType,
+  AttendanceSnapshotStatus,
+} from '@prisma/client';
 import { AuthenticateFaceDto } from './authenticate-face.dto';
 import { NotificationGateway } from '../../../../common/gateways';
 
@@ -35,6 +40,8 @@ export class AuthenticateFaceHandler {
   constructor(
     @Inject(RABBITMQ_CLIENTS.FACE_RECOGNITION_SERVICE)
     private readonly faceClient: ClientProxy,
+    @Inject(RABBITMQ_CLIENTS.EXAM_SERVICE)
+    private readonly examClient: ClientProxy,
     @Inject(USER_REPOSITORY) private readonly userRepository: IUserRepository,
     @Inject(STUDENT_EXAM_REPOSITORY) private readonly studentExamRepository: IStudentExamRepository,
     private readonly prisma: PrismaService,
@@ -52,8 +59,15 @@ export class AuthenticateFaceHandler {
     }
   }
 
-  async execute(dto: AuthenticateFaceDto): Promise<AuthenticateFaceResponse> {
+  async execute(
+    dto: AuthenticateFaceDto,
+    actor?: { userId?: string; role?: string },
+  ): Promise<AuthenticateFaceResponse> {
     this.logger.log(`Processing face authentication. Request DTO: ${JSON.stringify({ ...dto, image: dto.image?.substring(0, 20) + '...' })}`);
+
+    let imageBuffer: Buffer | null = null;
+    let snapshotRecorded = false;
+    const captureTimestamp = new Date();
 
     try {
       // Validation
@@ -62,8 +76,6 @@ export class AuthenticateFaceHandler {
       }
 
       // Decrypt image if encrypted
-      let imageBuffer: Buffer;
-
       if (dto.isEncrypted) {
         imageBuffer = EncryptionUtils.decryptImage(
           dto.image,
@@ -146,6 +158,26 @@ export class AuthenticateFaceHandler {
         this.logger.warn('Face authentication completed but no studentId was matched');
       }
 
+      const snapshotStatus = !result?.student_id
+        ? AttendanceSnapshotStatus.NOT_MATCHED
+        : !isCorrectRoom
+          ? AttendanceSnapshotStatus.WRONG_ROOM
+          : AttendanceSnapshotStatus.MATCHED;
+
+      await this.createAttendanceSnapshot({
+        actorType: AttendanceActorType.STUDENT,
+        examSessionId: dto.examSessionId,
+        examPartCode: dto.examPartCode,
+        capturedUserId:
+          actor?.role === 'STUDENT' ? actor.userId : undefined,
+        matchedUserId: result?.student_id,
+        status: snapshotStatus,
+        confidence: result?.confidence,
+        imageBuffer,
+        captureTimestamp,
+      });
+      snapshotRecorded = true;
+
       if (!isCorrectRoom && studentCode) {
         let anomalyCampus: string | null = null;
         if (dto.examSessionId) {
@@ -217,12 +249,74 @@ export class AuthenticateFaceHandler {
     } catch (error) {
       this.logger.error('Face authentication failed:', error);
 
+      if (!snapshotRecorded && imageBuffer && dto.examSessionId) {
+        await this.createAttendanceSnapshot({
+          actorType: AttendanceActorType.STUDENT,
+          examSessionId: dto.examSessionId,
+          examPartCode: dto.examPartCode,
+          capturedUserId:
+            actor?.role === 'STUDENT' ? actor.userId : undefined,
+          matchedUserId: undefined,
+          status: AttendanceSnapshotStatus.FAILED,
+          confidence: undefined,
+          imageBuffer,
+          captureTimestamp,
+        });
+      }
+
       const errorResponse: AuthenticateFaceResponse = {
         status: 'error',
         message: error.message || 'Face authentication failed',
       };
       this.logger.error(`Authentication failed: ${JSON.stringify(errorResponse)}`);
       return errorResponse;
+    }
+  }
+
+  private async createAttendanceSnapshot(input: {
+    actorType: AttendanceActorType;
+    examSessionId?: string;
+    examPartCode?: string;
+    capturedUserId?: string;
+    matchedUserId?: string;
+    status: AttendanceSnapshotStatus;
+    confidence?: number;
+    imageBuffer: Buffer;
+    captureTimestamp: Date;
+  }): Promise<void> {
+    if (!input.examSessionId) {
+      return;
+    }
+
+    try {
+      const snapshot = await this.prisma.attendanceSnapshot.create({
+        data: {
+          actorType: input.actorType,
+          examSessionId: input.examSessionId,
+          examPartCode: input.examPartCode,
+          capturedUserId: input.capturedUserId,
+          matchedUserId: input.matchedUserId,
+          status: input.status,
+          confidence: input.confidence,
+          captureTimestamp: input.captureTimestamp,
+        },
+      });
+
+      const payload: AttendanceSnapshotUploadJobData = {
+        snapshotId: snapshot.id,
+        imageBase64: input.imageBuffer.toString('base64'),
+        actorType: input.actorType,
+        capturedAt: input.captureTimestamp.toISOString(),
+      };
+
+      this.examClient.emit(
+        MESSAGE_PATTERNS.EXAM.UPLOAD_ATTENDANCE_SNAPSHOT,
+        payload,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to persist attendance snapshot for session ${input.examSessionId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

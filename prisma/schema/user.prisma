@@ -9,6 +9,7 @@ model User {
   role                    Role?
   createdAt               DateTime             @default(now())
   updatedAt               DateTime             @updatedAt
+  lastAssignedAt          DateTime?
   campus                  Campus?
   username                String?              @unique
   identities              Identity?

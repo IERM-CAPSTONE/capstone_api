@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
+import { FcmService } from '../../../../common/fcm/fcm.service';
 import { AnnouncementType, ExamSessionStatus } from '@prisma/client';
 import { logSessionActivity } from '../../../../common/utils/activity-history.util';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,6 +29,7 @@ export class BroadcastAnnouncementHandler {
     constructor(
         private readonly prisma: PrismaService,
         private readonly gateway: NotificationGateway,
+        private readonly fcmService: FcmService,
     ) { }
 
     async execute(command: BroadcastAnnouncementCommand): Promise<{ success: boolean; count: number; deliveries: BroadcastDeliveryItem[]; sentAt: string }> {
@@ -127,25 +129,27 @@ export class BroadcastAnnouncementHandler {
             });
         }
 
-        // 4. Create dual-channel notifications for proctors (PUSH_APP + IN_APP)
-        const proctorIds = Array.from(
-            new Set(sessions.map(s => s.proctorId).filter((id): id is string => id !== null))
+        // 4. Persist notifications and send mobile push for session staff (proctors + hall invigilators)
+        const staffIds = Array.from(
+            new Set(
+                sessions.flatMap((session) => [session.proctorId, session.hallInvigilatorId])
+                    .filter((id): id is string => id !== null),
+            ),
         );
-        
-        if (proctorIds.length > 0) {
-            const deliveriesForProctorMeta = sessions.map((session) => ({
+
+        if (staffIds.length > 0) {
+            const deliveriesForStaffMeta = sessions.map((session) => ({
                 sessionId: session.id,
                 subjectCode: session.subjectCode,
                 roomNumber: session.examRoom?.roomNumber ?? 'N/A',
                 campus: String(session.campus),
             }));
 
-            // Create 2 notifications per proctor (PUSH_APP + IN_APP)
-            const proctorNotifications = [];
-            proctorIds.forEach(proctorId => {
-                proctorNotifications.push({
+            const staffNotifications = [];
+            staffIds.forEach((staffId) => {
+                staffNotifications.push({
                     id: uuidv4(),
-                    toUserId: proctorId,
+                    toUserId: staffId,
                     fromId: command.senderId || null,
                     title: command.title || 'Official Announcement',
                     message: command.content,
@@ -156,13 +160,13 @@ export class BroadcastAnnouncementHandler {
                         senderId: command.senderId ?? null,
                         senderName: command.senderName ?? null,
                         subjectCodes: command.subjectCodes,
-                        deliveries: deliveriesForProctorMeta,
+                        deliveries: deliveriesForStaffMeta,
                         sentAt: notificationData.sentAt,
                     },
                 });
-                proctorNotifications.push({
+                staffNotifications.push({
                     id: uuidv4(),
-                    toUserId: proctorId,
+                    toUserId: staffId,
                     fromId: command.senderId || null,
                     title: command.title || 'Official Announcement',
                     message: command.content,
@@ -173,17 +177,31 @@ export class BroadcastAnnouncementHandler {
                         senderId: command.senderId ?? null,
                         senderName: command.senderName ?? null,
                         subjectCodes: command.subjectCodes,
-                        deliveries: deliveriesForProctorMeta,
+                        deliveries: deliveriesForStaffMeta,
                         sentAt: notificationData.sentAt,
                     },
                 });
             });
 
-            if (proctorNotifications.length > 0) {
+            if (staffNotifications.length > 0) {
                 await this.prisma.notification.createMany({
-                    data: proctorNotifications,
+                    data: staffNotifications,
                 });
             }
+
+            await Promise.all(
+                staffIds.map((staffId) =>
+                    this.fcmService.sendToUser(staffId, {
+                        title: command.title || 'Official Announcement',
+                        body: command.content,
+                        data: {
+                            type: 'broadcast_announcement',
+                            sentAt: notificationData.sentAt,
+                            subjectCodes: command.subjectCodes.join(','),
+                        },
+                    }),
+                ),
+            );
         }
 
         await Promise.all(

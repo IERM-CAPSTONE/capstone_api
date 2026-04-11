@@ -15,7 +15,12 @@ export class ListUsersEndpoint {
     constructor(private readonly handler: ListUsersHandler) { }
 
     @Get()
-    @Roles(RoleType.ADMIN, RoleType.HALL_INVIGILATOR)
+    @Roles(
+        RoleType.ADMIN,
+        RoleType.EXAM_OFFICER,
+        RoleType.HALL_INVIGILATOR,
+        RoleType.PROCTOR,
+    )
     @ApiOperation({ summary: 'Get list of users with pagination' })
     @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
     @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
@@ -41,7 +46,12 @@ export class ListUsersEndpoint {
     }
 
     @Get('assignees')
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.HALL_INVIGILATOR)
+    @Roles(
+        RoleType.ADMIN,
+        RoleType.EXAM_OFFICER,
+        RoleType.HALL_INVIGILATOR,
+        RoleType.PROCTOR,
+    )
     @ApiOperation({ summary: 'Get IT Support and Hall Invigilator users for ticket assignment' })
     @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name or email' })
     @ApiResponse({ status: 200, description: 'Assignee candidates retrieved successfully' })

@@ -34,6 +34,17 @@ enum IssueStatus {
   OPEN
 }
 
+enum AiCandidateSourceType {
+  CONCLUSION
+  RESOLUTION
+}
+
+enum AiCandidateReviewStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
 /// Preferred shift for proctor applications
 enum PreferredShift {
   MORNING
@@ -119,4 +130,16 @@ enum DeviceApplicationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum AttendanceActorType {
+  STUDENT
+  PROCTOR
+}
+
+enum AttendanceSnapshotStatus {
+  MATCHED
+  NOT_MATCHED
+  WRONG_ROOM
+  FAILED
 }

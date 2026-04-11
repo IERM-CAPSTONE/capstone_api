@@ -23,26 +23,40 @@ import { ReviewTicketEndpoint } from './use-cases/review-ticket/review-ticket.en
 import { ReviewTicketHandler } from './use-cases/review-ticket/review-ticket.handler';
 import { CommentTicketEndpoint } from './use-cases/comment-ticket/comment-ticket.endpoint';
 import { CommentTicketHandler } from './use-cases/comment-ticket/comment-ticket.handler';
+import { RouteTicketEndpoint } from './use-cases/route-ticket/route-ticket.endpoint';
+import { RouteTicketHandler } from './use-cases/route-ticket/route-ticket.handler';
+import { LifecycleTicketEndpoint } from './use-cases/lifecycle-ticket/lifecycle-ticket.endpoint';
+import { LifecycleTicketHandler } from './use-cases/lifecycle-ticket/lifecycle-ticket.handler';
+import { GetTicketStatsEndpoint } from './use-cases/get-ticket-stats/get-ticket-stats.endpoint';
+import { GetTicketStatsHandler } from './use-cases/get-ticket-stats/get-ticket-stats.handler';
+import { TicketWorkflowService } from './ticket-workflow.service';
 
 @Module({
     imports: [PrismaModule, TicketsCoreModule],
     controllers: [
         CreateTicketEndpoint,
         ListTicketsEndpoint,
+        GetTicketStatsEndpoint,
         GetTicketEndpoint,
         ProcessTicketEndpoint,
         BulkProcessTicketEndpoint,
         ReviewTicketEndpoint,
         CommentTicketEndpoint,
+        RouteTicketEndpoint,
+        LifecycleTicketEndpoint,
     ],
     providers: [
         CreateTicketHandler,
         ListTicketsHandler,
+        GetTicketStatsHandler,
         GetTicketHandler,
         ProcessTicketHandler,
         BulkProcessTicketHandler,
         ReviewTicketHandler,
         CommentTicketHandler,
+        RouteTicketHandler,
+        LifecycleTicketHandler,
+        TicketWorkflowService,
         NotificationGateway,
         FcmService,
     ],

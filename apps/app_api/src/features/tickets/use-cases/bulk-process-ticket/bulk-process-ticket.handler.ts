@@ -1,11 +1,7 @@
-import { Injectable, Inject, BadRequestException } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
-import { PrismaService } from '@app/prisma';
-import { TICKET_REPOSITORY, ITicketRepository } from '@app/tickets';
-import { BulkProcessTicketDto, BulkProcessAction } from './bulk-process-ticket.dto';
-import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
-import { logSessionActivity } from '../../../../common/utils/activity-history.util';
-import { FcmService } from '../../../../common/fcm/fcm.service';
+import { Injectable } from '@nestjs/common';
+import { BulkProcessTicketDto } from './bulk-process-ticket.dto';
+import { TicketWorkflowService } from '../../ticket-workflow.service';
+import { ProcessTicketHandler } from '../process-ticket/process-ticket.handler';
 
 export interface BulkProcessResult {
     processed: number;
@@ -16,185 +12,57 @@ export interface BulkProcessResult {
 @Injectable()
 export class BulkProcessTicketHandler {
     constructor(
-        @Inject(TICKET_REPOSITORY)
-        private readonly ticketRepository: ITicketRepository,
-        private readonly prisma: PrismaService,
-        private readonly notificationGateway: NotificationGateway,
-        private readonly fcmService: FcmService,
+        private readonly workflow: TicketWorkflowService,
+        private readonly legacyProcessHandler: ProcessTicketHandler,
     ) { }
 
-    async execute(dto: BulkProcessTicketDto, officerId: string): Promise<BulkProcessResult> {
-        if (dto.action === BulkProcessAction.ASSIGN && !dto.assigneeId) {
-            throw new BadRequestException('assigneeId is required when action is "assign"');
-        }
-        if (dto.action === BulkProcessAction.CHANGE_STATUS && !dto.status) {
-            throw new BadRequestException('status is required when action is "change_status"');
-        }
-
-        const officer = await this.prisma.user.findUnique({
-            where: { id: officerId },
-            select: { fullName: true },
-        });
-
-        const nextStatus =
-            dto.action === BulkProcessAction.ASSIGN
-                ? 'IN_PROGRESS'
-                : dto.action === BulkProcessAction.RESOLVE
-                    ? 'SOLVED'
-                    : dto.status!;
-        const note = (dto.note ?? dto.resolveNote ?? '').trim();
-        const officerName = officer?.fullName ?? 'Exam Officer';
+    async execute(dto: BulkProcessTicketDto, actorId: string): Promise<BulkProcessResult> {
         const details: BulkProcessResult['details'] = [];
 
-        await Promise.all(
-            dto.ticketIds.map(async (ticketId) => {
-                try {
-                    const ticket = await this.ticketRepository.findById(ticketId);
-                    if (!ticket) {
-                        details.push({ ticketId, success: false, error: 'Not found' });
-                        return;
-                    }
-
-                    await this.ticketRepository.save({
-                        id: ticketId,
-                        status: nextStatus,
-                        assigneeId: dto.action === BulkProcessAction.ASSIGN ? dto.assigneeId : undefined,
-                        resolveNote:
-                            (dto.action === BulkProcessAction.CHANGE_STATUS || dto.action === BulkProcessAction.RESOLVE) && nextStatus === 'SOLVED'
-                                ? (note || ticket.resolveNote || null)
-                                : undefined,
+        for (const ticketId of dto.ticketIds) {
+            try {
+                if (dto.action === 'COMMENT') {
+                    await this.workflow.addComment(ticketId, actorId, dto.mode ?? 'DISCUSSION', {
+                        body: dto.body ?? dto.note ?? '',
+                        issueCode: dto.issueCode ?? null,
+                        issueType: dto.issueType ?? null,
+                        issueCustomText: dto.issueCustomText ?? null,
+                        resolutionCode: dto.resolutionCode ?? null,
+                        resolutionCustomText: dto.resolutionCustomText ?? null,
+                        responseText: dto.responseText ?? null,
+                        techNote: dto.techNote ?? null,
+                        useForAiTraining: dto.useForAiTraining ?? null,
                     });
-
-                    if ((ticket as any).session?.campus) {
-                        this.notificationGateway.sendToCampus((ticket as any).session.campus, 'monitor:ticket_count_changed', {
-                            ticketId,
-                            sessionId: (ticket as any).sessionId ?? null,
-                            campus: (ticket as any).session.campus,
-                            action: dto.action,
-                            status: nextStatus,
-                            bulk: true,
-                        });
+                } else if (dto.action === 'ROUTE') {
+                    await this.workflow.routeTicket(ticketId, actorId, dto.targetRole!, dto.note);
+                } else if (dto.action === 'LIFECYCLE') {
+                    if (dto.lifecycleAction === 'START') {
+                        await this.workflow.setStatus(ticketId, actorId, 'IN_PROGRESS', dto.note);
+                    } else if (dto.lifecycleAction === 'REOPEN') {
+                        await this.workflow.setStatus(ticketId, actorId, 'IN_PROGRESS', dto.note);
+                    } else if (dto.lifecycleAction === 'ACKNOWLEDGE') {
+                        await this.workflow.setStatus(ticketId, actorId, 'CLOSED', dto.note);
+                    } else if (dto.lifecycleAction === 'CLOSE') {
+                        await this.workflow.setStatus(ticketId, actorId, 'CLOSED', dto.note);
                     } else {
-                        this.notificationGateway.sendToAll('monitor:ticket_count_changed', {
-                            ticketId,
-                            sessionId: (ticket as any).sessionId ?? null,
-                            action: dto.action,
-                            status: nextStatus,
-                            bulk: true,
-                        });
+                        throw new Error(`Unsupported lifecycle action ${dto.lifecycleAction}`);
                     }
-
-                    if ((dto.action === BulkProcessAction.CHANGE_STATUS || dto.action === BulkProcessAction.RESOLVE) && nextStatus === 'SOLVED') {
-                        await this.prisma.notification.create({
-                            data: {
-                                id: uuidv4(),
-                                toUserId: ticket.reporterId,
-                                fromId: officerId,
-                                title: `Ticket resolved: ${ticket.issueName}`,
-                                message: note
-                                    ? `${officerName} resolved the ticket. ${note}`
-                                    : `${officerName} resolved the ticket.`,
-                                channel: 'IN_APP',
-                                meta: { ticketId, resolveNote: note, bulk: true },
-                            },
-                        });
-
-                        this.notificationGateway.sendToUser(ticket.reporterId, 'ticket:resolved', {
-                            ticketId,
-                            issueName: ticket.issueName,
-                            studentCode: (ticket as any).studentCode ?? null,
-                            resolveNote: note,
-                            officerName,
-                            reporterId: ticket.reporterId,
-                            isUserNotification: true,
-                        });
-
-                        await this.fcmService.sendToUser(ticket.reporterId, {
-                            title: `Ticket resolved: ${ticket.issueName}`,
-                            body: note
-                                ? `${officerName} resolved the ticket. ${note}`
-                                : `${officerName} resolved the ticket.`,
-                            data: {
-                                type: 'ticket_resolved',
-                                ticketId,
-                                issueName: ticket.issueName,
-                                studentCode: (ticket as any).studentCode ?? '',
-                                reporterId: ticket.reporterId,
-                                actorName: officerName,
-                            },
-                        });
-                    } else if (dto.action === BulkProcessAction.ASSIGN && dto.assigneeId) {
-                        await this.prisma.notification.create({
-                            data: {
-                                id: uuidv4(),
-                                toUserId: dto.assigneeId,
-                                fromId: officerId,
-                                title: `Ticket assigned: ${ticket.issueName}`,
-                                message: note
-                                    ? `${officerName} assigned a ticket to you. ${note}`
-                                    : `${officerName} assigned a ticket to you.`,
-                                channel: 'IN_APP',
-                                meta: { ticketId, note, bulk: true },
-                            },
-                        });
-
-                        this.notificationGateway.sendToUser(dto.assigneeId, 'ticket:assigned', {
-                            ticketId,
-                            assigneeId: dto.assigneeId,
-                            issueName: ticket.issueName,
-                            studentCode: (ticket as any).studentCode ?? null,
-                            officerName,
-                            reporterId: ticket.reporterId,
-                            isUserNotification: true,
-                        });
-
-                        await this.fcmService.sendToUser(dto.assigneeId, {
-                            title: `Ticket assigned: ${ticket.issueName}`,
-                            body: note
-                                ? `${officerName} assigned a ticket to you. ${note}`
-                                : `${officerName} assigned a ticket to you.`,
-                            data: {
-                                type: 'ticket_assigned',
-                                ticketId,
-                                assigneeId: dto.assigneeId,
-                                issueName: ticket.issueName,
-                                studentCode: (ticket as any).studentCode ?? '',
-                                reporterId: ticket.reporterId,
-                                actorName: officerName,
-                            },
-                        });
-                    }
-
-                    if ((ticket as any).sessionId) {
-                        await logSessionActivity(this.prisma, {
-                            sessionId: (ticket as any).sessionId,
-                            ticketId,
-                            activityType: 'MOVED',
-                            payload: {
-                                event: dto.action === BulkProcessAction.ASSIGN ? 'TICKET_ASSIGNED' : 'TICKET_STATUS_CHANGED',
-                                title: 'Ticket Processed (Bulk)',
-                                message: `${officerName} processed ticket ${ticket.issueName} in bulk mode`,
-                                meta: {
-                                    ticketId,
-                                    action: dto.action,
-                                    assigneeId: dto.assigneeId ?? null,
-                                    status: dto.status ?? null,
-                                    note,
-                                },
-                            },
-                        });
-                    }
-
-                    details.push({ ticketId, success: true });
-                } catch (err: any) {
-                    details.push({ ticketId, success: false, error: err?.message });
+                } else {
+                    await this.legacyProcessHandler.execute(ticketId, dto as any, actorId);
                 }
-            }),
-        );
+                details.push({ ticketId, success: true });
+            } catch (error: any) {
+                details.push({
+                    ticketId,
+                    success: false,
+                    error: error?.message ?? 'Unknown error',
+                });
+            }
+        }
 
         return {
-            processed: details.filter((d) => d.success).length,
-            failed: details.filter((d) => !d.success).length,
+            processed: details.filter((detail) => detail.success).length,
+            failed: details.filter((detail) => !detail.success).length,
             details,
         };
     }

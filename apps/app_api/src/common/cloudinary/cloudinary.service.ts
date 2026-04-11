@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
 import { createHash, randomUUID } from 'crypto';
+import { createRequire } from 'module';
+
+declare const __non_webpack_require__: ((id: string) => any) | undefined;
 
 @Injectable()
 export class CloudinaryService {
@@ -65,12 +68,13 @@ export class CloudinaryService {
 
     private loadCloudinary(): any {
         try {
-            // Avoid hard build failure when the optional package is missing locally.
-            // eslint-disable-next-line @typescript-eslint/no-implied-eval
-            const dynamicRequire = new Function('name', 'return require(name);') as (
-                name: string,
-            ) => any;
-            return dynamicRequire('cloudinary').v2;
+            // app_background is bundled, so plain `require` may not resolve the real Node loader.
+            const runtimeRequire =
+                typeof __non_webpack_require__ === 'function'
+                    ? __non_webpack_require__
+                    : createRequire(process.cwd() + '/package.json');
+
+            return runtimeRequire('cloudinary').v2;
         } catch {
             return null;
         }

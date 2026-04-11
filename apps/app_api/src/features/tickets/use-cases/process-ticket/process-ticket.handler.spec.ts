@@ -1,109 +1,110 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProcessTicketHandler } from './process-ticket.handler';
-import { TICKET_REPOSITORY, ITicketRepository } from '@app/tickets';
+import { TicketWorkflowService } from '../../ticket-workflow.service';
 import { PrismaService } from '@app/prisma';
-import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
 import { ProcessAction } from './process-ticket.dto';
 
 describe('ProcessTicketHandler', () => {
     let handler: ProcessTicketHandler;
-    let ticketRepo: jest.Mocked<ITicketRepository>;
+    let workflow: jest.Mocked<Pick<TicketWorkflowService, 'getTicketOrThrow' | 'applyLifecycle' | 'addComment' | 'routeTicket'>>;
     let prisma: any;
-    let gateway: any;
 
-    const TID = 'ticket-001'; const OID = 'officer-001'; const RID = 'reporter-001';
-    const ticket = { id: TID, issueName: 'Cheating', issueType: 'Academic Violation', status: 'OPEN', reporterId: RID, studentCode: 'SE140001' };
-    const officer = { fullName: 'Nguyen Van A' };
-    const resolveDto = { action: ProcessAction.RESOLVE, resolveNote: 'Resolved.' };
-    const assignDto = { action: ProcessAction.ASSIGN, resolveNote: 'Forwarded', assigneeId: 'it-001' };
+    const TID = 'ticket-001';
+    const OID = 'officer-001';
+    const ticket = {
+        id: TID,
+        issueName: 'Cheating',
+        issueType: 'Academic Violation',
+        status: 'OPEN',
+        reporterId: 'reporter-001',
+        studentCode: 'SE140001',
+    };
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 ProcessTicketHandler,
-                { provide: TICKET_REPOSITORY, useValue: { save: jest.fn(), findById: jest.fn(), findMany: jest.fn() } },
-                { provide: PrismaService, useValue: { user: { findUnique: jest.fn() }, notification: { create: jest.fn() } } },
-                { provide: NotificationGateway, useValue: { sendToAll: jest.fn(), sendToUser: jest.fn() } },
+                {
+                    provide: TicketWorkflowService,
+                    useValue: {
+                        getTicketOrThrow: jest.fn(),
+                        applyLifecycle: jest.fn(),
+                        addComment: jest.fn(),
+                        routeTicket: jest.fn(),
+                    },
+                },
+                {
+                    provide: PrismaService,
+                    useValue: {
+                        user: { findUnique: jest.fn() },
+                    },
+                },
             ],
         }).compile();
+
         handler = module.get(ProcessTicketHandler);
-        ticketRepo = module.get(TICKET_REPOSITORY);
+        workflow = module.get(TicketWorkflowService);
         prisma = module.get(PrismaService);
-        gateway = module.get(NotificationGateway);
     });
 
-    // ── RESOLVE ───────────────────────────────────────────────────────────────
     describe('Resolve', () => {
-        it('UTC01: resolve OPEN → SOLVED, notify reporter', async () => {
-            ticketRepo.findById.mockResolvedValue(ticket);
-            ticketRepo.save.mockImplementation(async (d) => ({ ...ticket, ...d }));
-            prisma.user.findUnique.mockResolvedValue(officer);
-            prisma.notification.create.mockResolvedValue({});
-            const r = await handler.execute(TID, resolveDto, OID);
-            expect(r.status).toBe('SOLVED');
-            expect(prisma.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({ toUserId: RID }) });
-            expect(gateway.sendToAll).toHaveBeenCalledWith('ticket:resolved', expect.objectContaining({ ticketId: TID }));
+        it('keeps ticket status unchanged and records AI training data', async () => {
+            workflow.getTicketOrThrow.mockResolvedValue(ticket);
+            workflow.addComment.mockResolvedValue({ ...ticket, status: 'OPEN' });
+
+            const r = await handler.execute(TID, { action: ProcessAction.RESOLVE, resolveNote: 'Resolved.' }, OID);
+
+            expect(workflow.addComment).toHaveBeenCalledWith(
+                TID,
+                OID,
+                'RESOLUTION',
+                expect.objectContaining({
+                    body: 'Resolved.',
+                    note: undefined,
+                    techNote: null,
+                }),
+            );
+            expect(r.status).toBe('OPEN');
         });
 
-        it('UTC02: resolve IN_PROGRESS → SOLVED', async () => {
-            ticketRepo.findById.mockResolvedValue({ ...ticket, status: 'IN_PROGRESS' });
-            ticketRepo.save.mockImplementation(async (d) => ({ ...ticket, ...d }));
-            prisma.user.findUnique.mockResolvedValue(officer);
-            prisma.notification.create.mockResolvedValue({});
-            const r = await handler.execute(TID, resolveDto, OID);
-            expect(r.status).toBe('SOLVED');
+        it('passes through an in-progress ticket without auto-closing it', async () => {
+            workflow.getTicketOrThrow.mockResolvedValue({ ...ticket, status: 'IN_PROGRESS' });
+            workflow.addComment.mockResolvedValue({ ...ticket, status: 'IN_PROGRESS' });
+
+            const r = await handler.execute(TID, { action: ProcessAction.RESOLVE, resolveNote: 'Resolved.' }, OID);
+
+            expect(r.status).toBe('IN_PROGRESS');
         });
 
-        it('UTC05: officer not found → fallback name', async () => {
-            ticketRepo.findById.mockResolvedValue(ticket);
-            ticketRepo.save.mockImplementation(async (d) => ({ ...ticket, ...d }));
-            prisma.user.findUnique.mockResolvedValue(null);
-            prisma.notification.create.mockResolvedValue({});
-            await handler.execute(TID, resolveDto, OID);
-            expect(gateway.sendToAll).toHaveBeenCalledWith('ticket:resolved', expect.objectContaining({ officerName: 'Exam Officer' }));
-        });
+        it('throws NotFoundException when ticket is missing', async () => {
+            workflow.getTicketOrThrow.mockRejectedValue(new NotFoundException('not found'));
 
-        it('UTC06: ticket not found → NotFoundException', async () => {
-            ticketRepo.findById.mockResolvedValue(null);
-            await expect(handler.execute('bad-id', resolveDto, OID)).rejects.toThrow(NotFoundException);
-            expect(ticketRepo.save).not.toHaveBeenCalled();
-        });
-
-        it('UTC07: repo save error → propagated', async () => {
-            ticketRepo.findById.mockResolvedValue(ticket);
-            ticketRepo.save.mockRejectedValue(new Error('DB fail'));
-            await expect(handler.execute(TID, resolveDto, OID)).rejects.toThrow('DB fail');
-        });
-
-        it('UTC09: empty resolveNote → passed through', async () => {
-            ticketRepo.findById.mockResolvedValue(ticket);
-            ticketRepo.save.mockImplementation(async (d) => ({ ...ticket, ...d }));
-            prisma.user.findUnique.mockResolvedValue(officer);
-            prisma.notification.create.mockResolvedValue({});
-            await handler.execute(TID, { ...resolveDto, resolveNote: '' }, OID);
-            expect(ticketRepo.save).toHaveBeenCalledWith(expect.objectContaining({ resolveNote: '' }));
+            await expect(
+                handler.execute('bad-id', { action: ProcessAction.RESOLVE, resolveNote: 'Resolved.' }, OID),
+            ).rejects.toThrow(NotFoundException);
         });
     });
 
-    // ── ASSIGN ────────────────────────────────────────────────────────────────
     describe('Assign', () => {
-        it('UTC-A01: assign → IN_PROGRESS, notify assignee', async () => {
-            ticketRepo.findById.mockResolvedValue(ticket);
-            ticketRepo.save.mockImplementation(async (d) => ({ ...ticket, ...d }));
-            prisma.user.findUnique.mockResolvedValue(officer);
-            prisma.notification.create.mockResolvedValue({});
-            const r = await handler.execute(TID, assignDto, OID);
-            expect(r.status).toBe('IN_PROGRESS');
+        it('routes to the assignee role and returns the workflow result', async () => {
+            workflow.getTicketOrThrow.mockResolvedValue(ticket);
+            prisma.user.findUnique.mockResolvedValue({ role: 'IT_SUPPORT' });
+            workflow.routeTicket.mockResolvedValue({ ...ticket, status: 'IN_PROGRESS', assigneeId: 'it-001' });
+
+            const r = await handler.execute(TID, { action: ProcessAction.ASSIGN, assigneeId: 'it-001' }, OID);
+
+            expect(workflow.routeTicket).toHaveBeenCalledWith(TID, OID, 'IT_SUPPORT', undefined);
             expect(r.assigneeId).toBe('it-001');
-            expect(prisma.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({ toUserId: 'it-001' }) });
-            expect(gateway.sendToAll).toHaveBeenCalledWith('ticket:assigned', expect.objectContaining({ assigneeId: 'it-001' }));
+            expect(r.status).toBe('IN_PROGRESS');
         });
 
-        it('UTC-A06: missing assigneeId → BadRequestException', async () => {
-            ticketRepo.findById.mockResolvedValue(ticket);
-            const badDto = { action: ProcessAction.ASSIGN, resolveNote: 'test' };
-            await expect(handler.execute(TID, badDto, OID)).rejects.toThrow('assigneeId is required');
+        it('rejects missing assigneeId for legacy assign', async () => {
+            workflow.getTicketOrThrow.mockResolvedValue(ticket);
+
+            await expect(
+                handler.execute(TID, { action: ProcessAction.ASSIGN }, OID),
+            ).rejects.toThrow(BadRequestException);
         });
     });
 });

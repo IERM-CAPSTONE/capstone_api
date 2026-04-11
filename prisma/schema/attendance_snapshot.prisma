@@ -1,0 +1,18 @@
+model AttendanceSnapshot {
+  id               String                   @id @default(uuid())
+  actorType        AttendanceActorType
+  examSessionId    String
+  examPartCode     String?
+  capturedUserId   String?
+  matchedUserId    String?
+  status           AttendanceSnapshotStatus
+  confidence       Float?
+  imageUrl         String?
+  captureTimestamp DateTime
+  createdAt        DateTime                 @default(now())
+
+  @@index([examSessionId])
+  @@index([status])
+  @@index([matchedUserId])
+  @@index([captureTimestamp])
+}

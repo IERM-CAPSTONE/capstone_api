@@ -1,40 +1,97 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsOptional, IsString, ArrayNotEmpty } from 'class-validator';
-
-export enum BulkProcessAction {
-    ASSIGN = 'assign',
-    CHANGE_STATUS = 'change_status',
-    RESOLVE = 'resolve',
-}
+import { ArrayNotEmpty, IsArray, IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 
 export class BulkProcessTicketDto {
-    @ApiProperty({ type: [String], description: 'Array of ticket IDs to process' })
+    @ApiProperty({ type: [String] })
     @IsArray()
     @ArrayNotEmpty()
     @IsString({ each: true })
     ticketIds: string[];
 
-    @ApiProperty({ enum: BulkProcessAction, description: '"assign" or "change_status"' })
-    @IsEnum(BulkProcessAction)
-    action: BulkProcessAction;
+    @ApiProperty({
+        enum: ['COMMENT', 'ROUTE', 'LIFECYCLE', 'assign', 'change_status', 'resolve'],
+    })
+    @IsString()
+    @IsIn(['COMMENT', 'ROUTE', 'LIFECYCLE', 'assign', 'change_status', 'resolve'])
+    action: 'COMMENT' | 'ROUTE' | 'LIFECYCLE' | 'assign' | 'change_status' | 'resolve';
 
-    @ApiPropertyOptional({ example: 'Đổi trạng thái hàng loạt theo yêu cầu vận hành.' })
+    @ApiPropertyOptional({ enum: ['DISCUSSION', 'CONCLUSION', 'RESOLUTION'] })
+    @IsOptional()
+    @IsString()
+    mode?: 'DISCUSSION' | 'CONCLUSION' | 'RESOLUTION';
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    body?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    issueCode?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    issueType?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    issueCustomText?: string | null;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    resolutionCode?: string | null;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    resolutionCustomText?: string | null;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    responseText?: string | null;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    techNote?: string | null;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsBoolean()
+    useForAiTraining?: boolean;
+
+    @ApiPropertyOptional({ enum: ['HALL_INVIGILATOR', 'EXAM_OFFICER', 'IT_SUPPORT'] })
+    @IsOptional()
+    @IsString()
+    targetRole?: 'HALL_INVIGILATOR' | 'EXAM_OFFICER' | 'IT_SUPPORT';
+
+    @ApiPropertyOptional({ enum: ['START', 'REOPEN', 'ACKNOWLEDGE', 'CLOSE'] })
+    @IsOptional()
+    @IsString()
+    lifecycleAction?: 'START' | 'REOPEN' | 'ACKNOWLEDGE' | 'CLOSE';
+
+    @ApiPropertyOptional()
     @IsOptional()
     @IsString()
     note?: string;
 
-    @ApiPropertyOptional({ example: 'Legacy resolve note for backward compatibility' })
-    @IsOptional()
-    @IsString()
-    resolveNote?: string;
-
-    @ApiPropertyOptional({ description: 'Required when action is "assign"' })
+    @ApiPropertyOptional()
     @IsOptional()
     @IsString()
     assigneeId?: string;
 
-    @ApiPropertyOptional({ example: 'IN_PROGRESS', description: 'Required when action is "change_status"' })
+    @ApiPropertyOptional()
     @IsOptional()
     @IsString()
     status?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    resolveNote?: string;
 }

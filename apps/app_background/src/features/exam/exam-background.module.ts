@@ -5,6 +5,8 @@ import { ExamSessionsCoreModule } from '@app/exam-sessions';
 import { ExamSeatsModule } from '@app/exam-seats';
 import { ExamImportProcessor } from './processors/exam-import.processor';
 import { AutoGenerateScheduleProcessor } from './processors/auto-generate-schedule.processor';
+import { AttendanceSnapshotProcessor } from './processors/attendance-snapshot.processor';
+import { CloudinaryService } from '../../../../app_api/src/common/cloudinary/cloudinary.service';
 
 @Module({
     imports: [
@@ -16,7 +18,8 @@ import { AutoGenerateScheduleProcessor } from './processors/auto-generate-schedu
     controllers: [
         ExamImportProcessor,
         AutoGenerateScheduleProcessor,
+        AttendanceSnapshotProcessor,
     ],
-    providers: [],
+    providers: [CloudinaryService],
 })
 export class ExamBackgroundModule { }

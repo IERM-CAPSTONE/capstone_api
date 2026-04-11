@@ -163,6 +163,13 @@ export interface ImportExamCodeJobData {
     totalItems?: number;
 }
 
+export interface AttendanceSnapshotUploadJobData {
+    snapshotId: string;
+    imageBase64: string;
+    actorType: 'STUDENT' | 'PROCTOR';
+    capturedAt: string;
+}
+
 /**
  * Base interface cho tất cả job results
  */

@@ -166,6 +166,19 @@ export class AutoGenerateScheduleProcessor {
                 reason: f.reason,
                 note: f.note,
                 students: f._failStudents || [],
+                registrations: excelData
+                    .filter((row: any) =>
+                        row.subjectCode === f.subjectCode &&
+                        (row.campus || '') === (f.campus || '') &&
+                        (!f.examType || !row.examType || row.examType === f.examType) &&
+                        (f._failStudents || []).includes(String(row.studentCode || '').trim())
+                    )
+                    .map((row: any) => ({
+                        Roll: row.studentCode || '',
+                        SubCode: row.subjectCode || '',
+                        Login: row.login || '',
+                        Online: row.online || '',
+                    })),
                 rooms: f._failRooms
                     ? {
                         campus: f._failRooms.campus,
@@ -369,7 +382,7 @@ export class AutoGenerateScheduleProcessor {
         }
     }
 
-    private parseCsv(base64Data: string, campus?: Campus): { studentCode: string; subjectCode: string; examType?: string; date?: string; slot?: number; scheduleId?: string }[] {
+    private parseCsv(base64Data: string, campus?: Campus): { studentCode: string; subjectCode: string; examType?: string; date?: string; slot?: number; scheduleId?: string; login?: string; online?: string }[] {
         const buffer = Buffer.from(base64Data, 'base64');
         const workbook = XLSX.read(buffer, { type: 'buffer' });
         const firstSheetName = workbook.SheetNames[0];
@@ -404,7 +417,9 @@ export class AutoGenerateScheduleProcessor {
                 studentCode: rawStudentCode,
                 subjectCode,
                 examType,
-                scheduleId: item.ScheduleID ? String(item.ScheduleID) : undefined
+                scheduleId: item.ScheduleID ? String(item.ScheduleID) : undefined,
+                login: item.Login ? String(item.Login).trim() : '',
+                online: item.Online ? String(item.Online).trim() : ''
             });
         }
 

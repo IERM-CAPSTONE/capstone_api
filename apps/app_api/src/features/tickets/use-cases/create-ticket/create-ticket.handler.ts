@@ -17,29 +17,7 @@ export class CreateTicketHandler {
     ) { }
 
     async execute(dto: CreateTicketDto, reporterId: string): Promise<any> {
-        // Helper: parse DB time strings as Vietnam local time (UTC+7)
-        // DB stores "2026-03-12 08:30:00.000" (no Z) - Node.js treats this as UTC
-        // which would be wrong. We append +07:00 so JS parses it as Vietnam time.
-        // DB stores Vietnam local time (UTC+7) as naive timestamps.
-        // Prisma reads naive timestamps and returns Date objects assuming UTC.
-        // e.g. "2026-03-12 08:30:00" -> Prisma Date of UTC 08:30 (= VN 15:30, WRONG)
-        // Fix: take the ISO string, strip the Z, re-add +07:00 to reinterpret as VN time.
-        const toVNDate = (s: string | Date | null): Date | null => {
-            if (!s) return null;
-            // Get a plain date-time string without any timezone info
-            let raw: string;
-            if (s instanceof Date) {
-                // "2026-03-12T08:30:00.000Z" -> strip Z -> "2026-03-12T08:30:00.000"
-                raw = s.toISOString().replace('Z', '');
-            } else {
-                raw = String(s).replace(/Z$/, '').replace(/[+-]\d{2}:?\d{2}$/, '').replace(' ', 'T');
-            }
-            // Re-parse treating those digits as Vietnam local time
-            const d = new Date(`${raw}+07:00`);
-            return isNaN(d.getTime()) ? null : d;
-        };
-
-        // 0. Validate session status: only Ongoing or within 30min grace period
+        // Temporary bypass: allow ticket creation regardless of exam time window.
         if (!dto.sessionId) {
             throw new BadRequestException('sessionId is required to create a ticket');
         }
@@ -56,21 +34,6 @@ export class CreateTicketHandler {
 
         if (!session) {
             throw new BadRequestException(`Exam session ${dto.sessionId} not found`);
-        }
-
-        const now = new Date();
-        const openTime = toVNDate(session.examOpenTime as any);
-        const closeTime = toVNDate(session.examCloseTime as any);
-
-        if (!openTime || !closeTime) {
-            throw new BadRequestException('Exam session does not have valid open/close times');
-        }
-
-        const PRE_EXAM_MS = 15 * 60 * 1000;    // 15 min before start
-
-                // Allow from 15 minutes before start onward.
-        if (now < new Date(openTime.getTime() - PRE_EXAM_MS)) {
-            throw new BadRequestException('Cannot create ticket: exam session starts in more than 15 minutes');
         }
 
         const confirmedAssignmentType =

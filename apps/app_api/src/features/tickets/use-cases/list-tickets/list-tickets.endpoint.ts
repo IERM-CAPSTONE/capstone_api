@@ -16,8 +16,10 @@ export class ListTicketsEndpoint {
     @Roles(
         RoleType.EXAM_OFFICER,
         RoleType.PROCTOR,
+        RoleType.STUDENT,
         RoleType.IT_SUPPORT,
         RoleType.HALL_INVIGILATOR,
+        RoleType.ADMIN,
     )
     @ApiOperation({ summary: 'List tickets (role-filtered)' })
     @ApiQuery({ name: 'status', required: false })
@@ -41,11 +43,11 @@ export class ListTicketsEndpoint {
         }
 
         // Proctor → tickets they reported
-        if (user.role === RoleType.PROCTOR) {
+        if (user.role === RoleType.PROCTOR || user.role === RoleType.STUDENT) {
             return this.handler.execute({ status, issueType, reporterId: user.userId, sessionId, fromDate, toDate });
         }
 
-        // Exam Officers see all
+        // Exam Officers/Admin see all
         return this.handler.execute({ status, issueType, sessionId, fromDate, toDate });
     }
 }

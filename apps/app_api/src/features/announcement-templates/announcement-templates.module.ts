@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AnnouncementTemplatesCoreModule } from '@app/announcement-templates';
 import { NotificationGateway } from '../../common/gateways/notification.gateway';
+import { FcmService } from '../../common/fcm/fcm.service';
 import { ExamSessionsCoreModule } from '@app/exam-sessions';
 
 import { AnnouncementTemplatesController } from './announcement-templates.controller';
@@ -27,6 +28,7 @@ import { ListBroadcastMessagesEndpoint, ListBroadcastMessagesHandler } from './u
         BroadcastAnnouncementHandler,
         ListBroadcastMessagesHandler,
         NotificationGateway,
+        FcmService,
     ],
 })
 export class AnnouncementTemplatesModule { }

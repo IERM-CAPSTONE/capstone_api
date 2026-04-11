@@ -23,6 +23,7 @@ import { TicketsModule } from './features/tickets/tickets.module';
 import { AnnouncementTemplatesModule } from './features/announcement-templates/announcement-templates.module';
 import { CloudinaryModule } from './common/cloudinary/cloudinary.module';
 import { NotificationsModule } from './features/notifications/notifications.module';
+import { AuditLogModule } from './features/audit-log';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { NotificationsModule } from './features/notifications/notifications.modu
     AnnouncementTemplatesModule,
     CloudinaryModule,
     NotificationsModule,
+    AuditLogModule,
   ],
   providers: [],
   exports: [],

@@ -40,6 +40,12 @@ model IssueTicket {
   resolutionCustomText String?
   /// Standardized response text generated from the selected resolution template
   resolutionStandardText String?
+  /// One-line summary shown in list views, derived from the newest relevant timeline entry
+  latestSummary     String?
+  /// User id that resolved the latest solved snapshot
+  resolvedBy        String?
+  /// Timestamp of the latest resolved snapshot
+  resolvedAt        DateTime?
   /// Whether this ticket still needs human review before it can be used for AI training
   needsAiReview     Boolean           @default(false)
   /// Lifecycle of this ticket for AI training dataset curation
@@ -53,6 +59,7 @@ model IssueTicket {
   assignee          User?             @relation("assignee", fields: [assigneeId], references: [id])
   session           ExamSession?      @relation(fields: [sessionId], references: [id])
   activityHistories ActivityHistory[]
+  aiCandidates      AiCandidate[]
 
   @@index([reporterId])
   @@index([assigneeId])

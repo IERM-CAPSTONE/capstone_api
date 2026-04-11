@@ -1,40 +1,39 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { IssueTypeEnum } from '../create-ticket/create-ticket.dto';
-
-export enum AiTrainingStatusEnum {
-    PENDING_REVIEW = 'PENDING_REVIEW',
-    APPROVED = 'APPROVED',
-    REJECTED = 'REJECTED',
-}
+import { IsIn, IsOptional, IsString } from 'class-validator';
 
 export class ReviewTicketDto {
-    @ApiProperty({ enum: AiTrainingStatusEnum, description: 'Review decision for AI training eligibility' })
-    @IsEnum(AiTrainingStatusEnum)
-    aiTrainingStatus: AiTrainingStatusEnum;
+    @ApiProperty({ enum: ['APPROVED', 'REJECTED'] })
+    @IsString()
+    @IsIn(['APPROVED', 'REJECTED'])
+    decision: 'APPROVED' | 'REJECTED';
 
-    @ApiPropertyOptional({ example: 'cannotLogin', description: 'Standardized final issue code after review' })
+    @ApiPropertyOptional({ example: 'cannotLogin' })
     @IsOptional()
     @IsString()
-    finalIssueName?: string;
+    finalIssueName?: string | null;
 
-    @ApiPropertyOptional({ enum: IssueTypeEnum, description: 'Standardized issue type after review' })
-    @IsOptional()
-    @IsEnum(IssueTypeEnum)
-    finalIssueType?: IssueTypeEnum;
-
-    @ApiPropertyOptional({ example: 'RESET_PASSWORD_GUIDE', description: 'Standardized resolution code after review' })
+    @ApiPropertyOptional({ example: 'Technical Issue' })
     @IsOptional()
     @IsString()
-    resolutionCode?: string;
+    finalIssueType?: string | null;
 
-    @ApiPropertyOptional({ example: 'Đã hướng dẫn reset thông tin đăng nhập và xác nhận truy cập được hệ thống thi.' })
+    @ApiPropertyOptional({ example: 'RESET_PASSWORD_GUIDE' })
     @IsOptional()
     @IsString()
-    resolutionStandardText?: string;
+    resolutionCode?: string | null;
 
-    @ApiPropertyOptional({ example: 'Đã map case custom về taxonomy chuẩn cannotLogin.' })
+    @ApiPropertyOptional({ example: 'Da huong dan reset thong tin dang nhap.' })
     @IsOptional()
     @IsString()
-    reviewNote?: string;
+    resolutionStandardText?: string | null;
+
+    @ApiPropertyOptional({ example: 'Mapped custom taxonomy back to standard catalog.' })
+    @IsOptional()
+    @IsString()
+    reviewNote?: string | null;
+
+    @ApiPropertyOptional({ example: 'Legacy alias for decision' })
+    @IsOptional()
+    @IsString()
+    aiTrainingStatus?: string;
 }

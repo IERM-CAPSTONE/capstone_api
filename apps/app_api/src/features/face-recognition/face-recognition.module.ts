@@ -7,6 +7,10 @@ import { RegisterFaceHandler, RegisterFaceEndpoint } from './use-cases/register-
 import { AuthenticateFaceHandler, AuthenticateFaceEndpoint } from './use-cases/authenticate-face';
 import { CheckRegistrationHandler, CheckRegistrationEndpoint } from './use-cases/check-registration';
 import { ProctorCheckInEndpoint, ProctorCheckInHandler } from './use-cases/proctor-check-in';
+import {
+  ListAttendanceSnapshotsEndpoint,
+  ListAttendanceSnapshotsHandler,
+} from './use-cases/list-attendance-snapshots';
 import { NotificationGateway } from '../../common/gateways';
 
 @Module({
@@ -19,12 +23,14 @@ import { NotificationGateway } from '../../common/gateways';
     AuthenticateFaceEndpoint,
     CheckRegistrationEndpoint,
     ProctorCheckInEndpoint,
+    ListAttendanceSnapshotsEndpoint,
   ],
   providers: [
     RegisterFaceHandler,
     AuthenticateFaceHandler,
     CheckRegistrationHandler,
     ProctorCheckInHandler,
+    ListAttendanceSnapshotsHandler,
     NotificationGateway,
   ],
 })

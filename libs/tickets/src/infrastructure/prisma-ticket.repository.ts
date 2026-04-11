@@ -6,10 +6,37 @@ import { TICKET_REPOSITORY, ITicketRepository } from '../domain';
 export class PrismaTicketRepository implements ITicketRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private decorateTicket(ticket: any): any {
+        const aiCandidates = ticket.aiCandidates ?? [];
+        const pendingCount = aiCandidates.filter((candidate: any) => candidate.reviewStatus === 'PENDING_REVIEW').length;
+
+        const latestSummary =
+            ticket.latestSummary ??
+            [...(ticket.activityHistories ?? [])]
+                .reverse()
+                .map((history: any) => {
+                    try {
+                        const parsed = JSON.parse(history.description);
+                        if (parsed?.meta?.body?.trim()) return parsed.meta.body.trim();
+                    } catch { }
+                    return history.note?.trim?.() || null;
+                })
+                .find((value: string | null) => !!value) ??
+            ticket.description ??
+            null;
+
+        return {
+            ...ticket,
+            latestSummary,
+            needsAiReview: pendingCount > 0,
+            aiCandidates,
+        };
+    }
+
     async save(data: any): Promise<any> {
         if (data.id) {
             // Update existing
-            return this.prisma.issueTicket.update({
+            const ticket = await (this.prisma as any).issueTicket.update({
                 where: { id: data.id },
                 data: {
                     status: data.status,
@@ -25,6 +52,9 @@ export class PrismaTicketRepository implements ITicketRepository {
                     resolutionCode: data.resolutionCode,
                     resolutionCustomText: data.resolutionCustomText,
                     resolutionStandardText: data.resolutionStandardText,
+                    latestSummary: data.latestSummary,
+                    resolvedBy: data.resolvedBy,
+                    resolvedAt: data.resolvedAt,
                     needsAiReview: data.needsAiReview,
                     aiTrainingStatus: data.aiTrainingStatus,
                     reviewedBy: data.reviewedBy,
@@ -35,12 +65,15 @@ export class PrismaTicketRepository implements ITicketRepository {
                     reporter: true,
                     assignee: true,
                     session: true,
+                    aiCandidates: true,
+                    activityHistories: { orderBy: { createdAt: 'asc' } },
                 },
             });
+            return this.decorateTicket(ticket);
         }
 
         // Create new
-        return this.prisma.issueTicket.create({
+        const ticket = await (this.prisma as any).issueTicket.create({
             data: {
                 issueName: data.issueName,
                 issueType: data.issueType,
@@ -66,12 +99,15 @@ export class PrismaTicketRepository implements ITicketRepository {
                 reporter: true,
                 assignee: true,
                 session: { include: { examRoom: true } },
+                aiCandidates: true,
+                activityHistories: { orderBy: { createdAt: 'asc' } },
             },
         });
+        return this.decorateTicket(ticket);
     }
 
     async findById(id: string): Promise<any | null> {
-        return this.prisma.issueTicket.findUnique({
+        const ticket = await (this.prisma as any).issueTicket.findUnique({
             where: { id },
             include: {
                 reporter: { select: { id: true, fullName: true, email: true, role: true } },
@@ -80,8 +116,12 @@ export class PrismaTicketRepository implements ITicketRepository {
                 activityHistories: {
                     orderBy: { createdAt: 'asc' },
                 },
+                aiCandidates: {
+                    orderBy: { createdAt: 'desc' },
+                },
             },
         });
+        return ticket ? this.decorateTicket(ticket) : null;
     }
 
     async findMany(filters: {
@@ -111,7 +151,7 @@ export class PrismaTicketRepository implements ITicketRepository {
             }
         }
 
-        return this.prisma.issueTicket.findMany({
+        const tickets = await (this.prisma as any).issueTicket.findMany({
             where,
             orderBy: { createdAt: 'desc' },
             include: {
@@ -122,7 +162,14 @@ export class PrismaTicketRepository implements ITicketRepository {
                         examRoom: { select: { id: true, roomNumber: true } },
                     },
                 },
+                activityHistories: {
+                    orderBy: { createdAt: 'asc' },
+                },
+                aiCandidates: {
+                    orderBy: { createdAt: 'desc' },
+                },
             },
         });
+        return tickets.map((ticket: any) => this.decorateTicket(ticket));
     }
 }

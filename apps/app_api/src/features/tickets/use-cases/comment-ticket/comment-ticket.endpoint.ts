@@ -14,8 +14,15 @@ export class CommentTicketEndpoint {
     constructor(private readonly handler: CommentTicketHandler) { }
 
     @Post(':id/comments')
-    @Roles(RoleType.EXAM_OFFICER, RoleType.HALL_INVIGILATOR, RoleType.IT_SUPPORT)
-    @ApiOperation({ summary: 'Add a comment to a ticket' })
+    @Roles(
+        RoleType.EXAM_OFFICER,
+        RoleType.HALL_INVIGILATOR,
+        RoleType.IT_SUPPORT,
+        RoleType.ADMIN,
+        RoleType.PROCTOR,
+        RoleType.STUDENT,
+    )
+    @ApiOperation({ summary: 'Add a comment/conclusion/resolution to a ticket' })
     async handle(
         @Param('id') id: string,
         @Body() dto: CommentTicketDto,

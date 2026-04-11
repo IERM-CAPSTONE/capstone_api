@@ -1,0 +1,24 @@
+model AiCandidate {
+  id                   String                  @id @default(uuid())
+  ticketId             String
+  sourceActivityId     String
+  sourceType           AiCandidateSourceType
+  issueCode            String?
+  issueType            String?
+  issueCustomText      String?
+  resolutionCode       String?
+  resolutionCustomText String?
+  responseText         String?
+  techNote             String?
+  reviewStatus         AiCandidateReviewStatus @default(PENDING_REVIEW)
+  reviewNote           String?
+  reviewedBy           String?
+  reviewedAt           DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  ticket               IssueTicket             @relation(fields: [ticketId], references: [id])
+
+  @@index([ticketId])
+  @@index([reviewStatus])
+  @@index([sourceActivityId])
+}

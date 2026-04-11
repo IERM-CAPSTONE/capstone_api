@@ -17,6 +17,11 @@ export class GoogleLoginEndpoint {
         private readonly configService: ConfigService,
     ) { }
 
+    private resolvePreferredLocale(cookieHeader?: string): 'vi' | 'en' {
+        const matched = cookieHeader?.match(/(?:^|;\s*)preferred_locale=(vi|en)(?:;|$)/i)?.[1]?.toLowerCase();
+        return matched === 'en' ? 'en' : 'vi';
+    }
+
     @Get()
     @UseGuards(AuthGuard('google'))
     @ApiOperation({ summary: 'Initiate Google OAuth login' })
@@ -40,7 +45,7 @@ export class GoogleLoginEndpoint {
 
         // Redirect back to frontend
         const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3001');
-        const locale = 'en'; // Default locale
+        const locale = this.resolvePreferredLocale(req.headers?.cookie);
 
         if (user.role.value === RoleType.ADMIN) {
             return res.redirect(`${frontendUrl}/${locale}/admin`);
