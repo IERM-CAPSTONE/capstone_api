@@ -26,9 +26,6 @@ lerna-debug.log*
 
 /generated/prisma
 # .env
-# .env.development
-# .env.development
-# *.development
-# .env.development
-.env.development
-.env.development
+ .env.development
+ .env.development
+ *.development
