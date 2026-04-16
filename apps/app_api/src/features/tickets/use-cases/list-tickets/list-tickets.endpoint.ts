@@ -36,18 +36,14 @@ export class ListTicketsEndpoint {
         @Request() req?: any,
     ): Promise<any[]> {
         const user = req.user;
+        const commonFilters = { status, issueType, sessionId, fromDate, toDate };
 
-        // Hall Invigilator / IT Support → tickets assigned to them
-        if ([RoleType.IT_SUPPORT, RoleType.HALL_INVIGILATOR].includes(user.role)) {
-            return this.handler.execute({ status, issueType, assigneeId: user.userId, sessionId, fromDate, toDate });
-        }
-
-        // Proctor → tickets they reported
-        if (user.role === RoleType.PROCTOR || user.role === RoleType.STUDENT) {
-            return this.handler.execute({ status, issueType, reporterId: user.userId, sessionId, fromDate, toDate });
+        // These roles see tickets where they are involved (reporter OR assignee)
+        if ([RoleType.IT_SUPPORT, RoleType.HALL_INVIGILATOR, RoleType.PROCTOR, RoleType.STUDENT].includes(user.role)) {
+            return this.handler.executeForUser(user.userId, commonFilters);
         }
 
         // Exam Officers/Admin see all
-        return this.handler.execute({ status, issueType, sessionId, fromDate, toDate });
+        return this.handler.execute(commonFilters);
     }
 }
