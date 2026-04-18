@@ -17,6 +17,10 @@ export class SwapSeatsHandler {
     async handle(sourceSeatId: string, targetSeatId: string, examSessionId: string) {
         this.logger.log(`Swapping seats: ${sourceSeatId} <-> ${targetSeatId}`);
 
+        if (sourceSeatId === targetSeatId) {
+            throw new BadRequestException('Source and target seats must be different');
+        }
+
         // 1. Fetch both seats
         const [sourceSeat, targetSeat] = await Promise.all([
             this.prisma.examSeat.findUnique({ where: { id: sourceSeatId } }),
@@ -41,9 +45,10 @@ export class SwapSeatsHandler {
             throw new BadRequestException('Seat swapping only enabled after layout is finalized');
         }
 
-        // 4. Check if either seat is locked
-        if (sourceSeat.status === 'Locked' || targetSeat.status === 'Locked') {
-            throw new BadRequestException('Cannot swap locked seats');
+        // 4. Protect seats that are not editable in seat-management workflows
+        const blockedStatuses = new Set(['Locked', 'Present', 'Absent']);
+        if (blockedStatuses.has(sourceSeat.status) || blockedStatuses.has(targetSeat.status)) {
+            throw new BadRequestException('Cannot swap seats with Locked, Present, or Absent status');
         }
 
         // 5. Check if seats have students (must have at least one student)

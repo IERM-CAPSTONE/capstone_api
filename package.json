@@ -27,12 +27,14 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./apps/app_api/test/jest-e2e.json",
-    "db:seed": "npx ts-node prisma/seed.ts",
+    "db:seed": "npx ts-node prisma/seed-ready.ts",
+    "db:seed:legacy": "npx ts-node prisma/seed.ts",
+    "db:seed:comprehensive": "npx ts-node prisma/seed-comprehensive.ts",
     "db:reset": "npx prisma migrate reset --force",
     "db:migrate": "npx prisma migrate dev"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed-ready.ts"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.1.0",

@@ -28,4 +28,6 @@ lerna-debug.log*
 
 /generated/prisma
 ## end of dotenv rules
+/scripts
+
 

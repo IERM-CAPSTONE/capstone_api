@@ -7,21 +7,24 @@ import { ChangeExamSeatStatusHandler } from './use-cases/change-seat-status/chan
 import { GetAllExamSeatsHandler } from './use-cases/get-all-exam-seats/get-all-exam-seats.handler';
 import { GetExamSeatsBySessionHandler } from './use-cases/get-exam-seats-by-session/get-exam-seats-by-session.handler';
 import { SwapSeatsHandler, SwapSeatsEndpoint } from './use-cases/swap-seats';
+import { ApplySeatTemplateEndpoint, ApplySeatTemplateHandler } from './use-cases/apply-seat-template';
 
 @Module({
     imports: [ExamSeatsModule, ExamSessionsCoreModule, PrismaModule],
-    controllers: [ExamSeatsController, SwapSeatsEndpoint],
+    controllers: [ExamSeatsController, SwapSeatsEndpoint, ApplySeatTemplateEndpoint],
     providers: [
         ChangeExamSeatStatusHandler,
         GetAllExamSeatsHandler,
         GetExamSeatsBySessionHandler,
         SwapSeatsHandler,
+        ApplySeatTemplateHandler,
     ],
     exports: [
         ChangeExamSeatStatusHandler,
         GetAllExamSeatsHandler,
         GetExamSeatsBySessionHandler,
         SwapSeatsHandler,
+        ApplySeatTemplateHandler,
     ],
 })
 export class AppExamSeatsModule { }
