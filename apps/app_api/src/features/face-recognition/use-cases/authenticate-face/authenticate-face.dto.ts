@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsBoolean, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class AuthenticateFaceDto {
@@ -25,4 +25,20 @@ export class AuthenticateFaceDto {
   @IsOptional()
   @IsString()
   examPartCode?: string;
+
+  @ApiProperty({ required: false, type: [String], description: 'Multiple frames for attendance recognition' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  images?: string[];
+
+  @ApiProperty({ required: false, description: 'Expected student UUID for 1:1 face verification' })
+  @IsOptional()
+  @IsString()
+  expectedStudentId?: string;
+
+  @ApiProperty({ required: false, description: 'Physical seat id for proctor-driven check-in' })
+  @IsOptional()
+  @IsString()
+  seatPosition?: string;
 }

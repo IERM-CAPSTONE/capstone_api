@@ -99,6 +99,7 @@ export class ProctorCheckInHandler {
           .send(MESSAGE_PATTERNS.FACE.AUTHENTICATE, {
             image: imageBuffer.toString('base64'),
             timestamp: new Date().toISOString(),
+            expectedStudentId: currentUserId,
           })
           .pipe(timeout(this.requestTimeout)),
       );

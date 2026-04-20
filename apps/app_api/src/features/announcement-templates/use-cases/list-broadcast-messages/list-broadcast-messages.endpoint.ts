@@ -18,6 +18,6 @@ export class ListBroadcastMessagesEndpoint {
     @ApiOperation({ summary: 'List persisted broadcast messages for current user' })
     @ApiResponse({ status: 200, description: 'Broadcast messages listed' })
     async handle(@Req() req: any, @Query() query: ListBroadcastMessagesQueryDto): Promise<BroadcastMessageItem[]> {
-        return this.handler.execute(req.user.id, query);
+        return this.handler.execute(req.user?.userId, query);
     }
 }

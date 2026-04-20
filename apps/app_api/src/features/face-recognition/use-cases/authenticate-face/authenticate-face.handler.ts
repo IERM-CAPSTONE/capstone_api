@@ -63,12 +63,19 @@ export class AuthenticateFaceHandler {
     dto: AuthenticateFaceDto,
     actor?: { userId?: string; role?: string },
   ): Promise<AuthenticateFaceResponse> {
-    this.logger.log(`Processing face authentication. Request DTO: ${JSON.stringify({ ...dto, image: dto.image?.substring(0, 20) + '...' })}`);
+    this.logger.log(
+      `Processing face authentication. Metadata: ${JSON.stringify({
+        examSessionId: dto.examSessionId,
+        examPartCode: dto.examPartCode,
+        isEncrypted: dto.isEncrypted,
+        imageProvided: Boolean(dto.image),
+        imageCount: Array.isArray(dto.images) ? dto.images.length : 0,
+      })}`,
+    );
 
     let imageBuffer: Buffer | null = null;
     let snapshotRecorded = false;
     const captureTimestamp = new Date();
-
     try {
       // Validation
       if (!dto.image || dto.image.trim() === '') {
@@ -99,12 +106,32 @@ export class AuthenticateFaceHandler {
       }
 
       // Convert to base64 for RabbitMQ transmission
-      const base64Image = imageBuffer.toString('base64');
+      const base64Images = Array.isArray(dto.images) && dto.images.length > 0
+        ? dto.images
+        : [imageBuffer.toString('base64')];
+
+      let candidateStudentIds: string[] | undefined;
+      if (dto.examSessionId) {
+        const studentExams = await this.prisma.studentExam.findMany({
+          where: {
+            examSessionId: dto.examSessionId,
+          },
+          select: {
+            studentId: true,
+          },
+        });
+        candidateStudentIds = [...new Set(studentExams.map((item) => item.studentId).filter(Boolean))];
+        if (candidateStudentIds.length === 0) {
+          throw new Error('No students are assigned to this exam session');
+        }
+      }
 
       // Send to RabbitMQ (Python worker)
       const payload = {
-        image: base64Image,
+        image: base64Images[0],
+        images: base64Images,
         timestamp: new Date().toISOString(),
+        candidateStudentIds,
       };
 
       this.logger.log('Sending authentication request to RabbitMQ');
@@ -146,13 +173,13 @@ export class AuthenticateFaceHandler {
             if (!isCorrectRoom) {
               this.logger.warn(`Student ${studentCode} identified but is NOT in session ${dto.examSessionId}`);
             } else {
-              // 3. Update check-in status if correct room
               this.logger.log(`Student ${studentCode} confirmed for session. Updating check-in status...`);
               await this.studentExamRepository.checkIn(result.student_id, dto.examSessionId, dto.examPartCode);
             }
           }
         } catch (e) {
           this.logger.error(`Failed to fetch user info for ID ${result.student_id}:`, e);
+          throw e;
         }
       } else {
         this.logger.warn('Face authentication completed but no studentId was matched');
@@ -319,4 +346,5 @@ export class AuthenticateFaceHandler {
       );
     }
   }
+
 }

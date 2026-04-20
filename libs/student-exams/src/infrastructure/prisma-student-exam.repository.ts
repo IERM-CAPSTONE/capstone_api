@@ -226,54 +226,60 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             where: { studentId, examSessionId }
         });
 
-        if (!studentExam) return;
-
-        const examSession = await this.prisma.examSession.findUnique({
-            where: { id: examSessionId },
-            select: {
-                examOpenTime: true,
-                examCloseTime: true,
-            },
-        });
-
-        const examOpenTime = examSession?.examOpenTime ? new Date(examSession.examOpenTime) : null;
-        const examCloseTime = examSession?.examCloseTime ? new Date(examSession.examCloseTime) : null;
-
-        if (!examOpenTime || !examCloseTime) {
-            throw new BadRequestException('Exam session time is not configured');
+        if (!studentExam) {
+            throw new BadRequestException(`Student ${studentId} is not assigned to exam session ${examSessionId}`);
         }
 
         const now = new Date();
-        const attendanceOpenAt = new Date(examOpenTime.getTime() - 40 * 60 * 1000);
-        const attendanceCloseAt = new Date(examOpenTime.getTime() + 10 * 60 * 1000);
-
-        if (now < attendanceOpenAt) {
-            throw new BadRequestException('Attendance has not opened yet');
-        }
-
-        if (now > attendanceCloseAt || now >= examCloseTime) {
-            throw new BadRequestException('Attendance is already locked');
-        }
 
         // 2. Prepare the update condition
         const whereClause: any = { studentExamId: studentExam.id };
+        let normalizedExamPartCode: string | undefined;
         if (examPartCode) {
+            normalizedExamPartCode = examPartCode.trim().toUpperCase();
             // Find by specific part code if provided
-            const part = await this.prisma.examPart.findFirst({ where: { code: examPartCode } });
-            if (part) {
-                whereClause.examPartId = part.id;
+            const part = await this.prisma.examPart.findFirst({
+                where: {
+                    code: {
+                        equals: normalizedExamPartCode,
+                        mode: 'insensitive',
+                    },
+                },
+            });
+            if (!part) {
+                throw new BadRequestException(`Exam part ${normalizedExamPartCode} not found`);
             }
+            whereClause.examPartId = part.id;
         }
 
-        // 3. Update isCheckedIn for the matching part(s)
-        await this.prisma.studentExamPart.updateMany({
-            where: whereClause,
-            data: {
-                isCheckedIn: true,
-                checkInTime: new Date(),
+        // 3. Persist attendance consistently across part, student exam, and seat
+        await this.prisma.$transaction(async (tx) => {
+            const updatedParts = await tx.studentExamPart.updateMany({
+                where: whereClause,
+                data: {
+                    isCheckedIn: true,
+                    checkInTime: now,
+                }
+            });
+
+            if (updatedParts.count === 0) {
+                throw new BadRequestException(
+                    normalizedExamPartCode
+                        ? `No StudentExamPart found for exam part ${normalizedExamPartCode}`
+                        : `No StudentExamPart found for student exam ${studentExam.id}`,
+                );
+            }
+
+            if (studentExam.seatPosition) {
+                await tx.examSeat.update({
+                    where: { id: studentExam.seatPosition },
+                    data: {
+                        status: 'Present',
+                    },
+                });
             }
         });
 
-        console.log(`[Repository] Checked in student ${studentId} for session ${examSessionId}${examPartCode ? ` (Part: ${examPartCode})` : ' (All parts)'}`);
+        console.log(`[Repository] Checked in student ${studentId} for session ${examSessionId}${normalizedExamPartCode ? ` (Part: ${normalizedExamPartCode})` : ' (All parts)'}`);
     }
 }
