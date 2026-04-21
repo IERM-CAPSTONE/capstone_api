@@ -15,20 +15,19 @@ lerna-debug.log*
 
 # dotenv environment variable files
 .agent
-# .env
-# .env.development
-# .env.test
-# .env.production
+# dotenv environment variable files
+.env
+.env.development
+.env.test
+.env.production
+.env.*
 
 # temp directory
 .temp
 .tmp
 
 /generated/prisma
-# .env
-# .env.development
-# .env.development
-# *.development
-# .env.development
-.env.development
-.env.development
+## end of dotenv rules
+/scripts
+
+
