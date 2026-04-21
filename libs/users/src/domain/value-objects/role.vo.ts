@@ -6,6 +6,8 @@ export enum RoleType {
     EXAM_OFFICER = 'EXAM_OFFICER',
     PROCTOR = 'PROCTOR',
     STUDENT = 'STUDENT',
+    IT_SUPPORT = 'IT_SUPPORT',
+    HALL_INVIGILATOR = 'HALL_INVIGILATOR',
 }
 
 export class Role {

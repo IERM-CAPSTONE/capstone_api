@@ -1,31 +1,67 @@
-// Prisma IssueTicket Model
-
 /// Ticket/issue reports raised during exam operations
 model IssueTicket {
-    id        String @id @default(uuid())
-    issueName String
+  id                String            @id @default(uuid())
+  issueName         String
+  reporterId        String
+  assigneeId        String?
+  issueType         String?
+  description       String?
+  /// MSSV of the student involved (optional, for quick reference)
+  studentCode       String?
+  priority          String?           @default("Normal")
+  resolveNote       String?
+  /// Technical resolution note added by IT Support
+  techNote          String?
+  sessionId         String?
+  status            IssueStatus       @default(PENDING)
+  /// Attachment URL (evidence for the ticket)
+  attachment        String?
+  /// OCR text extracted from the attachment for AI-assisted triage
+  ocrText           String?
+  /// Initial AI prediction captured at ticket creation time
+  aiPredictedIssueName String?
+  aiPredictedIssueType String?
+  aiConfidence      Float?
+  aiDisplayMessage  String?
+  aiEvidenceText    String?
+  aiModelVersion    String?
+  /// AI-recommended assignment type (HALL_INVIGILATOR or EXAM_OFFICER)
+  aiRecommendedAssignmentType String?
+  /// User-confirmed assignment type that was actually used
+  confirmedAssignmentType String?
+  /// Final confirmed label after human processing; used for retraining datasets
+  finalIssueName    String?
+  finalIssueType    String?
+  /// Custom human-entered final issue text when the existing taxonomy is insufficient
+  finalIssueCustomText String?
+  /// Normalized resolution action code chosen by staff; used for learning standardized handling
+  resolutionCode    String?
+  /// Custom human-entered resolution label when the standardized catalog is insufficient
+  resolutionCustomText String?
+  /// Standardized response text generated from the selected resolution template
+  resolutionStandardText String?
+  /// One-line summary shown in list views, derived from the newest relevant timeline entry
+  latestSummary     String?
+  /// User id that resolved the latest solved snapshot
+  resolvedBy        String?
+  /// Timestamp of the latest resolved snapshot
+  resolvedAt        DateTime?
+  /// Whether this ticket still needs human review before it can be used for AI training
+  needsAiReview     Boolean           @default(false)
+  /// Lifecycle of this ticket for AI training dataset curation
+  aiTrainingStatus  String            @default("PENDING_REVIEW")
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  reviewNote        String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  reporter          User              @relation("reporter", fields: [reporterId], references: [id])
+  assignee          User?             @relation("assignee", fields: [assigneeId], references: [id])
+  session           ExamSession?      @relation(fields: [sessionId], references: [id])
+  activityHistories ActivityHistory[]
+  aiCandidates      AiCandidate[]
 
-    reporterId String
-    reporter   User   @relation("reporter", fields: [reporterId], references: [id])
-
-    assigneeId String?
-    assignee   User?   @relation("assignee", fields: [assigneeId], references: [id])
-
-    issueType   String?
-    description String?
-
-    sessionId String?
-    session   ExamSession? @relation(fields: [sessionId], references: [id])
-
-    status IssueStatus @default(PENDING)
-
-    /// Attachment URL (evidence for the ticket)
-    attachment String?
-
-    createdAt   DateTime     @default(now())
-    updatedAt   DateTime     @updatedAt
-
-    @@index([reporterId])
-    @@index([assigneeId])
-    @@index([sessionId])
+  @@index([reporterId])
+  @@index([assigneeId])
+  @@index([sessionId])
 }

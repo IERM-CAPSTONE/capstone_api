@@ -1,0 +1,32 @@
+model Subject {
+  id         String        @id @default(uuid())
+  code       String        @unique
+  name       String?
+  department String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  semesterId String?
+  isCoursera Boolean       @default(false)
+  isMajor    Boolean       @default(false)
+  semester   Semester?     @relation(fields: [semesterId], references: [id])
+  parts      SubjectPart[]
+
+  @@index([code])
+  @@index([semesterId])
+}
+
+/// Represents a specific part/type of an exam for a subject (e.g., Oral, Writing)
+model SubjectPart {
+  id         String   @id @default(uuid())
+  subjectId  String
+  examPartId String
+  duration   Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  subject    Subject  @relation(fields: [subjectId], references: [id])
+  examPart   ExamPart @relation(fields: [examPartId], references: [id])
+
+  @@unique([subjectId, examPartId])
+  @@index([subjectId])
+  @@index([examPartId])
+}

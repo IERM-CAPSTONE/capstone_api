@@ -1,33 +1,21 @@
-// Prisma StudentExam Model
-
 /// Junction table: which student belongs to which exam session
 model StudentExam {
-    id String @id @default(uuid())
+  id                String            @id @default(uuid())
+  studentId         String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  examSessionId     String
+  seatNumber        String?
+  stt               Int?
+  seatPosition      String?
+  examSession       ExamSession       @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
+  student           User              @relation(fields: [studentId], references: [id])
+  seat              ExamSeat?         @relation(fields: [seatPosition], references: [id])
+  activityHistories ActivityHistory[]
+  parts             StudentExamPart[]
 
-    examId String
-    exam   ExamSession @relation(fields: [examId], references: [id])
-
-    studentId String
-    student   User   @relation(fields: [studentId], references: [id])
-
-    seatNumber Int?
-    status     StudentExamStatus @default(CHECKEDIN)
-
-    /// Optional link to identity snapshot used during check-in
-    identityId String?
-    identity   Identity? @relation(fields: [identityId], references: [id])
-
-    isMatched    Boolean   @default(false)
-    checkinTime  DateTime?
-    checkoutTime DateTime?
-
-    /// Admin/proctor can invalidate a record if fraud is detected
-    isValid Boolean @default(true)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@unique([examId, studentId])
-    @@index([studentId])
-    @@index([examId])
+  @@unique([examSessionId, studentId])
+  @@index([studentId])
+  @@index([examSessionId])
+  @@index([seatPosition])
 }

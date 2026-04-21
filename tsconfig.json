@@ -19,6 +19,12 @@
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
     "esModuleInterop": true,
+    "types": [
+      "node",
+      "express",
+      "multer",
+      "jest"
+    ],
     "paths": {
       "@app/queue": [
         "libs/queue/src"
@@ -37,16 +43,94 @@
       ],
       "@app/users/*": [
         "libs/users/src/*"
+      ],
+      "@app/exam-rooms": [
+        "libs/exam-rooms/src"
+      ],
+      "@app/exam-rooms/*": [
+        "libs/exam-rooms/src/*"
+      ],
+      "@app/exam-sessions": [
+        "libs/exam-sessions/src"
+      ],
+      "@app/exam-sessions/*": [
+        "libs/exam-sessions/src/*"
+      ],
+      "@app/student-exams": [
+        "libs/student-exams/src"
+      ],
+      "@app/student-exams/*": [
+        "libs/student-exams/src/*"
+      ],
+      "@app/exam-seats": [
+        "libs/exam-seats/src"
+      ],
+      "@app/exam-seats/*": [
+        "libs/exam-seats/src/*"
+      ],
+      "@app/cache": [
+        "libs/cache/src"
+      ],
+      "@app/cache/*": [
+        "libs/cache/src/*"
+      ],
+      "@app/proctor-applications": [
+        "libs/proctor-applications/src"
+      ],
+      "@app/proctor-applications/*": [
+        "libs/proctor-applications/src/*"
+      ],
+      "@app/exam-parts": [
+        "libs/exam-parts/src"
+      ],
+      "@app/exam-parts/*": [
+        "libs/exam-parts/src/*"
+      ],
+      "@app/subjects": [
+        "libs/subjects/src"
+      ],
+      "@app/subjects/*": [
+        "libs/subjects/src/*"
+      ],
+      "@app/semesters": [
+        "libs/semesters/src"
+      ],
+      "@app/semesters/*": [
+        "libs/semesters/src/*"
+      ],
+      "@app/tickets": [
+        "libs/tickets/src"
+      ],
+      "@app/tickets/*": [
+        "libs/tickets/src/*"
+      ],
+      "@app/devices": [
+        "libs/devices/src"
+      ],
+      "@app/devices/*": [
+        "libs/devices/src/*"
+      ],
+      "@app/devices-applications": [
+        "libs/devices-applications/src"
+      ],
+      "@app/devices-applications/*": [
+        "libs/devices-applications/src/*"
+      ],
+      "@app/announcement-templates": [
+        "libs/announcement-templates/src"
+      ],
+      "@app/announcement-templates/*": [
+        "libs/announcement-templates/src/*"
       ]
     }
   },
   "include": [
     "apps/**/*.ts",
-    "libs/**/*.ts"
+    "libs/**/*.ts",
+    "*.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.spec.ts"
+    "dist"
   ]
 }

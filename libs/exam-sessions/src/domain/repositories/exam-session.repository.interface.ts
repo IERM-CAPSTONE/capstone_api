@@ -1,0 +1,73 @@
+import { ExamSession } from '../entities';
+import { SubjectMonitorSummary } from './monitor-summary.types';
+
+export interface IExamSessionRepository {
+    save(session: ExamSession): Promise<ExamSession>;
+    findById(id: string): Promise<ExamSession | null>;
+    findMany(query?: {
+        subjectCode?: string;
+        examCode?: string;
+        date?: string;
+        time?: string;
+        status?: string;
+        fromDate?: string;
+        toDate?: string;
+        startTime?: string;
+        endTime?: string;
+        examRoomId?: string;
+        proctorId?: string;
+        hallInvigilatorId?: string;
+        studentId?: string;
+        semesterId?: string;
+        skip?: number;
+        take?: number;
+    }): Promise<ExamSession[]>;
+    findOne(query: {
+        id?: string;
+        subjectCode?: string;
+        examRoomId?: string;
+        proctorId?: string;
+    }): Promise<ExamSession | null>;
+    exists(id: string): Promise<boolean>;
+    count(query?: {
+        subjectCode?: string;
+        examCode?: string;
+        date?: string;
+        time?: string;
+        status?: string;
+        fromDate?: string;
+        toDate?: string;
+        startTime?: string;
+        endTime?: string;
+        examRoomId?: string;
+        proctorId?: string;
+        hallInvigilatorId?: string;
+        studentId?: string;
+    }): Promise<number>;
+
+    /**
+     * Tìm các phiên thi bị trùng lịch (overlap)
+     */
+    findOverlapping(params: {
+        startTime: Date;
+        endTime: Date;
+        examRoomId?: string | null;
+        proctorId?: string | null;
+        hallInvigilatorId?: string | null;
+        excludeId?: string;
+    }): Promise<ExamSession[]>;
+
+    updateStatusBulk(ids: string[], status: string): Promise<number>;
+    publishGeneratedDrafts(semesterId: string, campus: string): Promise<number>;
+    publishAllDraftsForSemester(semesterId: string): Promise<number>;
+
+    getMonitorSummary(query: {
+        campus?: string;
+        semesterId?: string;
+        date?: Date;
+    }): Promise<SubjectMonitorSummary[]>;
+
+    delete(id: string): Promise<void>;
+}
+
+export const EXAM_SESSION_REPOSITORY = Symbol('EXAM_SESSION_REPOSITORY');

@@ -1,31 +1,19 @@
-// Prisma Identity Model
-
 /// Stores identity verification info (CCCD images + extracted OCR + face embedding)
 model Identity {
-  id     String @id @default(uuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id])
-
+  id            String           @id @default(uuid())
   /// Optional raw images (can be stored in Cloudinary/S3 URL)
-  faceImage String?
-  frontCCCD String?
-  backCCCD  String?
-
+  faceImage     String?
+  frontCCCD     String?
+  backCCCD      String?
   /// OCR / extracted fields from CCCD (JSON for flexibility)
   extractedData Json?
-
   /// Is identity verified by exam officer/admin
-  isValid Boolean @default(false)
-
-  /// Active face embedding used for recognition
-  activeVector Json?
-
-  /// Enrollment history (multi-enroll support)
-  enrollments FaceEnrollment[]
-
-  /// Student exams using this identity snapshot
-  studentExams StudentExam[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isValid       Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  studentId     String           @unique
+  activeVector  Unsupported("vector(512)")?
+  userId        String?          @unique
+  user          User?            @relation(fields: [userId], references: [id])
+  enrollments   FaceEnrollment[]
 }

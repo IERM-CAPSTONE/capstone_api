@@ -42,6 +42,51 @@
       "compilerOptions": {
         "tsConfigPath": "libs/users/tsconfig.lib.json"
       }
+    },
+    "exam-rooms": {
+      "type": "library",
+      "root": "libs/exam-rooms",
+      "entryFile": "index",
+      "sourceRoot": "libs/exam-rooms/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/exam-rooms/tsconfig.lib.json"
+      }
+    },
+    "exam-sessions": {
+      "type": "library",
+      "root": "libs/exam-sessions",
+      "entryFile": "index",
+      "sourceRoot": "libs/exam-sessions/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/exam-sessions/tsconfig.lib.json"
+      }
+    },
+    "proctor-applications": {
+      "type": "library",
+      "root": "libs/proctor-applications",
+      "entryFile": "index",
+      "sourceRoot": "libs/proctor-applications/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/proctor-applications/tsconfig.lib.json"
+      }
+    },
+    "tickets": {
+      "type": "library",
+      "root": "libs/tickets",
+      "entryFile": "index",
+      "sourceRoot": "libs/tickets/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/tickets/tsconfig.lib.json"
+      }
+    },
+    "announcement-templates": {
+      "type": "library",
+      "root": "libs/announcement-templates",
+      "entryFile": "index",
+      "sourceRoot": "libs/announcement-templates/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/announcement-templates/tsconfig.lib.json"
+      }
     }
   }
 }

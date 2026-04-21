@@ -1,12 +1,19 @@
-// Prisma Enums
-// All enum definitions for the IERM system
-
 /// User roles in the system
 enum Role {
   ADMIN
   EXAM_OFFICER
   PROCTOR
   STUDENT
+  IT_SUPPORT
+  HALL_INVIGILATOR
+}
+
+enum Campus {
+  HCM
+  HN
+  DN
+  QN
+  CT
 }
 
 /// Student exam attendance status
@@ -25,6 +32,17 @@ enum IssueStatus {
   IN_PROGRESS
   SOLVED
   OPEN
+}
+
+enum AiCandidateSourceType {
+  CONCLUSION
+  RESOLUTION
+}
+
+enum AiCandidateReviewStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
 }
 
 /// Preferred shift for proctor applications
@@ -51,4 +69,77 @@ enum ProctorApplicationStatus {
 enum AssignmentStatus {
   ASSIGNED
   CANCELLED
+}
+
+/// Exam room status
+enum ExamRoomStatus {
+  Available
+  Occupied
+  Maintenance
+  Exam_Ongoing
+  For_Exam
+}
+
+/// Exam session status
+enum ExamSessionStatus {
+  Ongoing
+  Ended
+  Scheduled
+  Draft
+}
+
+/// Activity types for auditing student exam actions
+enum ActivityType {
+  CHECKED_IN
+  MOVED
+  SEAT_MOVED
+  TICKET_CREATED
+  TICKET_ASSIGNED
+  TICKET_REASSIGNED
+  TICKET_STARTED
+  TICKET_RESOLVED
+  TICKET_COMMENTED
+}
+
+/// Exam seat status
+enum ExamSeatStatus {
+  Available
+  Locked
+  Assigned
+  Present
+  Absent
+}
+
+enum ExamType {
+  PE
+  FE
+  TE
+  RE
+}
+
+enum AnnouncementType {
+  INFO
+  WARNING
+  URGENT
+}
+
+
+
+
+enum DeviceApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceActorType {
+  STUDENT
+  PROCTOR
+}
+
+enum AttendanceSnapshotStatus {
+  MATCHED
+  NOT_MATCHED
+  WRONG_ROOM
+  FAILED
 }

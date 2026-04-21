@@ -1,0 +1,45 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsInt, IsOptional, IsPositive, Min, IsString, IsNotEmpty, IsEnum } from 'class-validator';
+
+/**
+ * Create ExamRoom - Request DTO
+ */
+export class CreateExamRoomDto {
+    @ApiProperty({ example: '101', description: 'Room number' })
+    @IsString()
+    roomNumber: string;
+
+    @ApiProperty({ example: 30, description: 'Room capacity', required: false, nullable: true })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    capacity?: number | null;
+
+    @ApiProperty({ example: 5, description: 'Maximum rows', required: false })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    maxRows?: number;
+
+    @ApiProperty({ example: 6, description: 'Maximum columns', required: false })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    maxColumns?: number;
+
+    @ApiProperty({ example: 30, description: 'Total seats', required: false })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    totalSeats?: number;
+
+    @ApiProperty({ example: 'Available', enum: ['Available', 'Occupied', 'Maintenance', 'Exam_Ongoing', 'For_Exam'], description: 'Room status', required: false })
+    @IsOptional()
+    @IsEnum(['Available', 'Occupied', 'Maintenance', 'Exam_Ongoing', 'For_Exam'])
+    status?: string;
+
+    @ApiProperty({ example: 'HCM', enum: ['HCM', 'HN', 'DN', 'QN', 'CT'], description: 'Campus', required: false })
+    @IsOptional()
+    @IsEnum(['HCM', 'HN', 'DN', 'QN', 'CT'])
+    campus?: string;
+}

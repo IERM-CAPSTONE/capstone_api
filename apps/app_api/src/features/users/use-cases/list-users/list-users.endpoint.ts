@@ -15,10 +15,51 @@ export class ListUsersEndpoint {
     constructor(private readonly handler: ListUsersHandler) { }
 
     @Get()
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
+    @Roles(
+        RoleType.ADMIN,
+        RoleType.EXAM_OFFICER,
+        RoleType.HALL_INVIGILATOR,
+        RoleType.PROCTOR,
+    )
     @ApiOperation({ summary: 'Get list of users with pagination' })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+    @ApiQuery({ name: 'role', required: false, enum: RoleType, description: 'Filter by role' })
+    @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
+    @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name, email, or code' })
     @ApiResponse({ status: 200, description: 'Users retrieved successfully', type: PaginatedUserResponse })
     async handle(@Query() query: ListUsersDto): Promise<PaginatedUserResponse> {
         return this.handler.execute(query);
+    }
+
+    @Get('proctors')
+    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
+    @ApiOperation({ summary: 'Get list of proctors with pagination' })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+    @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
+    @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name, email, or code' })
+    @ApiResponse({ status: 200, description: 'Proctors retrieved successfully', type: PaginatedUserResponse })
+    async getProctors(@Query() query: ListUsersDto): Promise<PaginatedUserResponse> {
+        query.role = RoleType.PROCTOR;
+        return this.handler.execute(query);
+    }
+
+    @Get('assignees')
+    @Roles(
+        RoleType.ADMIN,
+        RoleType.EXAM_OFFICER,
+        RoleType.HALL_INVIGILATOR,
+        RoleType.PROCTOR,
+    )
+    @ApiOperation({ summary: 'Get IT Support and Hall Invigilator users for ticket assignment' })
+    @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name or email' })
+    @ApiResponse({ status: 200, description: 'Assignee candidates retrieved successfully' })
+    async getAssignees(@Query() query: ListUsersDto): Promise<any[]> {
+        const [itSupport, hallInvigilator] = await Promise.all([
+            this.handler.execute({ ...query, role: RoleType.IT_SUPPORT, limit: 100 }),
+            this.handler.execute({ ...query, role: RoleType.HALL_INVIGILATOR, limit: 100 }),
+        ]);
+        return [...itSupport.data, ...hallInvigilator.data];
     }
 }

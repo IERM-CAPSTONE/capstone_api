@@ -1,6 +1,7 @@
 import { Controller, Post, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import type { Express } from 'express';
 import { RoleType } from '@app/users';
 import { Roles } from '../../../../common/decorators';
 import { RolesGuard, JwtAuthGuard } from '../../../../common/guards';

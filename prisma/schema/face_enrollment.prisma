@@ -1,23 +1,17 @@
-// Prisma FaceEnrollment Model
-
 /// Face enrollment history records (supports re-enroll, device tracking, audit)
 model FaceEnrollment {
-    id String @id @default(uuid())
+  id         String   @id @default(uuid())
+  identityId String
+  deviceId   String?
+  vector     Json
+  quality    Float?
+  model      String?
+  isActive   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  identity   Identity @relation(fields: [identityId], references: [id])
+  device     Device?  @relation(fields: [deviceId], references: [id])
 
-    identityId String
-    identity   Identity @relation(fields: [identityId], references: [id])
-
-    deviceId String?
-    device   Device? @relation(fields: [deviceId], references: [id])
-
-    vector   Json // face embedding vector
-    quality  Float?
-    model    String?
-    isActive Boolean @default(false)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@index([identityId])
-    @@index([deviceId])
+  @@index([identityId])
+  @@index([deviceId])
 }

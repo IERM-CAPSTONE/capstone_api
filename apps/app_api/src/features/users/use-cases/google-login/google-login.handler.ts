@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Redirect } from '@nestjs/common';
 import { TokenService } from '@app/users';
 import { IUserRepository, USER_REPOSITORY, User } from '@app/users';
 import { RoleType } from '@app/users';
@@ -13,13 +13,14 @@ export class GoogleLoginHandler {
 
     async handleCallback(googleUser: any): Promise<{ user: User; accessToken: string; refreshToken: string }> {
         // 1. Find or create user
-        let user = await this.userRepository.findByEmail(googleUser.email);
+        let user = await this.userRepository.findOne({ email: googleUser.email });
 
         if (!user) {
             // Create a new user if not exists
             user = User.create({
                 id: uuidv4(),
                 email: googleUser.email,
+                username: googleUser.email.split('@')[0].toLowerCase(),
                 fullName: `${googleUser.firstName} ${googleUser.lastName}`,
                 avatarUrl: googleUser.picture,
                 role: RoleType.STUDENT, // Default role
@@ -31,6 +32,8 @@ export class GoogleLoginHandler {
         const accessToken = await this.tokenService.generateAccessToken(user.id, user.role?.value);
         const refreshToken = await this.tokenService.generateRefreshToken(user.id);
 
+        Redirect('http://localhost:3001/en/admin');
         return { user, accessToken, refreshToken };
+
     }
 }

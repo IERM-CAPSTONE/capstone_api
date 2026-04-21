@@ -19,15 +19,16 @@ export class Email {
             throw new Error('Email cannot be empty');
         }
 
-        const normalized = email.toLowerCase().trim();
+        const normalized = email.trim();
 
         if (!this.EMAIL_REGEX.test(normalized)) {
             throw new Error(`Invalid email format: ${email}`);
         }
 
-        if (!normalized.endsWith('@fpt.edu.vn')) {
-            throw new Error('Email must end with @fpt.edu.vn');
-        }
+        // TODO: Enable email domain restriction in production
+        // if (!normalized.endsWith('@fpt.edu.vn') && !normalized.endsWith('@fe.edu.vn')) {
+        //     throw new Error('Email must end with @fpt.edu.vn or @fe.edu.vn');
+        // }
 
         return new Email(normalized);
     }

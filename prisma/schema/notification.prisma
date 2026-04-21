@@ -1,25 +1,17 @@
-// Prisma Notification Models
-// In-app notification messages
-
-/// Notification messages from users to exam rooms (in-app/email/sms as channels)
+/// In-app notifications, supports user-to-user messaging
 model Notification {
-  id String @id @default(uuid())
-
-  toId String
-  to   ExamRoom @relation(fields: [toId], references: [id])
-
-  fromId String?
-  from   User?   @relation("notificationFrom", fields: [fromId], references: [id])
-
-  title   String
-  message String
-
-  channel String? // e.g., "in-app", "email", "sms"
-  meta    Json?
-  isRead  Boolean @default(false)
-
+  id        String   @id @default(uuid())
+  toUserId  String
+  fromId    String?
+  title     String
+  message   String
+  channel   String?
+  meta      Json?
+  isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+  toUser    User     @relation("notificationTo", fields: [toUserId], references: [id])
+  from      User?    @relation("notificationFrom", fields: [fromId], references: [id])
 
-  @@index([toId])
+  @@index([toUserId])
   @@index([fromId])
 }

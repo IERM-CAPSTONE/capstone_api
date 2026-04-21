@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import type { Express } from 'express';
 import { RABBITMQ_CLIENTS, MESSAGE_PATTERNS, UserImportJobData } from '@app/queue';
 
 @Injectable()

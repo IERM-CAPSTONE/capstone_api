@@ -62,7 +62,112 @@ export interface UserImportFinishedData {
     fileName: string;
     successCount: number;
     errorCount: number;
+    failedItems?: any[];
+    batchId?: string;
     timestamp: Date;
+}
+
+/**
+ * Interface cho Exam Import Job Data
+ */
+export interface ExamImportJobData {
+    /** Tên file */
+    fileName: string;
+
+    /** Nội dung file dưới dạng base64 */
+    fileContent: string;
+
+    /** Mime type */
+    mimeType: string;
+
+    /** Semester ID (optional) */
+    semesterId?: string;
+
+    /** Campus ID (optional) */
+    campusId?: string;
+}
+
+export interface ExamImportFinishedData {
+    action: 'rooms' | 'schedule' | 'proctor' | 'examcode' | 'subjects';
+    fileName?: string;
+    successCount: number;
+    errorCount: number;
+    failedItems?: { item: any; error: string }[];
+    batchId?: string;
+    timestamp: Date;
+}
+
+/**
+ * Interface cho dữ liệu Import Schedule từ API
+ */
+export interface ScheduleImportData {
+    examCode?: string | null;
+    openCode?: string | null;
+    subjectCode: string;
+    examDate: string;
+    startTime: string;
+    endTime: string;
+    room: string;
+    examSession: string;
+}
+
+export interface StudentImportData {
+    stt?: number | null;
+    studentCode: string;
+    name: string;
+    email?: string | null;
+    username?: string | null;
+    memberCode?: string | null;
+    examSession?: string | null;
+    subjectCode: string;
+    examPart: string;
+}
+
+export interface ProctorImportData {
+    dateExam: string;
+    timeExam: string;
+    examRoom: string;
+    proctorEmail: string;
+    proctorType?: string;
+}
+
+export interface ImportScheduleJobData {
+    importType: 'schedule';
+    schedules: ScheduleImportData[];
+    students: StudentImportData[];
+    batchId?: string;
+    totalItems?: number;
+}
+
+export interface ImportProctorJobData {
+    importType: 'proctor';
+    proctors: ProctorImportData[];
+    creatorId?: string;
+    batchId?: string;
+    totalItems?: number;
+}
+
+export interface ExamCodeImportData {
+    dateExam: string;
+    timeExam: string;
+    examRoom: string;
+    subjectCode?: string;
+    examCode?: string | null;
+    openCode?: string | null;
+}
+
+export interface ImportExamCodeJobData {
+    importType: 'examcode';
+    codes: ExamCodeImportData[];
+    batchId?: string;
+    totalItems?: number;
+}
+
+export interface AttendanceSnapshotUploadJobData {
+    snapshotId: string;
+    imageBase64: string;
+    actorType: 'STUDENT' | 'PROCTOR';
+    capturedAt: string;
 }
 
 /**

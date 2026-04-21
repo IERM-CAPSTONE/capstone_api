@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersCoreModule } from '@app/users';
@@ -19,7 +20,9 @@ import { GetUserHandler, GetUserEndpoint } from './use-cases/get-user';
 import { ListUsersHandler, ListUsersEndpoint } from './use-cases/list-users';
 
 // Use Cases - Authentication
+import { FirebaseLoginHandler, FirebaseLoginEndpoint } from './use-cases/firebase-login';
 import { GoogleLoginHandler, GoogleLoginEndpoint } from './use-cases/google-login';
+import { GoogleIdTokenHandler, GoogleIdTokenEndpoint } from './use-cases/google-id-token';
 import { RefreshTokenHandler, RefreshTokenEndpoint } from './use-cases/refresh-token';
 import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
 
@@ -27,6 +30,8 @@ import { LogoutHandler, LogoutEndpoint } from './use-cases/logout';
 import { ImportStudentHandler, ImportStudentEndpoint, ImportFinishedProcessor } from './use-cases/import-student';
 import { TestTokenHandler, TestTokenEndpoint } from './use-cases/test-token';
 import { NotificationGateway } from '../../common/gateways/notification.gateway';
+import { MeEndpoint } from './use-cases/me';
+import { PushTokensEndpoint, PushTokensHandler } from './use-cases/push-tokens';
 
 @Module({
     imports: [
@@ -40,15 +45,19 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         UpdateUserEndpoint,
         DeleteUserEndpoint,
         ChangeRoleEndpoint,
-        GetUserEndpoint,
         ListUsersEndpoint,
+        GetUserEndpoint,
         // Authentication
+        FirebaseLoginEndpoint,
         GoogleLoginEndpoint,
+        GoogleIdTokenEndpoint,
         RefreshTokenEndpoint,
         LogoutEndpoint,
         ImportStudentEndpoint,
         ImportFinishedProcessor,
         TestTokenEndpoint,
+        MeEndpoint,
+        PushTokensEndpoint,
     ],
     providers: [
         // Infrastructure - Auth
@@ -65,11 +74,14 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         GetUserHandler,
         ListUsersHandler,
         // Handlers - Authentication
+        FirebaseLoginHandler,
         GoogleLoginHandler,
+        GoogleIdTokenHandler,
         RefreshTokenHandler,
         LogoutHandler,
         ImportStudentHandler,
         TestTokenHandler,
+        PushTokensHandler,
         NotificationGateway,
     ],
 })

@@ -1,0 +1,12 @@
+/// Represents a dynamic exam part (e.g., Multiple Choice, Listening)
+model ExamPart {
+  id               String            @id @default(uuid())
+  code             String            @unique
+  name             String?
+  description      String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  subjectParts     SubjectPart[]
+  studentExamParts StudentExamPart[]
+  examSessions     ExamSession[]
+}

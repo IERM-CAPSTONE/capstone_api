@@ -1,0 +1,16 @@
+/// Physical seat in an exam room for a specific session
+model ExamSeat {
+  id            String         @id @default(uuid())
+  examSessionId String
+  row           Int
+  col           Int
+  status        ExamSeatStatus @default(Available)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  examSession   ExamSession    @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
+  studentExams  StudentExam[]
+
+  @@unique([examSessionId, row, col], name: "unique_session_seat")
+  @@index([examSessionId])
+  @@index([status])
+}

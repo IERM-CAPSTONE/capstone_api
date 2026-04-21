@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Database
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: capstone-db
     restart: always
     environment:
@@ -14,6 +14,16 @@ services:
       - '${DB_PORT_EXTERNAL:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: capstone-redis
+    restart: always
+    ports:
+      - '${REDIS_PORT_EXTERNAL:-6379}:6379'
+    volumes:
+      - redis_data:/data
 
   # RabbitMQ Message Broker
   rabbitmq:
@@ -35,46 +45,10 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # API Service
-  app-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: capstone-api
-    command: node dist/apps/app_api/main
-    ports:
-      - '${API_PORT_EXTERNAL:-3000}:3000'
-    environment:
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-capstone_db}?schema=public
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin123}@rabbitmq:5672
-      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-    depends_on:
-      db:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy
-    restart: always
-
-  # Background Worker Service
-  app-background:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: capstone-background
-    command: node dist/apps/app_background/main
-    environment:
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-capstone_db}?schema=public
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin123}@rabbitmq:5672
-    depends_on:
-      db:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy
-    restart: always
-
 volumes:
   postgres_data:
     driver: local
   rabbitmq_data:
+    driver: local
+  redis_data:
     driver: local

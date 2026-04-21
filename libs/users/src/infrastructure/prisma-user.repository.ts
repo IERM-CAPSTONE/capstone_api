@@ -19,11 +19,13 @@ export class PrismaUserRepository implements IUserRepository {
 
     async save(user: User): Promise<User> {
         const data = {
-            email: user.email.value,
+            email: user.email?.value,
             fullName: user.fullName,
-            code: user.code?.value ?? null,
+            username: user.username,
+            code: user.code?.value,
             avatarUrl: user.avatarUrl,
             isActive: user.isActive,
+            campus: user.campus as any,
             role: (user.role?.value as PrismaRole) ?? null,
         };
 
@@ -40,24 +42,30 @@ export class PrismaUserRepository implements IUserRepository {
         await this.prisma.user.delete({ where: { id } });
     }
 
-    async findById(id: string): Promise<User | null> {
-        const result = await this.prisma.user.findUnique({ where: { id } });
+    async findOne(query: { id?: string; email?: string; code?: string; username?: string }, excludeId?: string): Promise<User | null> {
+        const { id, email, code, username } = query;
+        const result = await this.prisma.user.findFirst({
+            where: {
+                AND: [
+                    {
+                        OR: [
+                            ...(id ? [{ id }] : []),
+                            ...(email ? [{ email }] : []),
+                            ...(code ? [{ code }] : []),
+                            ...(username ? [{ username }] : []),
+                        ],
+                    },
+                    ...(excludeId ? [{ id: { not: excludeId } }] : []),
+                ],
+            },
+        });
         return result ? this.toDomain(result) : null;
     }
 
-    async findByEmail(email: string): Promise<User | null> {
-        const result = await this.prisma.user.findUnique({ where: { email } });
-        return result ? this.toDomain(result) : null;
-    }
-
-    async findByCode(code: string): Promise<User | null> {
-        const result = await this.prisma.user.findFirst({ where: { code } });
-        return result ? this.toDomain(result) : null;
-    }
-
-    async findByRole(role: RoleType): Promise<User[]> {
+    async findMany(query: { role?: RoleType; isActive?: boolean; search?: string }): Promise<User[]> {
+        const where = this.buildWhere(query);
         const results = await this.prisma.user.findMany({
-            where: { role: role as PrismaRole },
+            where,
             orderBy: { createdAt: 'desc' },
         });
         return results.map((r) => this.toDomain(r));
@@ -73,7 +81,7 @@ export class PrismaUserRepository implements IUserRepository {
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' },
+                orderBy: { createdAt: 'asc' },
             }),
             this.prisma.user.count({ where }),
         ]);
@@ -87,27 +95,10 @@ export class PrismaUserRepository implements IUserRepository {
         };
     }
 
-    async exists(id: string): Promise<boolean> {
-        const count = await this.prisma.user.count({ where: { id } });
-        return count > 0;
-    }
-
-    async emailExists(email: string, excludeId?: string): Promise<boolean> {
-        const count = await this.prisma.user.count({
-            where: { email, ...(excludeId && { id: { not: excludeId } }) },
-        });
-        return count > 0;
-    }
-
-    async codeExists(code: string, excludeId?: string): Promise<boolean> {
-        const count = await this.prisma.user.count({
-            where: { code, ...(excludeId && { id: { not: excludeId } }) },
-        });
-        return count > 0;
-    }
-
     async countByRole(role: RoleType): Promise<number> {
-        return this.prisma.user.count({ where: { role: role as PrismaRole } });
+        return this.prisma.user.count({
+            where: { role: role as PrismaRole },
+        });
     }
 
     async countAll(): Promise<number> {
@@ -116,7 +107,7 @@ export class PrismaUserRepository implements IUserRepository {
 
     // ==================== PRIVATE ====================
 
-    private buildWhere(options: FindPaginatedOptions): Prisma.UserWhereInput {
+    private buildWhere(options: { role?: RoleType; isActive?: boolean; search?: string }): Prisma.UserWhereInput {
         const where: Prisma.UserWhereInput = {};
         if (options.role) where.role = options.role as PrismaRole;
         if (options.isActive !== undefined) where.isActive = options.isActive;
@@ -125,32 +116,37 @@ export class PrismaUserRepository implements IUserRepository {
                 { email: { contains: options.search, mode: 'insensitive' } },
                 { fullName: { contains: options.search, mode: 'insensitive' } },
                 { code: { contains: options.search, mode: 'insensitive' } },
+                { username: { contains: options.search, mode: 'insensitive' } },
             ];
         }
         return where;
     }
 
-    private toDomain(data: {
+    private toDomain(model: {
         id: string;
-        email: string;
+        email: string | null;
         fullName: string | null;
+        username: string | null;
         code: string | null;
         avatarUrl: string | null;
         isActive: boolean;
         role: PrismaRole | null;
+        campus: string | null;
         createdAt: Date;
         updatedAt: Date;
     }): User {
         return User.fromPersistence({
-            id: data.id,
-            email: data.email,
-            fullName: data.fullName,
-            code: data.code,
-            avatarUrl: data.avatarUrl,
-            isActive: data.isActive,
-            role: data.role,
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt,
+            id: model.id,
+            email: model.email,
+            fullName: model.fullName,
+            username: model.username,
+            code: model.code,
+            avatarUrl: model.avatarUrl,
+            isActive: model.isActive,
+            role: model.role,
+            campus: model.campus,
+            createdAt: model.createdAt,
+            updatedAt: model.updatedAt,
         });
     }
 }

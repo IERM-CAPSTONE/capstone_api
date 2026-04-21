@@ -1,0 +1,20 @@
+model DeviceApplication {
+  id             String                  @id @default(uuid())
+  deviceId       String
+  registeredBy   String
+  status         DeviceApplicationStatus @default(PENDING)
+  approvedBy     String?
+  approvedAt     DateTime?
+  rejectedReason String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  device         Device                  @relation(fields: [deviceId], references: [id])
+  registeredUser User                    @relation("deviceApplicationRegisteredBy", fields: [registeredBy], references: [id])
+  approvedUser   User?                   @relation("deviceApplicationApprovedBy", fields: [approvedBy], references: [id])
+
+  @@index([deviceId])
+  @@index([registeredBy])
+  @@index([approvedBy])
+  @@index([status])
+}

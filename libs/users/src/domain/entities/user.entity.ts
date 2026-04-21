@@ -9,12 +9,14 @@ import { UserCode } from '../value-objects/user-code.vo';
 export class User {
     private constructor(
         private readonly _id: string,
-        private _email: Email,
+        private _email: Email | null,
         private _fullName: string | null,
+        private _username: string | null,
         private _code: UserCode | null,
         private _avatarUrl: string | null,
         private _isActive: boolean,
         private _role: Role | null,
+        private _campus: string | null,
         private readonly _createdAt: Date,
         private _updatedAt: Date,
     ) { }
@@ -25,12 +27,16 @@ export class User {
         return this._id;
     }
 
-    get email(): Email {
+    get email(): Email | null {
         return this._email;
     }
 
     get fullName(): string | null {
         return this._fullName;
+    }
+
+    get username(): string | null {
+        return this._username;
     }
 
     get code(): UserCode | null {
@@ -49,6 +55,10 @@ export class User {
         return this._role;
     }
 
+    get campus(): string | null {
+        return this._campus;
+    }
+
     get createdAt(): Date {
         return this._createdAt;
     }
@@ -64,13 +74,16 @@ export class User {
      */
     static create(props: {
         id: string;
-        email: string;
+        email?: string | null;
         fullName?: string;
+        username?: string;
         code?: string;
         avatarUrl?: string;
         role?: RoleType;
+        campus?: string;
+        isActive?: boolean;
     }): User {
-        const email = Email.create(props.email);
+        const email = props.email ? Email.create(props.email) : null;
         const code = props.code ? UserCode.create(props.code) : null;
         const role = props.role ? Role.create(props.role) : null;
 
@@ -78,10 +91,12 @@ export class User {
             props.id,
             email,
             props.fullName ?? null,
+            props.username?.toLowerCase() ?? null,
             code,
             props.avatarUrl ?? null,
-            true, // New users are active by default
+            props.isActive ?? true,
             role,
+            props.campus ?? null,
             new Date(),
             new Date(),
         );
@@ -92,23 +107,27 @@ export class User {
      */
     static fromPersistence(props: {
         id: string;
-        email: string;
+        email: string | null;
         fullName: string | null;
+        username: string | null;
         code: string | null;
         avatarUrl: string | null;
         isActive: boolean;
         role: string | null;
+        campus: string | null;
         createdAt: Date;
         updatedAt: Date;
     }): User {
         return new User(
             props.id,
-            Email.create(props.email),
+            props.email ? Email.fromPersistence(props.email) : null,
             props.fullName,
+            props.username,
             props.code ? UserCode.create(props.code) : null,
             props.avatarUrl,
             props.isActive,
             props.role ? Role.create(props.role as RoleType) : null,
+            props.campus,
             props.createdAt,
             props.updatedAt,
         );
@@ -122,12 +141,21 @@ export class User {
      * Update user profile
      */
     updateProfile(props: {
+        email?: string;
         fullName?: string;
+        username?: string;
         code?: string;
         avatarUrl?: string;
+        campus?: string;
     }): void {
+        if (props.email !== undefined) {
+            this._email = props.email ? Email.create(props.email) : null;
+        }
         if (props.fullName !== undefined) {
             this._fullName = props.fullName || null;
+        }
+        if (props.username !== undefined) {
+            this._username = props.username?.toLowerCase() || null;
         }
         if (props.code !== undefined) {
             this._code = props.code ? UserCode.create(props.code) : null;
@@ -135,6 +163,17 @@ export class User {
         if (props.avatarUrl !== undefined) {
             this._avatarUrl = props.avatarUrl || null;
         }
+        if (props.campus !== undefined) {
+            this._campus = props.campus || null;
+        }
+        this._updatedAt = new Date();
+    }
+
+    /**
+     * Update user email
+     */
+    updateEmail(email: string): void {
+        this._email = Email.create(email);
         this._updatedAt = new Date();
     }
 

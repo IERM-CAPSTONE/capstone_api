@@ -7,6 +7,12 @@ export const QUEUE_NAMES = {
 
     /** Queue nhận các event cho API */
     API_EVENT: 'api_event_queue',
+
+    /** Queue xử lý exam */
+    EXAM: 'exam_queue',
+
+    /** Queue xử lý face recognition */
+    FACE_RECOGNITION: 'face_recognition_queue',
 } as const;
 
 /**
@@ -19,6 +25,41 @@ export const MESSAGE_PATTERNS = {
         IMPORT_STUDENTS: 'user.import.students',
         /** Thông báo import hoàn tất */
         IMPORT_FINISHED: 'user.import.finished',
+        /** Thông báo có một activity mới giúp đồng bộ real-time */
+        ACTIVITY_LOGGED: 'user.activity.logged',
+    },
+    // Exam Patterns
+    EXAM: {
+        /** Import danh sách phòng thi */
+        IMPORT_ROOMS: 'exam.import.rooms',
+        /** Import lịch thi và sinh viên */
+        IMPORT_SCHEDULE: 'exam.import.schedule',
+        /** Import lịch thi */
+        IMPORT_SESSION: 'exam.import.session',
+        /** Import danh sách giám thị */
+        IMPORT_PROCTORS: 'exam.import.proctors',
+        /** Import mã đề và mã mở đề */
+        IMPORT_EXAMCODE: 'exam.import.examcode',
+        /** Import danh sách môn học */
+        IMPORT_SUBJECTS: 'exam.import.subjects',
+        /** Tạo lịch thi tự động */
+        AUTO_GENERATE_SCHEDULE: 'exam.auto_generate.schedule',
+        /** Thông báo import hoàn tất */
+        IMPORT_FINISHED: 'exam.import.finished',
+        /** Thông báo tạo lịch tự động hoàn tất */
+        AUTO_GENERATE_FINISHED: 'exam.auto_generate.finished',
+        /** Thông báo thuật toán tạo lịch đã chạy xong */
+        AUTO_GENERATE_CALCULATED: 'exam.auto_generate.calculated',
+        UPLOAD_ATTENDANCE_SNAPSHOT: 'exam.attendance_snapshot.upload',
+    },
+    // Face Recognition Patterns
+    FACE: {
+        /** Đăng ký khuôn mặt */
+        REGISTER: 'face.register',
+        /** Xác thực khuôn mặt */
+        AUTHENTICATE: 'face.authenticate',
+        /** Kết quả xử lý từ Python worker */
+        RESULT: 'face.result',
     },
 } as const;
 
@@ -51,4 +92,6 @@ export const QUEUE_OPTIONS = {
 export const RABBITMQ_CLIENTS = {
     USER_SERVICE: 'USER_SERVICE',
     API_EVENT_SERVICE: 'API_EVENT_SERVICE',
+    EXAM_SERVICE: 'EXAM_SERVICE',
+    FACE_RECOGNITION_SERVICE: 'FACE_RECOGNITION_SERVICE',
 } as const;

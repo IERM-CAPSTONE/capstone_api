@@ -1,0 +1,21 @@
+/// Junction table: which student belongs to which exam session part
+model StudentExamPart {
+  id            String       @id @default(uuid())
+  studentExamId String
+  isInRoom      Boolean      @default(false)
+  isCheckedIn   Boolean      @default(false)
+  checkInTime   DateTime?
+  isSubmit      Boolean      @default(false)
+  submitTime    DateTime?
+  isSign        Boolean      @default(false)
+  signTime      DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  examPartId    String?
+  studentExam   StudentExam? @relation(fields: [studentExamId], references: [id], onDelete: Cascade)
+  examPart      ExamPart?    @relation(fields: [examPartId], references: [id])
+
+  @@unique([studentExamId, examPartId])
+  @@index([studentExamId])
+  @@index([examPartId])
+}
