@@ -19,4 +19,36 @@ export class ListTicketsHandler {
     }): Promise<any[]> {
         return this.ticketRepository.findMany(filters);
     }
+
+    async executeForUser(userId: string, filters: {
+        status?: string;
+        issueType?: string;
+        sessionId?: string;
+        fromDate?: string;
+        toDate?: string;
+    }): Promise<any[]> {
+        const [reportedTickets, assignedTickets] = await Promise.all([
+            this.ticketRepository.findMany({
+                ...filters,
+                reporterId: userId,
+            }),
+            this.ticketRepository.findMany({
+                ...filters,
+                assigneeId: userId,
+            }),
+        ]);
+
+        const merged = new Map<string, any>();
+        for (const ticket of [...reportedTickets, ...assignedTickets]) {
+            if (ticket?.id) {
+                merged.set(ticket.id, ticket);
+            }
+        }
+
+        return Array.from(merged.values()).sort((a, b) => {
+            const aDate = new Date(a?.createdAt ?? 0).getTime();
+            const bDate = new Date(b?.createdAt ?? 0).getTime();
+            return bDate - aDate;
+        });
+    }
 }

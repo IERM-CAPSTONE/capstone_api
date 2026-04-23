@@ -7,6 +7,11 @@ export class RegisterFaceDto {
   @IsOptional()
   studentId?: string;
 
+  @ApiProperty({ example: 'SE123456', required: false })
+  @IsString()
+  @IsOptional()
+  studentCode?: string;
+
   @ApiProperty({ example: { center: '...' } })
   @IsObject()
   encryptedImages: Record<string, string>; // HeadPose -> Base64 encrypted image
