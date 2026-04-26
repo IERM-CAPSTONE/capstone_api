@@ -65,10 +65,10 @@ export class BulkProcessTicketDto {
     @IsBoolean()
     useForAiTraining?: boolean;
 
-    @ApiPropertyOptional({ enum: ['HALL_INVIGILATOR', 'EXAM_OFFICER', 'IT_SUPPORT'] })
+    @ApiPropertyOptional({ enum: ['PROCTOR', 'HALL_INVIGILATOR', 'EXAM_OFFICER', 'IT_SUPPORT'] })
     @IsOptional()
     @IsString()
-    targetRole?: 'HALL_INVIGILATOR' | 'EXAM_OFFICER' | 'IT_SUPPORT';
+    targetRole?: 'PROCTOR' | 'HALL_INVIGILATOR' | 'EXAM_OFFICER' | 'IT_SUPPORT';
 
     @ApiPropertyOptional({ enum: ['START', 'REOPEN', 'ACKNOWLEDGE', 'CLOSE'] })
     @IsOptional()

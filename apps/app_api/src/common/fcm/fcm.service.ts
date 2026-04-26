@@ -26,6 +26,10 @@ export class FcmService {
         sent: number;
         failed: number;
     }> {
+        this.logger.log(
+            `FCM send requested for user ${userId}: title="${message.title}", type=${message.data?.type ?? 'unknown'}`,
+        );
+
         try {
             ensureFirebaseAdminInitialized(this.configService, this.logger);
         } catch (error) {
@@ -55,9 +59,14 @@ export class FcmService {
         const data = this.normalizeData(message.data);
         const chunks = this.chunk(tokenList, MAX_TOKENS_PER_BATCH);
 
+        this.logger.log(
+            `FCM active tokens for user ${userId}: count=${tokenList.length}, chunks=${chunks.length}`,
+        );
+
         let sent = 0;
         let failed = 0;
         const invalidTokens = new Set<string>();
+        const failureReasons = new Map<string, number>();
 
         for (const chunk of chunks) {
             const response = await getMessaging().sendEachForMulticast({
@@ -75,6 +84,14 @@ export class FcmService {
             response.responses.forEach((item, index) => {
                 if (!item.success) {
                     const code = (item.error as any)?.code as string | undefined;
+                    const message = item.error?.message ?? 'Unknown FCM error';
+                    const reason = code ?? 'unknown';
+                    failureReasons.set(reason, (failureReasons.get(reason) ?? 0) + 1);
+
+                    this.logger.warn(
+                        `FCM token failed for user ${userId}: code=${reason}, message=${message}, tokenSuffix=${this.tokenSuffix(chunk[index])}`,
+                    );
+
                     if (code && this.isInvalidTokenError(code)) {
                         invalidTokens.add(chunk[index]);
                     }
@@ -96,6 +113,13 @@ export class FcmService {
         this.logger.log(
             `FCM send for user ${userId}: attempted=${tokenList.length}, sent=${sent}, failed=${failed}, invalid=${invalidTokens.size}`,
         );
+        if (failureReasons.size > 0) {
+            this.logger.warn(
+                `FCM failure summary for user ${userId}: ${Array.from(failureReasons.entries())
+                    .map(([code, count]) => `${code}=${count}`)
+                    .join(', ')}`,
+            );
+        }
 
         return {
             attempted: tokenList.length,
@@ -126,6 +150,10 @@ export class FcmService {
             'messaging/invalid-registration-token',
             'messaging/invalid-argument',
         ].includes(code);
+    }
+
+    private tokenSuffix(token: string): string {
+        return token.length <= 8 ? token : token.slice(-8);
     }
 
     private chunk<T>(items: T[], size: number): T[][] {

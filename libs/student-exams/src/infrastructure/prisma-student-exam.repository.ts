@@ -13,20 +13,37 @@ type StudentMeta = {
 type StudentExamWithMeta = StudentExam & {
     studentAvatarUrl?: string | null;
     student?: StudentMeta | null;
+    hasFaceRegistered?: boolean;
 };
 
 const attachStudentMeta = (
     exam: StudentExam,
     student: StudentMeta | null | undefined,
+    hasFaceRegistered = false,
 ): StudentExamWithMeta =>
     Object.assign(exam, {
         studentAvatarUrl: student?.avatarUrl ?? null,
         student: student ?? null,
+        hasFaceRegistered,
     });
 
 @Injectable()
 export class PrismaStudentExamRepository implements IStudentExamRepository {
     constructor(private readonly prisma: PrismaService) { }
+
+    private async getRegisteredStudentIds(studentIds: string[]): Promise<Set<string>> {
+        const uniqueStudentIds = [...new Set(studentIds.filter(Boolean))];
+        if (uniqueStudentIds.length === 0) {
+            return new Set();
+        }
+
+        const identities = await this.prisma.identity.findMany({
+            where: { studentId: { in: uniqueStudentIds } },
+            select: { studentId: true },
+        });
+
+        return new Set(identities.map(identity => identity.studentId));
+    }
 
     async save(studentExam: StudentExam): Promise<StudentExam> {
         const data = {
@@ -96,7 +113,8 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             parts: (found as any).parts,
         });
 
-        return attachStudentMeta(exam, found.student);
+        const registeredStudentIds = await this.getRegisteredStudentIds([found.studentId]);
+        return attachStudentMeta(exam, found.student, registeredStudentIds.has(found.studentId));
     }
 
     async findByExamSessionId(examSessionId: string): Promise<StudentExam[]> {
@@ -104,6 +122,10 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             where: { examSessionId },
             include: { student: true },
         });
+
+        const registeredStudentIds = await this.getRegisteredStudentIds(
+            results.map(item => item.studentId),
+        );
 
         return results.map(item => {
             const exam = StudentExam.reconstitute({
@@ -119,7 +141,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
                 studentCode: item.student?.code,
             });
 
-            return attachStudentMeta(exam, item.student);
+            return attachStudentMeta(exam, item.student, registeredStudentIds.has(item.studentId));
         });
     }
 
@@ -129,18 +151,26 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             include: { student: true },
         });
 
-        return results.map(item => StudentExam.reconstitute({
-            id: item.id,
-            examSessionId: item.examSessionId,
-            studentId: item.studentId,
-            seatNumber: item.seatNumber,
-            seatPosition: item.seatPosition,
-            stt: item.stt,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            studentName: item.student?.fullName,
-            studentCode: item.student?.code,
-        }));
+        const registeredStudentIds = await this.getRegisteredStudentIds(
+            results.map(item => item.studentId),
+        );
+
+        return results.map(item => {
+            const exam = StudentExam.reconstitute({
+                id: item.id,
+                examSessionId: item.examSessionId,
+                studentId: item.studentId,
+                seatNumber: item.seatNumber,
+                seatPosition: item.seatPosition,
+                stt: item.stt,
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
+                studentName: item.student?.fullName,
+                studentCode: item.student?.code,
+            });
+
+            return attachStudentMeta(exam, item.student, registeredStudentIds.has(item.studentId));
+        });
     }
 
     async findMany(criteria?: {
@@ -182,6 +212,10 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
             this.prisma.studentExam.count({ where }),
         ]);
 
+        const registeredStudentIds = await this.getRegisteredStudentIds(
+            results.map(item => item.studentId),
+        );
+
         const data = results.map(item => {
             const exam = StudentExam.reconstitute({
                 id: item.id,
@@ -198,7 +232,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
                 parts: (item as any).parts,
             });
 
-            return attachStudentMeta(exam, item.student);
+            return attachStudentMeta(exam, item.student, registeredStudentIds.has(item.studentId));
         });
 
         return { data, total };

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsEmail, IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class CampusFileDto {
@@ -70,4 +70,8 @@ export class AutoGenerateScheduleDto {
     @ApiProperty({ example: 6, description: 'Number of exam days in a week (6 or 7)', required: false })
     @IsNumber() @IsOptional()
     examDays?: number;
+
+    @ApiProperty({ example: ['proctor1@fpt.edu.vn'], description: 'Proctor email pool for automatic assignment', required: false })
+    @IsArray() @IsEmail({}, { each: true }) @IsOptional()
+    proctorEmails?: string[];
 }

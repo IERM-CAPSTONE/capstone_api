@@ -29,6 +29,9 @@ export class CloudinaryService {
         if (!this.cloudinary) {
             throw new Error('Cloudinary package is not installed');
         }
+        if (!this.cloudName || !this.apiKey || !this.apiSecret) {
+            throw new Error('Cloudinary credentials are not configured');
+        }
 
         return new Promise((resolve, reject) => {
             const uploadStream = this.cloudinary.uploader.upload_stream(

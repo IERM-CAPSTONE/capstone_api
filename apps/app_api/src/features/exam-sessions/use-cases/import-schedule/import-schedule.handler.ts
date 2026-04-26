@@ -14,11 +14,18 @@ export class ImportScheduleHandler {
 
     async handle(dto: ImportScheduleDto) {
         this.logger.log(`Publishing import schedule job to queue. Schedules: ${dto.schedules.length}, Students: ${dto.students.length}`);
+        const defaultCampus = 'DN';
 
         const jobData: ImportScheduleJobData = {
             importType: dto.importType,
-            schedules: dto.schedules,
-            students: dto.students,
+            schedules: dto.schedules.map((item) => ({
+                ...item,
+                campus: item.campus || defaultCampus,
+            })),
+            students: dto.students.map((item) => ({
+                ...item,
+                campus: item.campus || defaultCampus,
+            })),
             batchId: dto.batchId,
             totalItems: dto.totalItems,
         };

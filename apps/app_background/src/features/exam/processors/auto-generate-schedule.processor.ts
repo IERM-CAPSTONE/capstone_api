@@ -23,6 +23,7 @@ interface AutoGenerateScheduleJob {
     campusFiles?: { campus: string; fileData: string }[]; // Per-campus files
     classScheduleFiles?: { campus: string; fileData: string }[]; // Per-campus class schedule files
     examDays?: number; // 6 or 7
+    proctorEmails?: string[];
 }
 
 @Controller()
@@ -278,6 +279,13 @@ export class AutoGenerateScheduleProcessor {
                 where: { id: { in: data.roomIds } }
             });
             const roomMap = new Map(roomsInDb.map(r => [r.id, r]));
+            const proctors = await this.resolveProctors(data.proctorEmails || []);
+            if (proctors.length > 0) {
+                this.assignConvenientProctors(allScheduledSessions, proctors);
+                this.logger.log(`Assigned ${proctors.length} proctors across ${allScheduledSessions.length} generated sessions`);
+            } else {
+                this.logger.warn('No proctor email pool provided; generated sessions will not have proctors assigned.');
+            }
 
             this.logger.log(`Preparing bulk save for ${allScheduledSessions.length} sessions in chunks...`);
             
@@ -303,6 +311,7 @@ export class AutoGenerateScheduleProcessor {
                             status: ExamSessionStatus.Draft,
                             examType: session.examType as any,
                             campus: session.campus as any,
+                            proctorId: (session as any)._proctorId || null,
                             examParts: { connect: session.examPartIds.map(id => ({ id })) },
                         }
                     });
@@ -312,9 +321,20 @@ export class AutoGenerateScheduleProcessor {
                 let examSeatsChunk: any[] = [];
                 let studentExamsChunk: any[] = [];
                 let studentExamPartsChunk: any[] = [];
+                let proctorAssignmentsChunk: any[] = [];
 
                 for (const session of sessionChunk) {
                     const sessionId = (session as any)._createdSessionId;
+                    const proctorId = (session as any)._proctorId;
+                    if (proctorId) {
+                        proctorAssignmentsChunk.push({
+                            id: uuidv4(),
+                            proctorId,
+                            examSessionId: sessionId,
+                            status: 'ASSIGNED',
+                            assignedById: proctorId,
+                        });
+                    }
                     const room = roomMap.get(session.roomId);
                     const maxRows = room?.max_rows || 5;
                     const maxCols = room?.max_columns || 4;
@@ -358,6 +378,13 @@ export class AutoGenerateScheduleProcessor {
                     }
                 }
 
+                if (proctorAssignmentsChunk.length > 0) {
+                    await this.prisma.proctorAssignment.createMany({
+                        data: proctorAssignmentsChunk,
+                        skipDuplicates: true,
+                    });
+                }
+
                 // Yield the event loop to ensure RabbitMQ doesn't timeout
                 await new Promise(resolve => setImmediate(resolve));
             }
@@ -379,6 +406,134 @@ export class AutoGenerateScheduleProcessor {
             this.logger.error(`❌ Error in schedule generation: ${error.message}`);
             this.logger.error(error.stack);
             channel.ack(originalMsg);
+        }
+    }
+
+    private async resolveProctors(rawEmails: string[]): Promise<{ id: string; email: string }[]> {
+        const emails = Array.from(new Set(
+            rawEmails
+                .map(email => String(email || '').trim().toLowerCase())
+                .filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        ));
+
+        if (emails.length === 0) return [];
+
+        const existingUsers = await this.prisma.user.findMany({
+            where: {
+                OR: [
+                    { email: { in: emails } },
+                    { username: { in: emails } },
+                ],
+            },
+        });
+
+        const userByEmail = new Map<string, any>();
+        existingUsers.forEach(user => {
+            if (user.email) userByEmail.set(user.email.toLowerCase(), user);
+            if (user.username) userByEmail.set(user.username.toLowerCase(), user);
+        });
+
+        const missingEmails = emails.filter(email => !userByEmail.has(email));
+        if (missingEmails.length > 0) {
+            await this.prisma.user.createMany({
+                data: missingEmails.map(email => ({
+                    id: uuidv4(),
+                    username: email,
+                    email,
+                    fullName: email,
+                    role: 'PROCTOR',
+                    isActive: true,
+                })),
+                skipDuplicates: true,
+            });
+
+            const createdUsers = await this.prisma.user.findMany({
+                where: {
+                    OR: [
+                        { email: { in: missingEmails } },
+                        { username: { in: missingEmails } },
+                    ],
+                },
+            });
+            createdUsers.forEach(user => {
+                if (user.email) userByEmail.set(user.email.toLowerCase(), user);
+                if (user.username) userByEmail.set(user.username.toLowerCase(), user);
+            });
+        }
+
+        return emails
+            .map(email => userByEmail.get(email))
+            .filter(Boolean)
+            .map(user => ({ id: user.id, email: user.email || user.username }));
+    }
+
+    private shuffle<T>(items: T[]): T[] {
+        const shuffled = [...items];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    private assignConvenientProctors(
+        sessions: Array<any>,
+        proctors: { id: string; email: string }[],
+    ): void {
+        if (sessions.length === 0 || proctors.length === 0) return;
+
+        const shuffledProctors = this.shuffle(proctors);
+        const proctorState = new Map<string, {
+            total: number;
+            daySlots: Map<string, Set<number>>;
+        }>();
+
+        shuffledProctors.forEach(proctor => {
+            proctorState.set(proctor.id, { total: 0, daySlots: new Map() });
+        });
+
+        const orderedSessions = [...sessions].sort((a, b) => {
+            const weekDiff = (a.weekNum || 0) - (b.weekNum || 0);
+            if (weekDiff !== 0) return weekDiff;
+            const dayDiff = (a.dayIndex || 0) - (b.dayIndex || 0);
+            if (dayDiff !== 0) return dayDiff;
+            const slotDiff = (a.slotIndex || 0) - (b.slotIndex || 0);
+            if (slotDiff !== 0) return slotDiff;
+            return new Date(a.openTime).getTime() - new Date(b.openTime).getTime();
+        });
+
+        for (const session of orderedSessions) {
+            const dayKey = `${session.weekNum}_${session.dayIndex}`;
+            const slotIndex = Number(session.slotIndex || 0);
+            const candidates = shuffledProctors
+                .filter(proctor => !proctorState.get(proctor.id)?.daySlots.get(dayKey)?.has(slotIndex))
+                .map(proctor => {
+                    const state = proctorState.get(proctor.id)!;
+                    const slots = state.daySlots.get(dayKey) || new Set<number>();
+                    const hasSameDayWork = slots.size > 0;
+                    const hasAdjacentSlot = slots.has(slotIndex - 1) || slots.has(slotIndex + 1);
+                    const nearestGap = hasSameDayWork
+                        ? Math.min(...Array.from(slots).map(s => Math.abs(s - slotIndex)))
+                        : 0;
+
+                    let score = state.total * 12;
+                    score += slots.size * 2;
+                    if (hasAdjacentSlot) score -= 16;
+                    else if (hasSameDayWork) score += 10 + nearestGap * 4;
+                    score += Math.random();
+
+                    return { proctor, score };
+                })
+                .sort((a, b) => a.score - b.score);
+
+            const selected = candidates[0]?.proctor;
+            if (!selected) continue;
+
+            (session as any)._proctorId = selected.id;
+            const state = proctorState.get(selected.id)!;
+            state.total += 1;
+            if (!state.daySlots.has(dayKey)) state.daySlots.set(dayKey, new Set<number>());
+            state.daySlots.get(dayKey)!.add(slotIndex);
         }
     }
 

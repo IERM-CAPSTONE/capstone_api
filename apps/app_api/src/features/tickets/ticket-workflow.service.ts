@@ -7,13 +7,14 @@ import {
 import { PrismaService } from '@app/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { NotificationGateway } from '../../common/gateways/notification.gateway';
+import { FcmService } from '../../common/fcm/fcm.service';
 
 type TicketLike = any;
 type ActorLike = any;
 
 export type TicketCommentMode = 'DISCUSSION' | 'CONCLUSION' | 'RESOLUTION';
 export type TicketLifecycleAction = 'START' | 'REOPEN' | 'ACKNOWLEDGE' | 'CLOSE';
-export type TicketRouteRole = 'HALL_INVIGILATOR' | 'EXAM_OFFICER' | 'IT_SUPPORT';
+export type TicketRouteRole = 'PROCTOR' | 'HALL_INVIGILATOR' | 'EXAM_OFFICER' | 'IT_SUPPORT';
 export type TicketStatusValue = 'OPEN' | 'IN_PROGRESS' | 'SOLVED' | 'CLOSED';
 
 interface StructuredPayload {
@@ -28,11 +29,25 @@ interface StructuredPayload {
     useForAiTraining?: boolean | null;
 }
 
+interface StakeholderNotificationInput {
+    ticket: TicketLike;
+    actor: ActorLike;
+    event: 'ticket:assigned' | 'ticket:updated';
+    title: string;
+    message: string;
+    action: string;
+    status?: string | null;
+    includeUserIds?: Array<string | null | undefined>;
+    excludeUserIds?: Array<string | null | undefined>;
+    meta?: Record<string, any>;
+}
+
 @Injectable()
 export class TicketWorkflowService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly notificationGateway: NotificationGateway,
+        private readonly fcmService: FcmService,
     ) { }
 
     async getTicketOrThrow(ticketId: string): Promise<TicketLike> {
@@ -211,6 +226,31 @@ export class TicketWorkflowService {
             });
         }
 
+        await this.notifyTicketStakeholders({
+            ticket,
+            actor,
+            event: 'ticket:updated',
+            title: `Ticket updated: ${ticket.issueName}`,
+            message:
+                mode === 'DISCUSSION'
+                    ? `${actor.fullName ?? 'User'} added a discussion comment.`
+                    : mode === 'CONCLUSION'
+                        ? `${actor.fullName ?? 'User'} updated the ticket conclusion.`
+                        : `${actor.fullName ?? 'User'} added a resolution note.`,
+            action:
+                mode === 'DISCUSSION'
+                    ? 'commented'
+                    : mode === 'CONCLUSION'
+                        ? 'conclusion_updated'
+                        : 'resolution_updated',
+            status: ticket.status,
+            meta: {
+                mode,
+                activityId,
+                reviewStatus,
+            },
+        });
+
         return this.getTicketOrThrow(ticketId);
     }
 
@@ -345,6 +385,20 @@ export class TicketWorkflowService {
             toAssigneeId: ticket.assigneeId ?? null,
         });
 
+        await this.notifyTicketStakeholders({
+            ticket,
+            actor,
+            event: 'ticket:updated',
+            title: `Ticket lifecycle updated: ${ticket.issueName}`,
+            message: `${actor.fullName ?? 'User'} performed ${action}.`,
+            action: 'lifecycle_updated',
+            status: action,
+            meta: {
+                lifecycleAction: action,
+                note: trimmedNote,
+            },
+        });
+
         return this.getTicketOrThrow(ticketId);
     }
 
@@ -365,6 +419,20 @@ export class TicketWorkflowService {
                 title: 'Status unchanged',
                 message: `${actor.fullName ?? 'User'} confirmed status ${nextStatus}`,
                 note: trimmedNote,
+                meta: {
+                    fromStatus: ticket.status,
+                    toStatus: nextStatus,
+                    note: trimmedNote,
+                },
+            });
+            await this.notifyTicketStakeholders({
+                ticket,
+                actor,
+                event: 'ticket:updated',
+                title: `Ticket status confirmed: ${ticket.issueName}`,
+                message: `${actor.fullName ?? 'User'} confirmed status ${nextStatus}.`,
+                action: 'status_confirmed',
+                status: nextStatus,
                 meta: {
                     fromStatus: ticket.status,
                     toStatus: nextStatus,
@@ -393,6 +461,21 @@ export class TicketWorkflowService {
             title: 'Status updated',
             message: `${actor.fullName ?? 'User'} changed status from ${ticket.status} to ${nextStatus}`,
             note: trimmedNote,
+            meta: {
+                fromStatus: ticket.status,
+                toStatus: nextStatus,
+                note: trimmedNote,
+            },
+        });
+
+        await this.notifyTicketStakeholders({
+            ticket,
+            actor,
+            event: 'ticket:updated',
+            title: `Ticket status updated: ${ticket.issueName}`,
+            message: `${actor.fullName ?? 'User'} changed status from ${ticket.status} to ${nextStatus}.`,
+            action: 'status_updated',
+            status: nextStatus,
             meta: {
                 fromStatus: ticket.status,
                 toStatus: nextStatus,
@@ -556,12 +639,6 @@ export class TicketWorkflowService {
         if (!payload.issueCode || !payload.issueType || !payload.resolutionCode) {
             throw new BadRequestException('issueCode, issueType, and resolutionCode are required');
         }
-        if (payload.issueCode === 'OTHER' && !payload.issueCustomText?.trim()) {
-            throw new BadRequestException('issueCustomText is required when issueCode is OTHER');
-        }
-        if (payload.resolutionCode === 'CUSTOM' && !payload.resolutionCustomText?.trim()) {
-            throw new BadRequestException('resolutionCustomText is required when resolutionCode is CUSTOM');
-        }
         if (!payload.responseText?.trim()) {
             throw new BadRequestException('responseText is required for structured comment modes');
         }
@@ -569,6 +646,29 @@ export class TicketWorkflowService {
 
     private async resolveAssignee(ticket: TicketLike, targetRole: TicketRouteRole): Promise<any> {
         const sessionCampus = ticket.session?.campus ?? null;
+
+        if (targetRole === 'PROCTOR') {
+            if (!ticket.session?.proctorId) {
+                throw new BadRequestException('No room proctor is assigned to this exam session');
+            }
+
+            const direct = await (this.prisma as any).user.findUnique({
+                where: { id: ticket.session.proctorId },
+                select: {
+                    id: true,
+                    email: true,
+                    fullName: true,
+                    role: true,
+                    campus: true,
+                },
+            });
+
+            if (!direct) {
+                throw new BadRequestException('Assigned room proctor was not found');
+            }
+
+            return direct;
+        }
 
         if (targetRole === 'HALL_INVIGILATOR') {
             if (ticket.session?.hallInvigilatorId) {
@@ -720,6 +820,95 @@ export class TicketWorkflowService {
         }
     }
 
+    private getTicketStakeholderIds(
+        ticket: TicketLike,
+        includeUserIds: Array<string | null | undefined> = [],
+        excludeUserIds: Array<string | null | undefined> = [],
+    ): string[] {
+        const excluded = new Set(
+            excludeUserIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0),
+        );
+        const ids = new Set<string>();
+        const add = (id: string | null | undefined) => {
+            if (typeof id !== 'string' || id.trim().length === 0) return;
+            if (excluded.has(id)) return;
+            ids.add(id);
+        };
+
+        add(ticket.reporterId);
+        add(ticket.assigneeId);
+        for (const history of ticket.activityHistories ?? []) {
+            add(history.fromAssigneeId);
+            add(history.toAssigneeId);
+        }
+        for (const id of includeUserIds) {
+            add(id);
+        }
+
+        return Array.from(ids);
+    }
+
+    private async notifyTicketStakeholders(input: StakeholderNotificationInput): Promise<void> {
+        const recipientIds = this.getTicketStakeholderIds(
+            input.ticket,
+            input.includeUserIds,
+            input.excludeUserIds,
+        );
+
+        if (recipientIds.length === 0) return;
+
+        const actorName = input.actor.fullName ?? input.actor.email ?? 'Staff';
+        const meta = {
+            ticketId: input.ticket.id,
+            issueName: input.ticket.issueName,
+            reporterId: input.ticket.reporterId,
+            assigneeId: input.ticket.assigneeId ?? null,
+            actorId: input.actor.id,
+            actorName,
+            action: input.action,
+            status: input.status ?? null,
+            ...(input.meta ?? {}),
+        };
+
+        await (this.prisma as any).notification.createMany({
+            data: recipientIds.map((toUserId) => ({
+                id: uuidv4(),
+                toUserId,
+                fromId: input.actor.id,
+                title: input.title,
+                message: input.message,
+                channel: 'IN_APP',
+                meta,
+            })),
+        });
+
+        const realtimePayload = {
+            ...meta,
+            message: input.message,
+            isUserNotification: true,
+        };
+
+        for (const toUserId of recipientIds) {
+            this.notificationGateway.sendToUser(toUserId, input.event, realtimePayload);
+        }
+
+        await Promise.all(
+            recipientIds.map((toUserId) => this.fcmService.sendToUser(toUserId, {
+                title: input.title,
+                body: input.message,
+                data: {
+                    type: input.event.replace(':', '_'),
+                    ticketId: input.ticket.id,
+                    issueName: input.ticket.issueName,
+                    actorId: input.actor.id,
+                    actorName,
+                    action: input.action,
+                    status: input.status ?? undefined,
+                },
+            }).catch(() => null)),
+        );
+    }
+
     private async notifyTicketAssigned(
         ticket: TicketLike,
         actor: ActorLike,
@@ -748,6 +937,40 @@ export class TicketWorkflowService {
             targetRole,
             reason,
             isUserNotification: true,
+        });
+
+        await this.fcmService.sendToUser(assignee.id, {
+            title: `Ticket assigned: ${ticket.issueName}`,
+            body: reason || `Ticket routed to ${targetRole}`,
+            data: {
+                type: 'ticket_assigned',
+                ticketId: ticket.id,
+                assigneeId: assignee.id,
+                issueName: ticket.issueName,
+                actorId: actor.id,
+                actorName: actor.fullName ?? 'Staff',
+                reporterId: ticket.reporterId,
+                targetRole,
+                action: 'assigned',
+            },
+        });
+
+        await this.notifyTicketStakeholders({
+            ticket,
+            actor,
+            event: 'ticket:updated',
+            title: `Ticket assignment updated: ${ticket.issueName}`,
+            message: reason || `Ticket routed to ${targetRole}`,
+            action: 'assignment_updated',
+            status: ticket.status,
+            includeUserIds: [ticket.reporterId],
+            excludeUserIds: [assignee.id],
+            meta: {
+                targetRole,
+                reason,
+                assigneeId: assignee.id,
+                assigneeName: assignee.fullName ?? assignee.email ?? assignee.id,
+            },
         });
     }
 }

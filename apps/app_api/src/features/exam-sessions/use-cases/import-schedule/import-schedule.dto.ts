@@ -31,6 +31,10 @@ export class ScheduleItemDto {
     @IsOptional()
     @IsString()
     examPart?: string;
+
+    @IsOptional()
+    @IsString()
+    campus?: string | null;
 }
 
 export class StudentItemDto {
@@ -66,6 +70,10 @@ export class StudentItemDto {
 
     @IsString()
     examPart: string;
+
+    @IsOptional()
+    @IsString()
+    campus?: string | null;
 }
 
 export class ImportScheduleDto {

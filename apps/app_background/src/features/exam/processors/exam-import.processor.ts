@@ -161,6 +161,7 @@ export class ExamImportProcessor {
                 try {
                     const parsed = this.parseExamSession(s.examSession);
                     if (!parsed) throw new Error(`Cannot parse examSession string: ${s.examSession}`);
+                    const scheduleCampus = this.resolveCampus(s.campus);
 
                     // ... (rest of schedule logic) ...
 
@@ -177,7 +178,12 @@ export class ExamImportProcessor {
                     if (!parsed) throw new Error(`Cannot parse examSession string: ${s.examSession}`);
 
                     // Find or create Room
-                    let room = await this.prisma.examRoom.findFirst({ where: { roomNumber: parsed.roomName } });
+                    let room = await this.prisma.examRoom.findFirst({
+                        where: {
+                            roomNumber: parsed.roomName,
+                            campus: scheduleCampus,
+                        }
+                    });
                     if (!room) {
                         room = await this.prisma.examRoom.create({
                             data: {
@@ -187,7 +193,8 @@ export class ExamImportProcessor {
                                 max_columns: 3,
                                 total_seats: 18,
                                 capacity: 18,
-                                status: 'Available'
+                                status: 'Available',
+                                campus: scheduleCampus,
                             }
                         });
                     }
@@ -233,7 +240,8 @@ export class ExamImportProcessor {
                             subjectCode: s.subjectCode,
                             examOpenTime: parsed.openTime,
                             examCloseTime: parsed.closeTime,
-                            status: 'Scheduled'
+                            status: 'Scheduled',
+                            campus: scheduleCampus,
                         }
                     });
 
@@ -263,7 +271,13 @@ export class ExamImportProcessor {
                     if (!finalSessionId) {
                         try {
                             const parsed = this.parseExamSession(sessionStr);
-                            const room = await this.prisma.examRoom.findFirst({ where: { roomNumber: parsed.roomName } });
+                            const studentCampus = this.resolveCampus(students[0]?.campus);
+                            const room = await this.prisma.examRoom.findFirst({
+                                where: {
+                                    roomNumber: parsed.roomName,
+                                    campus: studentCampus,
+                                }
+                            });
                             this.logger.log(`Fallback Lookup: Room ${parsed.roomName} found: ${!!room}`);
 
                             if (room) {
@@ -344,6 +358,7 @@ export class ExamImportProcessor {
 
                     // Use raw seat coordinates as fallback for seatNumber
                     const allPossibleSeats = this.generateSeats(session.examRoom.max_rows, session.examRoom.max_columns);
+                    const assignedSeatIds: string[] = [];
 
                     for (let i = 0; i < students.length; i++) {
                         const st = students[i];
@@ -379,11 +394,11 @@ export class ExamImportProcessor {
                                     studentId: user.id,
                                     stt: st.stt ? Number(st.stt) : null,
                                     seatNumber: seatNumberString, // Ordered list (1-1, 1-2, etc.)
-                                    seatPosition: null, // ✅ NOT assigned yet - will be assigned when layout finalized
+                                    seatPosition: assignedPhysicalSeat.id,
                                 }
                             });
 
-                            // DON'T update ExamSeat status yet - seats remain Available for editing
+                            assignedSeatIds.push(assignedPhysicalSeat.id);
 
                             // Process Exam Parts
                             const parts = st.examPart.split(',').map(p => p.trim());
@@ -416,8 +431,12 @@ export class ExamImportProcessor {
                         }
                     }
 
-                    // DON'T mark import as complete yet - allow seat layout editing
-                    // hasStudentsImported will be set to true when seats are finalized via separate endpoint
+                    if (assignedSeatIds.length > 0) {
+                        await this.prisma.examSeat.updateMany({
+                            where: { id: { in: assignedSeatIds } },
+                            data: { status: 'Assigned' },
+                        });
+                    }
 
                     // --- NEW: Aggregate Exam Types for the Session ---
                     const sessionPartTypes: string[] = [];
@@ -1029,6 +1048,14 @@ export class ExamImportProcessor {
             const j = Math.floor(Math.random() * (i + 1));
             [array[i], array[j]] = [array[j], array[i]];
         }
+    }
+
+    private resolveCampus(campus?: string | null): Campus {
+        const normalized = String(campus || 'DN').trim().toUpperCase();
+        if (Object.values(Campus).includes(normalized as Campus)) {
+            return normalized as Campus;
+        }
+        return Campus.DN;
     }
 
     private emitFinished(

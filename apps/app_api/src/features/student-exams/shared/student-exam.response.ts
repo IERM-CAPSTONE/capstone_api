@@ -21,6 +21,7 @@ type StudentExamWithMeta = {
     studentEmail: string | null;
     studentAvatarUrl?: string | null;
     student?: StudentMeta | null;
+    hasFaceRegistered?: boolean | null;
     parts: any[];
 };
 
@@ -60,6 +61,12 @@ export class StudentExamResponse {
 
     @ApiProperty({ nullable: true })
     studentAvatarUrl: string | null;
+
+    @ApiProperty({
+        description: 'Whether the assigned student has registered face identity',
+        type: Boolean,
+    })
+    hasFaceRegistered: boolean;
 
     @ApiProperty({
         description: 'Attendance/submission status per exam part',
@@ -116,6 +123,7 @@ export function toStudentExamResponse(
         studentEmail: studentExam.studentEmail ?? studentExam.student?.email ?? null,
         studentAvatarUrl:
             studentExam.studentAvatarUrl ?? studentExam.student?.avatarUrl ?? null,
+        hasFaceRegistered: studentExam.hasFaceRegistered === true,
         stt: studentExam.stt,
         parts: (studentExam.parts || []).map((p: any) => ({
             id: p.id,

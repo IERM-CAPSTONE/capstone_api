@@ -42,7 +42,7 @@ export class AttendanceSnapshotProcessor {
       this.logger.error(
         `Failed to upload attendance snapshot ${data.snapshotId}: ${error instanceof Error ? error.message : String(error)}`,
       );
-      channel.ack(originalMsg);
+      channel.nack(originalMsg, false, true);
     }
   }
 }

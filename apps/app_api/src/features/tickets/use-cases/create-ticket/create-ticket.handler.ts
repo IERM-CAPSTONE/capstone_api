@@ -218,6 +218,55 @@ export class CreateTicketHandler {
                     action: 'auto_assigned',
                 },
             });
+
+            if (assigneeId !== reporterId) {
+                const reporterMessage = `Your ticket was assigned to ${confirmedAssignmentType}.`;
+                await this.prisma.notification.create({
+                    data: {
+                        id: uuidv4(),
+                        toUserId: reporterId,
+                        fromId: reporterId,
+                        title: `Ticket assignment updated: ${ticket.issueName}`,
+                        message: reporterMessage,
+                        channel: 'IN_APP',
+                        meta: {
+                            ticketId: ticket.id,
+                            action: 'auto_assigned',
+                            assignmentType: confirmedAssignmentType,
+                            assigneeId,
+                        },
+                    },
+                });
+
+                this.notificationGateway.sendToUser(reporterId, 'ticket:updated', {
+                    ticketId: ticket.id,
+                    assigneeId,
+                    issueName: ticket.issueName,
+                    studentCode: ticket.studentCode ?? null,
+                    actorName: reporter?.fullName ?? 'Staff',
+                    reporterId,
+                    action: 'auto_assigned',
+                    status: ticket.status,
+                    isUserNotification: true,
+                });
+
+                await this.fcmService.sendToUser(reporterId, {
+                    title: `Ticket assignment updated: ${ticket.issueName}`,
+                    body: reporterMessage,
+                    data: {
+                        type: 'ticket_updated',
+                        ticketId: ticket.id,
+                        assigneeId,
+                        issueName: ticket.issueName,
+                        studentCode: ticket.studentCode ?? '',
+                        reporterId,
+                        actorId: reporterId,
+                        actorName: reporter?.fullName ?? 'Staff',
+                        action: 'auto_assigned',
+                        status: ticket.status,
+                    },
+                });
+            }
         }
 
         return ticket;

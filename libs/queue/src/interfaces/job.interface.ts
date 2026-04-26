@@ -109,6 +109,7 @@ export interface ScheduleImportData {
     endTime: string;
     room: string;
     examSession: string;
+    campus?: string | null;
 }
 
 export interface StudentImportData {
@@ -121,6 +122,7 @@ export interface StudentImportData {
     examSession?: string | null;
     subjectCode: string;
     examPart: string;
+    campus?: string | null;
 }
 
 export interface ProctorImportData {
