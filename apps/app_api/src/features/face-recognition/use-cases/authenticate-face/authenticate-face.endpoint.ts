@@ -5,7 +5,13 @@ import {
   BadRequestException,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { RoleType } from '@app/users';
 import { GetUser, Roles } from '../../../../common/decorators';
 import { RolesGuard, JwtAuthGuard } from '../../../../common/guards';
@@ -20,7 +26,12 @@ export class AuthenticateFaceEndpoint {
   constructor(private readonly handler: AuthenticateFaceHandler) {}
 
   @Post('authenticate')
-  @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.STUDENT, RoleType.PROCTOR)
+  @Roles(
+    RoleType.ADMIN,
+    RoleType.EXAM_OFFICER,
+    RoleType.STUDENT,
+    RoleType.PROCTOR,
+  )
   @ApiOperation({ summary: 'Authenticate face with encrypted image' })
   @ApiBody({ type: AuthenticateFaceDto })
   @ApiResponse({ status: 200, description: 'Face authenticated successfully' })

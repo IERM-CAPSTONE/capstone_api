@@ -9,6 +9,29 @@ model FaceEnrollment {
   isActive   Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  
+  // New fields for supervised enrollment
+  status           EnrollmentStatus @default(APPROVED) // Default APPROVED for legacy records
+  approvedAt       DateTime?
+  approvedBy       String?   // User ID or name of supervisor
+  rejectedAt       DateTime?
+  rejectedReason   String?
+  
+  // Verification info
+  verificationMethod  String?   // "CCCD", "STUDENT_CARD", "FACE_CHECK"
+  verificationNote    String?
+
+  // Face image retention
+  retentionPolicy      FaceImageRetentionPolicy?
+  capturedImageUrls    Json?
+  faceImagePurgeAt     DateTime?
+  retentionConsentedAt DateTime?
+  
+  // Audit
+  supervisorName   String?
+  supervisorCode   String?
+  supervisorRole   String?
+  
   identity   Identity @relation(fields: [identityId], references: [id])
   device     Device?  @relation(fields: [deviceId], references: [id])
 

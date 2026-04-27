@@ -1,31 +1,26 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
-import { v4 as uuidv4 } from 'uuid';
 import { lastValueFrom, timeout } from 'rxjs';
-import {
-  RABBITMQ_CLIENTS,
-  MESSAGE_PATTERNS,
-} from '@app/queue/queue.constants';
+import * as crypto from 'crypto';
+import { RoleType } from '@app/users';
+import { PrismaService } from '@app/prisma';
+import { RABBITMQ_CLIENTS, MESSAGE_PATTERNS } from '@app/queue/queue.constants';
 import { EncryptionUtils } from '@app/queue/encryption.utils';
-import { IUserRepository, RoleType, USER_REPOSITORY, User } from '@app/users';
 import { RegisterFaceDto } from './register-face.dto';
 import { NotificationGateway } from '../../../../common/gateways';
-import {
-  UserResponse,
-  toUserResponse,
-} from '../../../users/shared/user.response';
+import { CloudinaryService } from '../../../../common/cloudinary/cloudinary.service';
 
 export interface RegisterFaceResponse {
   status: 'success' | 'error';
   message: string;
-  data?: {
-    uid?: number;
-    embeddings_count?: number;
-    student?: UserResponse & {
-      created: boolean;
-    };
-  };
+  data?: any;
 }
 
 @Injectable()
@@ -39,77 +34,78 @@ export class RegisterFaceHandler {
     private readonly faceClient: ClientProxy,
     private readonly configService: ConfigService,
     private readonly notificationGateway: NotificationGateway,
-    @Inject(USER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
+    private readonly cloudinaryService: CloudinaryService,
+    private readonly prisma: PrismaService,
   ) {
     this.encryptionKey = this.configService.get<string>(
       'FACE_ENCRYPTION_KEY',
       'MySecureKey12345678901234567890',
     );
-
-    if (this.encryptionKey.length !== 32) {
-      this.logger.error('FACE_ENCRYPTION_KEY must be exactly 32 characters!');
-    }
   }
 
-  async execute(dto: RegisterFaceDto): Promise<RegisterFaceResponse> {
-    return this.executeWithResolvedStudent(dto);
-  }
-
-  async executeWithResolvedStudent(
+  async execute(
     dto: RegisterFaceDto,
-    targetStudentOverride?: {
-      user: User;
-      created: boolean;
-    },
+    currentUser: { userId: string; role: string },
   ): Promise<RegisterFaceResponse> {
-    this.logger.log(
-      `Processing face registration for student: ${dto.studentId}`,
-    );
+    const normalizedRole = (currentUser.role ?? '').toUpperCase();
+    const currentDbUser = await this.prisma.user.findUnique({
+      where: { id: currentUser.userId },
+      select: { id: true, code: true, fullName: true, username: true, role: true },
+    });
+
+    if (!currentDbUser) {
+      throw new NotFoundException('Khong tim thay nguoi dung hien tai');
+    }
+
+    if (normalizedRole === RoleType.STUDENT && !dto.otp) {
+      throw new BadRequestException(
+        'Sinh vien can OTP tu giam thi de dang ky khuon mat',
+      );
+    }
+
+    let isSupervised = false;
+    let otpRecord: {
+      id: string;
+      studentCode: string;
+      issuedById: string;
+      issuedByName: string;
+      issuedByRole: string;
+    } | null = null;
+
+    if (dto.otp) {
+      if (!currentDbUser.code) {
+        throw new BadRequestException('Tai khoan khong co ma sinh vien');
+      }
+
+      const otpHash = crypto.createHash('sha256').update(dto.otp).digest('hex');
+      otpRecord = await this.prisma.enrollmentOTP.findFirst({
+        where: {
+          studentCode: currentDbUser.code.toUpperCase(),
+          otpHash,
+          usedAt: { not: null },
+        },
+        select: {
+          id: true,
+          studentCode: true,
+          issuedById: true,
+          issuedByName: true,
+          issuedByRole: true,
+        },
+      });
+
+      if (!otpRecord) {
+        throw new BadRequestException('OTP khong hop le hoac da het han');
+      }
+
+      isSupervised = true;
+    }
 
     try {
-      if (!dto.studentId || dto.studentId.trim() === '') {
-        throw new Error('Student ID must not be empty');
-      }
-
-      if (!dto.encryptedImages || Object.keys(dto.encryptedImages).length === 0) {
-        throw new Error('At least one image is required');
-      }
-
       const decryptedImages: Record<string, Buffer> = {};
-
-      if (dto.isEncrypted) {
-        for (const [pose, encryptedData] of Object.entries(dto.encryptedImages)) {
-          try {
-            const decrypted = EncryptionUtils.decryptImage(
-              encryptedData,
-              this.encryptionKey,
-            );
-
-            if (dto.imageHashes && dto.imageHashes[pose]) {
-              const isValid = EncryptionUtils.verifyHash(
-                decrypted,
-                dto.imageHashes[pose],
-              );
-              if (!isValid) {
-                throw new Error(`Hash verification failed for pose: ${pose}`);
-              }
-            }
-
-            decryptedImages[pose] = decrypted;
-            this.logger.debug(`Decrypted image for pose: ${pose}`);
-          } catch (error) {
-            this.logger.error(
-              `Failed to decrypt image for pose ${pose}:`,
-              error,
-            );
-            throw new Error(`Decryption failed for pose: ${pose}`);
-          }
-        }
-      } else {
-        for (const [pose, base64Data] of Object.entries(dto.encryptedImages)) {
-          decryptedImages[pose] = Buffer.from(base64Data, 'base64');
-        }
+      for (const [pose, data] of Object.entries(dto.encryptedImages)) {
+        decryptedImages[pose] = dto.isEncrypted
+          ? EncryptionUtils.decryptImage(data, this.encryptionKey)
+          : Buffer.from(data, 'base64');
       }
 
       const base64Images: Record<string, string> = {};
@@ -117,121 +113,135 @@ export class RegisterFaceHandler {
         base64Images[pose] = buffer.toString('base64');
       }
 
-      const payload = {
-        studentId: dto.studentId,
-        images: base64Images,
-        timestamp: new Date().toISOString(),
-      };
+      const targetStudent = dto.studentCode
+        ? await this.resolveTargetStudentByCode(dto.studentCode)
+        : currentDbUser;
 
-      this.logger.log(
-        `Sending registration request to RabbitMQ for student: ${dto.studentId}`,
-      );
+      if (
+        normalizedRole === RoleType.STUDENT &&
+        targetStudent.id !== currentDbUser.id
+      ) {
+        throw new BadRequestException(
+          'Sinh vien chi duoc dang ky khuon mat cho chinh minh',
+        );
+      }
 
       const result$ = this.faceClient
-        .send(MESSAGE_PATTERNS.FACE.REGISTER, payload)
+        .send(MESSAGE_PATTERNS.FACE.REGISTER, {
+          studentId: targetStudent.id,
+          images: base64Images,
+        })
         .pipe(timeout(this.requestTimeout));
 
-      const result = await lastValueFrom(result$);
+      const aiResult = await lastValueFrom(result$);
+      const vector = aiResult?.vector || {};
+      const capturedImageUrls = await this.uploadCapturedImages(
+        decryptedImages,
+        targetStudent.code || targetStudent.id,
+      );
 
-      this.logger.log(`Registration completed for student: ${dto.studentId}`);
-
-      this.notificationGateway.sendToAll('face_registered', {
-        studentId: dto.studentId,
-        status: 'success',
-        timestamp: new Date().toISOString(),
+      const identity = await this.prisma.identity.upsert({
+        where: { studentId: targetStudent.id },
+        update: { userId: targetStudent.id },
+        create: {
+          studentId: targetStudent.id,
+          userId: targetStudent.id,
+          isValid: false,
+        },
       });
 
-      const targetStudent =
-        targetStudentOverride ?? (await this.getTargetStudentResponse(dto));
+      const faceImagePurgeAt =
+        dto.retentionPolicy === 'SHORT_TERM_14_DAYS'
+          ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+          : undefined;
+
+      const enrollment = await this.prisma.faceEnrollment.create({
+        data: {
+          identityId: identity.id,
+          vector,
+          quality: aiResult?.quality || 1.0,
+          status: isSupervised ? 'PENDING_APPROVAL' : 'APPROVED',
+          isActive: !isSupervised,
+          retentionPolicy: dto.retentionPolicy as any,
+          capturedImageUrls,
+          retentionConsentedAt: dto.retentionPolicy ? new Date() : undefined,
+          faceImagePurgeAt,
+          supervisorName: otpRecord?.issuedByName,
+          supervisorCode: otpRecord?.issuedById,
+          supervisorRole: otpRecord?.issuedByRole,
+          verificationMethod: isSupervised
+            ? 'SUPERVISOR_OTP_MANUAL_CHECK'
+            : undefined,
+        },
+      });
+
+      if (otpRecord) {
+        this.notificationGateway.sendToUser(
+          otpRecord.issuedById,
+          'enrollment_pending',
+          {
+            enrollmentId: enrollment.id,
+            studentCode: otpRecord.studentCode,
+            message: 'Co yeu cau dang ky khuon mat moi can duyet',
+          },
+        );
+      } else {
+        await this.prisma.identity.update({
+          where: { id: identity.id },
+          data: { isValid: true },
+        });
+      }
 
       return {
         status: 'success',
-        message: 'Face registered successfully',
+        message: isSupervised
+          ? 'Da gui yeu cau dang ky, vui long cho giam thi duyet'
+          : 'Dang ky thanh cong',
         data: {
-          ...(result as Record<string, unknown>),
-          student: targetStudent
-            ? {
-                ...toUserResponse(targetStudent.user),
-                created: targetStudent.created,
-              }
-            : undefined,
+          enrollmentId: enrollment.id,
+          status: enrollment.status,
+          studentCode: targetStudent.code,
+          studentName: targetStudent.fullName,
+          capturedImageUrls,
         },
       };
     } catch (error) {
       this.logger.error('Face registration failed:', error);
-
-      return {
-        status: 'error',
-        message: error instanceof Error
-          ? error.message
-          : 'Face registration failed',
-      };
+      return { status: 'error', message: error.message };
     }
   }
 
-  async resolveTargetStudentByCode(studentCode: string): Promise<{
-    user: User;
-    created: boolean;
-  }> {
-    const normalizedCode = studentCode.trim().toUpperCase();
-    if (!normalizedCode) {
-      throw new Error('Student code must not be empty');
-    }
-
-    const existingUser = await this.userRepository.findOne({
-      code: normalizedCode,
+  private async resolveTargetStudentByCode(code: string) {
+    const student = await this.prisma.user.findFirst({
+      where: {
+        code: code.trim().toUpperCase(),
+        role: RoleType.STUDENT as any,
+        isActive: true,
+      },
+      select: { id: true, code: true, fullName: true, username: true, role: true },
     });
 
-    if (existingUser) {
-      if (existingUser.role?.value && existingUser.role.value !== RoleType.STUDENT) {
-        throw new Error(
-          `Code '${normalizedCode}' already belongs to a non-student account`,
-        );
-      }
-
-      return {
-        user: existingUser,
-        created: false,
-      };
+    if (!student) {
+      throw new NotFoundException('Khong tim thay sinh vien');
     }
 
-    const user = User.create({
-      id: uuidv4(),
-      email: `${normalizedCode.toLowerCase()}@student.local`,
-      username: normalizedCode.toLowerCase(),
-      fullName: normalizedCode,
-      code: normalizedCode,
-      role: RoleType.STUDENT,
-      isActive: true,
-    });
-
-    const savedUser = await this.userRepository.save(user);
-    return {
-      user: savedUser,
-      created: true,
-    };
+    return student;
   }
 
-  private async getTargetStudentResponse(dto: RegisterFaceDto): Promise<{
-    user: User;
-    created: boolean;
-  } | null> {
-    if (dto.studentCode && dto.studentCode.trim() !== '') {
-      return this.resolveTargetStudentByCode(dto.studentCode);
+  private async uploadCapturedImages(
+    images: Record<string, Buffer>,
+    studentCodeOrId: string,
+  ) {
+    const safeStudentCode = studentCodeOrId.replace(/[^a-zA-Z0-9_-]/g, '');
+    const uploaded: Record<string, string> = {};
+
+    for (const [pose, buffer] of Object.entries(images)) {
+      uploaded[pose] = await this.cloudinaryService.uploadImage(
+        buffer,
+        `face-enrollments/${safeStudentCode}`,
+      );
     }
 
-    if (!dto.studentId || dto.studentId.trim() === '') {
-      return null;
-    }
-
-    const user = await this.userRepository.findOne({ id: dto.studentId });
-    if (!user) {
-      return null;
-    }
-
-    return {
-      user,
-      created: false,
-    };
+    return uploaded;
   }
 }

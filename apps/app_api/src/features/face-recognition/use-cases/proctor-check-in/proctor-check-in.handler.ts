@@ -2,10 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom, timeout } from 'rxjs';
-import {
-  RABBITMQ_CLIENTS,
-  MESSAGE_PATTERNS,
-} from '@app/queue/queue.constants';
+import { RABBITMQ_CLIENTS, MESSAGE_PATTERNS } from '@app/queue/queue.constants';
 import { AttendanceSnapshotUploadJobData } from '@app/queue';
 import { EncryptionUtils } from '@app/queue/encryption.utils';
 import { IUserRepository, USER_REPOSITORY } from '@app/users';
@@ -13,10 +10,7 @@ import {
   EXAM_SESSION_REPOSITORY,
   IExamSessionRepository,
 } from '@app/exam-sessions';
-import {
-  AttendanceActorType,
-  AttendanceSnapshotStatus,
-} from '@prisma/client';
+import { AttendanceActorType, AttendanceSnapshotStatus } from '@prisma/client';
 import { PrismaService } from '@app/prisma';
 import { NotificationGateway } from '../../../../common/gateways';
 import { ProctorCheckInDto } from './proctor-check-in.dto';
@@ -73,19 +67,29 @@ export class ProctorCheckInHandler {
         throw new Error('Image is required');
       }
 
-      const session = await this.examSessionRepository.findById(dto.examSessionId);
+      const session = await this.examSessionRepository.findById(
+        dto.examSessionId,
+      );
       if (!session) {
         throw new Error('Exam session not found');
       }
 
       if (session.proctorId !== currentUserId) {
-        throw new Error('You are not the assigned proctor for this exam session');
+        throw new Error(
+          'You are not the assigned proctor for this exam session',
+        );
       }
 
       if (dto.isEncrypted) {
-        imageBuffer = EncryptionUtils.decryptImage(dto.image, this.encryptionKey);
+        imageBuffer = EncryptionUtils.decryptImage(
+          dto.image,
+          this.encryptionKey,
+        );
         if (dto.imageHash) {
-          const isValid = EncryptionUtils.verifyHash(imageBuffer, dto.imageHash);
+          const isValid = EncryptionUtils.verifyHash(
+            imageBuffer,
+            dto.imageHash,
+          );
           if (!isValid) {
             throw new Error('Hash verification failed');
           }
@@ -134,7 +138,9 @@ export class ProctorCheckInHandler {
           captureTimestamp,
         });
         snapshotRecorded = true;
-        throw new Error('The scanned face does not match the logged in proctor');
+        throw new Error(
+          'The scanned face does not match the logged in proctor',
+        );
       }
 
       const user = await this.userRepository.findOne({ id: currentUserId });
@@ -206,7 +212,8 @@ export class ProctorCheckInHandler {
 
       return {
         status: 'error',
-        message: error instanceof Error ? error.message : 'Proctor check-in failed',
+        message:
+          error instanceof Error ? error.message : 'Proctor check-in failed',
       };
     }
   }

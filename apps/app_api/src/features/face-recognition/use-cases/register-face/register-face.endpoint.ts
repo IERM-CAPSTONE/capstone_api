@@ -46,41 +46,12 @@ export class RegisterFaceEndpoint {
     @GetUser() user: { userId: string; role: string },
   ) {
     try {
-      const normalizedRole = (user.role ?? '').toUpperCase();
-      const requestedStudentCode = dto.studentCode?.trim();
-      const canRegisterForAnotherStudent = [
-        RoleType.ADMIN,
-        RoleType.EXAM_OFFICER,
-        RoleType.PROCTOR,
-        RoleType.IT_SUPPORT,
-        RoleType.HALL_INVIGILATOR,
-      ].includes(normalizedRole as RoleType);
-
-      if (requestedStudentCode && canRegisterForAnotherStudent) {
-        const targetStudent = await this.handler.resolveTargetStudentByCode(
-          requestedStudentCode,
-        );
-        this.logger.debug(
-          `Registering face for student code ${requestedStudentCode}: ${targetStudent.user.id}`,
-        );
-
-        return await this.handler.executeWithResolvedStudent(
-          {
-            ...dto,
-            studentId: targetStudent.user.id,
-            studentCode: targetStudent.user.code?.value ?? requestedStudentCode,
-          },
-          targetStudent,
-        );
-      }
-
-      const studentId = user.userId;
-      this.logger.debug(`Registering face for student: ${studentId}`);
+      this.logger.debug(`Registering face for user: ${user.userId}`);
 
       return await this.handler.execute({
         ...dto,
-        studentId,
-      });
+        studentId: user.userId,
+      }, user);
     } catch (error) {
       if (error instanceof Error) {
         throw new BadRequestException(error.message);

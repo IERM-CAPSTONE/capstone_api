@@ -60,7 +60,7 @@ export class SearchAuditLogHandler {
 
     ticketOrConditions.push({ reporterId: user.id });
 
-    const [tickets, attendanceSnapshots] = await Promise.all([
+    const [tickets, attendanceSnapshots, faceEnrollments] = await Promise.all([
       this.prisma.issueTicket.findMany({
         where: {
           OR: ticketOrConditions,
@@ -82,10 +82,7 @@ export class SearchAuditLogHandler {
       }),
       this.prisma.attendanceSnapshot.findMany({
         where: {
-          OR: [
-            { matchedUserId: user.id },
-            { capturedUserId: user.id },
-          ],
+          OR: [{ matchedUserId: user.id }, { capturedUserId: user.id }],
         },
         orderBy: { captureTimestamp: 'desc' },
         select: {
@@ -102,11 +99,27 @@ export class SearchAuditLogHandler {
           createdAt: true,
         },
       }),
+      this.prisma.faceEnrollment.findMany({
+        where: {
+          identity: {
+            userId: user.id,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          capturedImageUrls: true,
+          createdAt: true,
+          supervisorName: true,
+        },
+      }),
     ]);
 
     return {
       tickets,
       attendanceSnapshots,
+      faceEnrollments,
     };
   }
 }

@@ -53,12 +53,15 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             }
         });
 
-        // Group by subjectCode
+        // Group by subjectCode and time to avoid clashing slots on the same day
         const groups = new Map<string, SubjectMonitorSummary>();
 
         for (const s of sessions) {
             const subjectCode = s.subjectCode || 'Unknown';
-            let summary = groups.get(subjectCode);
+            const timeKey = s.examOpenTime ? s.examOpenTime.toISOString() : 'no-time';
+            const groupKey = `${subjectCode}_${timeKey}`;
+
+            let summary = groups.get(groupKey);
 
             const sessionDetail: SessionRoomDetail = {
                 sessionId: s.id,
@@ -87,7 +90,7 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                     pendingTickets: 0,
                     sessions: [],
                 };
-                groups.set(subjectCode, summary);
+                groups.set(groupKey, summary);
             }
 
             summary.totalProctors += s.proctorId ? 1 : 0;
@@ -99,9 +102,16 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             summary.pendingTickets += sessionDetail.pendingTickets;
             summary.sessions.push(sessionDetail);
 
-            // Special case: if at least one session is Ongoing, the subject status is Ongoing
-            if (s.status === 'Ongoing') {
-                summary.status = 'Ongoing';
+            // Prioritize statuses: Ongoing > Scheduled > Draft > Completed
+            const statusPriority: Record<string, number> = {
+                'Ongoing': 100,
+                'Scheduled': 80,
+                'Draft': 60,
+                'Completed': 40
+            };
+
+            if (statusPriority[s.status] > (statusPriority[summary.status] || 0)) {
+                summary.status = s.status as any;
             }
         }
 

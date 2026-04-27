@@ -143,3 +143,15 @@ enum AttendanceSnapshotStatus {
   WRONG_ROOM
   FAILED
 }
+
+enum EnrollmentStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  EXPIRED
+  LOCKED
+}
+enum FaceImageRetentionPolicy {
+  SHORT_TERM_14_DAYS
+  UNTIL_GRADUATION
+}

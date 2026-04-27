@@ -26,12 +26,10 @@ export class ProctorCheckInEndpoint {
   constructor(private readonly handler: ProctorCheckInHandler) {}
 
   @Post('proctor-check-in')
-  @Roles(
-    RoleType.PROCTOR,
-    RoleType.ADMIN,
-    RoleType.EXAM_OFFICER,
-  )
-  @ApiOperation({ summary: 'Check in assigned proctor via face authentication' })
+  @Roles(RoleType.PROCTOR, RoleType.ADMIN, RoleType.EXAM_OFFICER)
+  @ApiOperation({
+    summary: 'Check in assigned proctor via face authentication',
+  })
   @ApiBody({ type: ProctorCheckInDto })
   @ApiResponse({ status: 200, description: 'Proctor checked in successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })

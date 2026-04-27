@@ -2,19 +2,16 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom, timeout } from 'rxjs';
-import {
-  RABBITMQ_CLIENTS,
-  MESSAGE_PATTERNS,
-} from '@app/queue/queue.constants';
+import { RABBITMQ_CLIENTS, MESSAGE_PATTERNS } from '@app/queue/queue.constants';
 import { AttendanceSnapshotUploadJobData } from '@app/queue';
 import { EncryptionUtils } from '@app/queue/encryption.utils';
 import { IUserRepository, USER_REPOSITORY } from '@app/users';
-import { IStudentExamRepository, STUDENT_EXAM_REPOSITORY } from '@app/student-exams';
-import { PrismaService } from '@app/prisma';
 import {
-  AttendanceActorType,
-  AttendanceSnapshotStatus,
-} from '@prisma/client';
+  IStudentExamRepository,
+  STUDENT_EXAM_REPOSITORY,
+} from '@app/student-exams';
+import { PrismaService } from '@app/prisma';
+import { AttendanceActorType, AttendanceSnapshotStatus } from '@prisma/client';
 import { AuthenticateFaceDto } from './authenticate-face.dto';
 import { NotificationGateway } from '../../../../common/gateways';
 
@@ -43,7 +40,8 @@ export class AuthenticateFaceHandler {
     @Inject(RABBITMQ_CLIENTS.EXAM_SERVICE)
     private readonly examClient: ClientProxy,
     @Inject(USER_REPOSITORY) private readonly userRepository: IUserRepository,
-    @Inject(STUDENT_EXAM_REPOSITORY) private readonly studentExamRepository: IStudentExamRepository,
+    @Inject(STUDENT_EXAM_REPOSITORY)
+    private readonly studentExamRepository: IStudentExamRepository,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly notificationGateway: NotificationGateway,
@@ -106,9 +104,10 @@ export class AuthenticateFaceHandler {
       }
 
       // Convert to base64 for RabbitMQ transmission
-      const base64Images = Array.isArray(dto.images) && dto.images.length > 0
-        ? dto.images
-        : [imageBuffer.toString('base64')];
+      const base64Images =
+        Array.isArray(dto.images) && dto.images.length > 0
+          ? dto.images
+          : [imageBuffer.toString('base64')];
 
       let candidateStudentIds: string[] | undefined;
       if (dto.examSessionId) {
@@ -120,7 +119,11 @@ export class AuthenticateFaceHandler {
             studentId: true,
           },
         });
-        candidateStudentIds = [...new Set(studentExams.map((item) => item.studentId).filter(Boolean))];
+        candidateStudentIds = [
+          ...new Set(
+            studentExams.map((item) => item.studentId).filter(Boolean),
+          ),
+        ];
         if (candidateStudentIds.length === 0) {
           throw new Error('No students are assigned to this exam session');
         }
@@ -154,13 +157,17 @@ export class AuthenticateFaceHandler {
       if (result && result.student_id) {
         try {
           // 1. Identify student
-          const user = await this.userRepository.findOne({ id: result.student_id });
+          const user = await this.userRepository.findOne({
+            id: result.student_id,
+          });
           if (user) {
             studentCode = user.code?.value;
             studentName = user.fullName || undefined;
             this.logger.log(`User identified: ${studentName} (${studentCode})`);
           } else {
-            this.logger.warn(`Student ID ${result.student_id} returned by AI not found in database`);
+            this.logger.warn(
+              `Student ID ${result.student_id} returned by AI not found in database`,
+            );
           }
 
           // 2. Check if student belongs to the session (if session provided)
@@ -171,18 +178,31 @@ export class AuthenticateFaceHandler {
             });
 
             if (!isCorrectRoom) {
-              this.logger.warn(`Student ${studentCode} identified but is NOT in session ${dto.examSessionId}`);
+              this.logger.warn(
+                `Student ${studentCode} identified but is NOT in session ${dto.examSessionId}`,
+              );
             } else {
-              this.logger.log(`Student ${studentCode} confirmed for session. Updating check-in status...`);
-              await this.studentExamRepository.checkIn(result.student_id, dto.examSessionId, dto.examPartCode);
+              this.logger.log(
+                `Student ${studentCode} confirmed for session. Updating check-in status...`,
+              );
+              await this.studentExamRepository.checkIn(
+                result.student_id,
+                dto.examSessionId,
+                dto.examPartCode,
+              );
             }
           }
         } catch (e) {
-          this.logger.error(`Failed to fetch user info for ID ${result.student_id}:`, e);
+          this.logger.error(
+            `Failed to fetch user info for ID ${result.student_id}:`,
+            e,
+          );
           throw e;
         }
       } else {
-        this.logger.warn('Face authentication completed but no studentId was matched');
+        this.logger.warn(
+          'Face authentication completed but no studentId was matched',
+        );
       }
 
       const snapshotStatus = !result?.student_id
@@ -195,8 +215,7 @@ export class AuthenticateFaceHandler {
         actorType: AttendanceActorType.STUDENT,
         examSessionId: dto.examSessionId,
         examPartCode: dto.examPartCode,
-        capturedUserId:
-          actor?.role === 'STUDENT' ? actor.userId : undefined,
+        capturedUserId: actor?.role === 'STUDENT' ? actor.userId : undefined,
         matchedUserId: result?.student_id,
         status: snapshotStatus,
         confidence: result?.confidence,
@@ -226,9 +245,16 @@ export class AuthenticateFaceHandler {
         };
 
         if (anomalyCampus) {
-          this.notificationGateway.sendToCampus(anomalyCampus, 'monitor:student_anomaly', anomalyPayload);
+          this.notificationGateway.sendToCampus(
+            anomalyCampus,
+            'monitor:student_anomaly',
+            anomalyPayload,
+          );
         } else {
-          this.notificationGateway.sendToAll('monitor:student_anomaly', anomalyPayload);
+          this.notificationGateway.sendToAll(
+            'monitor:student_anomaly',
+            anomalyPayload,
+          );
         }
 
         return {
@@ -281,8 +307,7 @@ export class AuthenticateFaceHandler {
           actorType: AttendanceActorType.STUDENT,
           examSessionId: dto.examSessionId,
           examPartCode: dto.examPartCode,
-          capturedUserId:
-            actor?.role === 'STUDENT' ? actor.userId : undefined,
+          capturedUserId: actor?.role === 'STUDENT' ? actor.userId : undefined,
           matchedUserId: undefined,
           status: AttendanceSnapshotStatus.FAILED,
           confidence: undefined,
@@ -295,7 +320,9 @@ export class AuthenticateFaceHandler {
         status: 'error',
         message: error.message || 'Face authentication failed',
       };
-      this.logger.error(`Authentication failed: ${JSON.stringify(errorResponse)}`);
+      this.logger.error(
+        `Authentication failed: ${JSON.stringify(errorResponse)}`,
+      );
       return errorResponse;
     }
   }
@@ -346,5 +373,4 @@ export class AuthenticateFaceHandler {
       );
     }
   }
-
 }

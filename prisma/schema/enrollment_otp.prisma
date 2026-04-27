@@ -1,0 +1,17 @@
+model EnrollmentOTP {
+  id           String   @id @default(uuid())
+  studentCode  String
+  otpHash      String
+  expiresAt    DateTime
+  usedAt       DateTime?
+  
+  // Who created this OTP
+  issuedById   String
+  issuedByName String
+  issuedByRole String
+  
+  createdAt    DateTime @default(now())
+
+  @@index([studentCode])
+  @@index([otpHash])
+}
