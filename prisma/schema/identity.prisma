@@ -12,7 +12,7 @@ model Identity {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   studentId     String           @unique
-  activeVector  Json?
+  activeVector  Unsupported("vector(512)")?
   userId        String?          @unique
   user          User?            @relation(fields: [userId], references: [id])
   enrollments   FaceEnrollment[]
