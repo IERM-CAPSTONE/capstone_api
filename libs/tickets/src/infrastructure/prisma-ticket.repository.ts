@@ -154,19 +154,47 @@ export class PrismaTicketRepository implements ITicketRepository {
         const tickets = await (this.prisma as any).issueTicket.findMany({
             where,
             orderBy: { createdAt: 'desc' },
-            include: {
+            // Explicitly select stable/base columns to tolerate production DBs
+            // that are missing newer IssueTicket fields from recent migrations.
+            select: {
+                id: true,
+                issueName: true,
+                reporterId: true,
+                assigneeId: true,
+                issueType: true,
+                description: true,
+                sessionId: true,
+                status: true,
+                attachment: true,
+                createdAt: true,
+                updatedAt: true,
                 reporter: { select: { id: true, fullName: true, email: true, role: true } },
                 assignee: { select: { id: true, fullName: true, email: true, role: true } },
                 session: {
-                    include: {
+                    select: {
+                        id: true,
+                        examDate: true,
+                        startTime: true,
+                        endTime: true,
                         examRoom: { select: { id: true, roomNumber: true } },
                     },
                 },
                 activityHistories: {
                     orderBy: { createdAt: 'asc' },
+                    select: {
+                        id: true,
+                        description: true,
+                        note: true,
+                        createdAt: true,
+                    },
                 },
                 aiCandidates: {
                     orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true,
+                        reviewStatus: true,
+                        createdAt: true,
+                    },
                 },
             },
         });

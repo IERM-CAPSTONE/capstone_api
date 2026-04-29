@@ -81,16 +81,7 @@ async function resetData() {
   await safeDelete('ExamPart', () => prisma.examPart.deleteMany({}));
   await safeDelete('ExamRoom', () => prisma.examRoom.deleteMany({}));
   await safeDelete('Semester', () => prisma.semester.deleteMany({}));
-
-  try {
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE "User" CASCADE');
-  } catch (error: any) {
-    if (error?.code === 'P2021') {
-      console.warn('⚠️ Skipping cleanup for User: table missing in current database');
-      return;
-    }
-    throw error;
-  }
+  await safeDelete('User', () => prisma.user.deleteMany({}));
 }
 
 async function seedUsers() {
