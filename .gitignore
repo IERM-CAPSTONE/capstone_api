@@ -26,6 +26,9 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Firebase Admin SDK credentials
+firebase-credentials.json
+
 /generated/prisma
 ## end of dotenv rules
 /scripts

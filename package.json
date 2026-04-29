@@ -6,9 +6,9 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
-    "build:api": "nest build app_api",
-    "build:background": "nest build app_background",
+    "build": "prisma generate && nest build",
+    "build:api": "prisma generate && nest build app_api",
+    "build:background": "prisma generate && nest build app_background",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
     "start:api": "nest start app_api",
