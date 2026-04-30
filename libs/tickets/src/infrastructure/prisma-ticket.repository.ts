@@ -173,9 +173,8 @@ export class PrismaTicketRepository implements ITicketRepository {
                 session: {
                     select: {
                         id: true,
-                        examDate: true,
-                        startTime: true,
-                        endTime: true,
+                        examOpenTime: true,
+                        examCloseTime: true,
                         examRoom: { select: { id: true, roomNumber: true } },
                     },
                 },

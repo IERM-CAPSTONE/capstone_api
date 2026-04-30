@@ -7,6 +7,7 @@ import {
     Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { Prisma } from '@prisma/client';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -55,6 +56,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         const { method, url, body, user } = request;
         const stack = exception instanceof Error ? exception.stack : '';
         const message = exception instanceof Error ? exception.message : exception;
+        const prismaError = this.extractPrismaError(exception);
 
         const errorLog = {
             method,
@@ -63,19 +65,56 @@ export class AllExceptionsFilter implements ExceptionFilter {
             message,
             user: user ? { id: user.id, email: user.email } : 'Anonymous',
             body: this.sanitizeBody(body),
+            prisma: prismaError,
             stack,
         };
+
+        const serializedErrorLog = JSON.stringify(errorLog, null, 2);
 
         if (status >= 500) {
             this.logger.error(
                 `${method} ${url} ${status} - Error: ${message}`,
                 stack
             );
+            if (prismaError) {
+                this.logger.error(`Prisma details: ${JSON.stringify(prismaError)}`);
+            }
+            this.logger.error(`Context: ${serializedErrorLog}`);
         } else {
             this.logger.warn(
                 `${method} ${url} ${status} - Warning: ${message}`
             );
+            this.logger.warn(`Context: ${serializedErrorLog}`);
         }
+    }
+
+    private extractPrismaError(exception: unknown): {
+        name?: string;
+        code?: string;
+        clientVersion?: string;
+        meta?: Prisma.PrismaClientKnownRequestError['meta'];
+    } | null {
+        if (!exception || typeof exception !== 'object') return null;
+
+        const e = exception as {
+            name?: string;
+            code?: string;
+            clientVersion?: string;
+            meta?: Prisma.PrismaClientKnownRequestError['meta'];
+        };
+
+        const isPrismaError =
+            !!e.code ||
+            (typeof e.name === 'string' && e.name.startsWith('PrismaClient'));
+
+        if (!isPrismaError) return null;
+
+        return {
+            name: e.name,
+            code: e.code,
+            clientVersion: e.clientVersion,
+            meta: e.meta,
+        };
     }
 
     private sanitizeBody(body: any) {
