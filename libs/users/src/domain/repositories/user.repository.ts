@@ -14,6 +14,7 @@ export interface IUserRepository {
     // Queries
     findOne(query: { id?: string; email?: string; code?: string; username?: string }, excludeId?: string): Promise<User | null>;
     findMany(query: { role?: RoleType; isActive?: boolean; search?: string }): Promise<User[]>;
+    findByCodes(codes: string[]): Promise<User[]>;
     findPaginated(options: FindPaginatedOptions): Promise<PaginatedResult<User>>;
 
     // Counts

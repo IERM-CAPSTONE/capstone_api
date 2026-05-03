@@ -18,7 +18,7 @@ export class DownloadAutoGenerateTemplatesEndpoint {
     @ApiOperation({ summary: 'Download auto-generate templates' })
     @ApiResponse({ status: 200, description: 'Template file generated' })
     async execute(
-        @Param('type') type: 'proctor' | 'registration' | 'course',
+        @Param('type') type: 'proctor' | 'registration' | 'course' | 'student',
         @Res() res: Response
     ) {
         return this.handler.execute(type, res);

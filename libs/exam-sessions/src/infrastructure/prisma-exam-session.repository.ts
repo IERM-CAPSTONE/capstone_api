@@ -134,25 +134,24 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             updatedAt: session.updatedAt,
         };
 
-        const createRelationData: any = {};
-        if (session.examRoomId) createRelationData.examRoom = { connect: { id: session.examRoomId } };
-        if (session.proctorId) createRelationData.proctor = { connect: { id: session.proctorId } };
-        if (session.hallInvigilatorId) createRelationData.hallInvigilator = { connect: { id: session.hallInvigilatorId } };
-        if (session.semesterId) createRelationData.semester = { connect: { id: session.semesterId } };
+        const relationData: any = {};
+        if (session.examRoomId) relationData.examRoom = { connect: { id: session.examRoomId } };
+        if (session.proctorId) relationData.proctor = { connect: { id: session.proctorId } };
+        if (session.hallInvigilatorId) relationData.hallInvigilator = { connect: { id: session.hallInvigilatorId } };
+        if (session.semesterId) relationData.semester = { connect: { id: session.semesterId } };
 
-        const updateRelationData = {
-            examRoom: session.examRoomId ? { connect: { id: session.examRoomId } } : { disconnect: true },
-            proctor: session.proctorId ? { connect: { id: session.proctorId } } : { disconnect: true },
-            hallInvigilator: session.hallInvigilatorId ? { connect: { id: session.hallInvigilatorId } } : { disconnect: true },
-            semester: session.semesterId ? { connect: { id: session.semesterId } } : { disconnect: true },
-        };
+        const updateRelationData: any = {};
+        updateRelationData.examRoom = session.examRoomId ? { connect: { id: session.examRoomId } } : { disconnect: true };
+        updateRelationData.proctor = session.proctorId ? { connect: { id: session.proctorId } } : { disconnect: true };
+        updateRelationData.hallInvigilator = session.hallInvigilatorId ? { connect: { id: session.hallInvigilatorId } } : { disconnect: true };
+        updateRelationData.semester = session.semesterId ? { connect: { id: session.semesterId } } : { disconnect: true };
 
         const saved = await this.prisma.examSession.upsert({
             where: { id: session.id },
             create: {
                 id: session.id,
                 ...data,
-                ...createRelationData,
+                ...relationData,
                 createdAt: session.createdAt,
                 examParts: {
                     connect: session.examPart.map(code => ({ code }))

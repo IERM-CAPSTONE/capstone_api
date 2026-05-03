@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { PrismaModule } from '@app/prisma';
 import { TicketsCoreModule } from '@app/tickets';
 import { NotificationGateway } from '../../common/gateways/notification.gateway';
@@ -32,7 +33,7 @@ import { GetTicketStatsHandler } from './use-cases/get-ticket-stats/get-ticket-s
 import { TicketWorkflowService } from './ticket-workflow.service';
 
 @Module({
-    imports: [PrismaModule, TicketsCoreModule],
+    imports: [PrismaModule, TicketsCoreModule, HttpModule],
     controllers: [
         CreateTicketEndpoint,
         ListTicketsEndpoint,

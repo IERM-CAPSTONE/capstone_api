@@ -71,6 +71,17 @@ export class PrismaUserRepository implements IUserRepository {
         return results.map((r) => this.toDomain(r));
     }
 
+    async findByCodes(codes: string[]): Promise<User[]> {
+        const results = await this.prisma.user.findMany({
+            where: {
+                code: {
+                    in: codes,
+                },
+            },
+        });
+        return results.map((r) => this.toDomain(r));
+    }
+
     async findPaginated(options: FindPaginatedOptions): Promise<PaginatedResult<User>> {
         const { page, limit } = options;
         const skip = (page - 1) * limit;
