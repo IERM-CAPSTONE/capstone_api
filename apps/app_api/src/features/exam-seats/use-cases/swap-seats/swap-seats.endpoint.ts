@@ -26,7 +26,7 @@ export class SwapSeatsEndpoint {
     ) { }
 
     @Patch(':id/swap')
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR)
+    @Roles(RoleType.PROCTOR)
     @ApiOperation({ 
         summary: 'Swap students between two seats',
         description: 'Swap a student from one seat to another. Only works after layout is finalized and neither seat is locked.'

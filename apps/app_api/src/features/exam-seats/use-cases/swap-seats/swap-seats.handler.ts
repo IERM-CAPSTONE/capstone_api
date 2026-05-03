@@ -1,10 +1,6 @@
-import { Injectable, Inject, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { logSessionActivity } from '../../../../common/utils/activity-history.util';
-
-interface SwapSeatsDto {
-  targetSeatId: string;
-}
 
 @Injectable()
 export class SwapSeatsHandler {
@@ -36,22 +32,7 @@ export class SwapSeatsHandler {
             throw new BadRequestException('Seats must belong to the same exam session');
         }
 
-        // 3. Verify session has students imported (layout finalized)
-        const session = await this.prisma.examSession.findUnique({
-            where: { id: examSessionId }
-        });
-
-        if (!session || !session.hasStudentsImported) {
-            throw new BadRequestException('Seat swapping only enabled after layout is finalized');
-        }
-
-        // 4. Protect seats that are not editable in seat-management workflows
-        const blockedStatuses = new Set(['Locked', 'Present', 'Absent']);
-        if (blockedStatuses.has(sourceSeat.status) || blockedStatuses.has(targetSeat.status)) {
-            throw new BadRequestException('Cannot swap seats with Locked, Present, or Absent status');
-        }
-
-        // 5. Check if seats have students (must have at least one student)
+        // 3. Check if seats have students (must have at least one student)
         const [sourceStudent, targetStudent] = await Promise.all([
             this.prisma.studentExam.findFirst({
                 where: { seatPosition: sourceSeatId }
@@ -64,7 +45,7 @@ export class SwapSeatsHandler {
         // Allow swapping if one or both have students
         // (e.g., swap Assigned seat with Available seat)
 
-        // 6. Swap in transaction
+        // 4. Swap in transaction
         await this.prisma.$transaction(async (tx) => {
             // Update source student (if exists) to target seat
             if (sourceStudent) {
