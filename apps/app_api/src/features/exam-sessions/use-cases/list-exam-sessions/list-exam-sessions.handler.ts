@@ -10,18 +10,33 @@ export class ListExamSessionsHandler {
         private readonly repository: IExamSessionRepository,
     ) { }
 
-    async execute(dto: ListExamSessionsDto): Promise<PaginatedExamSessionResponse> {
+    async execute(dto: ListExamSessionsDto, user?: any): Promise<PaginatedExamSessionResponse> {
         const page = Number(dto.page) || 1;
         const limit = Number(dto.limit) || 10;
         const skip = (page - 1) * limit;
 
+        const isStaff = user?.role === 'ADMIN' || user?.role === 'EXAM_OFFICER';
+        const finalQuery = { ...dto };
+
+        // If not staff, automatically filter out Draft sessions if no status is specified
+        // or ensure they can't request Draft status explicitly
+        if (!isStaff) {
+            if (!dto.status) {
+                (finalQuery as any).status = { not: 'Draft' };
+            } else if (dto.status === 'Draft') {
+                // Non-staff requesting Draft should get nothing or error
+                // Here we force it to something that won't match Draft
+                (finalQuery as any).status = { not: 'Draft' };
+            }
+        }
+
         const [items, total] = await Promise.all([
             this.repository.findMany({
-                ...dto,
+                ...finalQuery,
                 skip,
                 take: limit,
             }),
-            this.repository.count(dto),
+            this.repository.count(finalQuery),
         ]);
 
         return {

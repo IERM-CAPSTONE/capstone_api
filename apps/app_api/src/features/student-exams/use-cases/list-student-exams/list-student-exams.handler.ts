@@ -10,12 +10,15 @@ export class ListStudentExamsHandler {
         private readonly studentExamRepository: IStudentExamRepository,
     ) { }
 
-    async execute(dto: ListStudentExamsDto): Promise<PaginatedStudentExamResponse> {
+    async execute(dto: ListStudentExamsDto, user?: any): Promise<PaginatedStudentExamResponse> {
+        const isStaff = user?.role === 'ADMIN' || user?.role === 'EXAM_OFFICER';
+
         const { data, total } = await this.studentExamRepository.findMany({
             examSessionId: dto.examSessionId,
             studentId: dto.studentId,
             studentCode: dto.studentCode,
             status: dto.status,
+            sessionStatus: isStaff ? undefined : { not: 'Draft' },
             page: dto.page,
             limit: dto.limit,
         });
