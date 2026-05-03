@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { logSessionActivity } from '../../../../common/utils/activity-history.util';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SwapSeatsHandler {
@@ -32,52 +33,90 @@ export class SwapSeatsHandler {
             throw new BadRequestException('Seats must belong to the same exam session');
         }
 
-        // 3. Check if seats have students (must have at least one student)
-        const [sourceStudent, targetStudent] = await Promise.all([
-            this.prisma.studentExam.findFirst({
-                where: { seatPosition: sourceSeatId }
+        // 3. Snapshot students currently assigned on source/target seats
+        const [sourceStudents, targetStudents] = await Promise.all([
+            this.prisma.studentExam.findMany({
+                where: {
+                    examSessionId,
+                    seatPosition: sourceSeatId,
+                },
+                select: {
+                    id: true,
+                    studentId: true,
+                },
             }),
-            this.prisma.studentExam.findFirst({
-                where: { seatPosition: targetSeatId }
-            })
+            this.prisma.studentExam.findMany({
+                where: {
+                    examSessionId,
+                    seatPosition: targetSeatId,
+                },
+                select: {
+                    id: true,
+                    studentId: true,
+                },
+            }),
         ]);
 
-        // Allow swapping if one or both have students
-        // (e.g., swap Assigned seat with Available seat)
-
-        // 4. Swap in transaction
+        // 4. Swap seat assignments and normalize seat statuses in transaction
         await this.prisma.$transaction(async (tx) => {
-            // Update source student (if exists) to target seat
-            if (sourceStudent) {
-                await tx.studentExam.update({
-                    where: { id: sourceStudent.id },
-                    data: { seatPosition: targetSeatId }
-                });
-            }
+            await tx.$executeRaw(
+                Prisma.sql`
+                  UPDATE "StudentExam"
+                  SET "seatPosition" = CASE
+                    WHEN "seatPosition" = ${sourceSeatId} THEN ${targetSeatId}
+                    WHEN "seatPosition" = ${targetSeatId} THEN ${sourceSeatId}
+                    ELSE "seatPosition"
+                  END
+                  WHERE "examSessionId" = ${examSessionId}
+                    AND "seatPosition" IN (${sourceSeatId}, ${targetSeatId})
+                `,
+            );
 
-            // Update target student (if exists) to source seat
-            if (targetStudent) {
-                await tx.studentExam.update({
-                    where: { id: targetStudent.id },
-                    data: { seatPosition: sourceSeatId }
-                });
-            }
-
-            // Update seat statuses based on updated assignments
-            // Source seat: if targetStudent moved in, it's Assigned; otherwise Available
-            await tx.examSeat.update({
-                where: { id: sourceSeatId },
-                data: { 
-                    status: targetStudent ? 'Assigned' : 'Available'
-                }
+            const assignedSeatRows = await tx.studentExam.findMany({
+                where: {
+                    examSessionId,
+                    seatPosition: {
+                        not: null,
+                    },
+                },
+                select: {
+                    seatPosition: true,
+                },
+                distinct: ['seatPosition'],
             });
 
-            // Target seat: if sourceStudent moved in, it's Assigned; otherwise Available
-            await tx.examSeat.update({
-                where: { id: targetSeatId },
-                data: { 
-                    status: sourceStudent ? 'Assigned' : 'Available'
-                }
+            const assignedSeatIds = assignedSeatRows
+                .map((row) => row.seatPosition)
+                .filter((value): value is string => Boolean(value));
+
+            if (assignedSeatIds.length > 0) {
+                await tx.examSeat.updateMany({
+                    where: {
+                        examSessionId,
+                        status: 'Available',
+                        id: {
+                            in: assignedSeatIds,
+                        },
+                    },
+                    data: {
+                        status: 'Assigned',
+                    },
+                });
+            }
+
+            await tx.examSeat.updateMany({
+                where: {
+                    examSessionId,
+                    status: 'Assigned',
+                    id: assignedSeatIds.length > 0
+                        ? {
+                            notIn: assignedSeatIds,
+                        }
+                        : undefined,
+                },
+                data: {
+                    status: 'Available',
+                },
             });
         });
 
@@ -93,8 +132,8 @@ export class SwapSeatsHandler {
                 meta: {
                     sourceSeatId,
                     targetSeatId,
-                    sourceStudentId: sourceStudent?.studentId ?? null,
-                    targetStudentId: targetStudent?.studentId ?? null,
+                    sourceStudentIds: sourceStudents.map((student) => student.studentId),
+                    targetStudentIds: targetStudents.map((student) => student.studentId),
                 },
             },
         });
@@ -105,7 +144,7 @@ export class SwapSeatsHandler {
             data: {
                 sourceSeatId,
                 targetSeatId,
-                swappedStudents: [!!sourceStudent, !!targetStudent]
+                swappedStudents: [sourceStudents.length > 0, targetStudents.length > 0],
             }
         };
     }
