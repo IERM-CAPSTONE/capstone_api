@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { RoleType } from '@app/users';
 import { Roles } from '../../../../common/decorators';
@@ -24,7 +24,7 @@ export class ListStudentExamsEndpoint {
     @ApiQuery({ name: 'studentCode', required: false, type: String })
     @ApiQuery({ name: 'status', required: false, enum: ['REGISTERED', 'CHECKEDIN', 'CHECKEDOUT', 'MOVED', 'REMOVED'] })
     @ApiResponse({ status: 200, description: 'Student exams retrieved', type: PaginatedStudentExamResponse })
-    async handle(@Query() query: ListStudentExamsDto): Promise<PaginatedStudentExamResponse> {
-        return this.handler.execute(query);
+    async handle(@Query() query: ListStudentExamsDto, @Req() req: any): Promise<PaginatedStudentExamResponse> {
+        return this.handler.execute(query, req.user);
     }
 }

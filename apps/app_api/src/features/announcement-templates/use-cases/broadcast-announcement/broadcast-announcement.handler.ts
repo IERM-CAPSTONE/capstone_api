@@ -39,7 +39,7 @@ export class BroadcastAnnouncementHandler {
         const sessions = await this.prisma.examSession.findMany({
             where: {
                 subjectCode: { in: command.subjectCodes },
-                status: { in: [ExamSessionStatus.Ongoing, ExamSessionStatus.Scheduled] },
+                status: { in: [ExamSessionStatus.Ongoing, ExamSessionStatus.Scheduled, ExamSessionStatus.Draft] },
             },
             select: {
                 id: true,
@@ -54,6 +54,10 @@ export class BroadcastAnnouncementHandler {
                 campus: true,
             }
         });
+
+        if (sessions.length === 0) {
+            this.logger.warn(`No active sessions found for subjects: ${command.subjectCodes.join(', ')}`);
+        }
 
         // 2. Identify unique proctors/staff to notify
         const userIds = new Set<string>();
@@ -208,7 +212,7 @@ export class BroadcastAnnouncementHandler {
             sessions.map((session) =>
                 logSessionActivity(this.prisma, {
                     sessionId: session.id,
-                    activityType: 'MOVED',
+                    activityType: 'TICKET_COMMENTED',
                     payload: {
                         event: 'BROADCAST_SENT',
                         title: command.title || 'Official Announcement',

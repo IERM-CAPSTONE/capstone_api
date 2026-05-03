@@ -12,6 +12,7 @@ export interface IStudentExamRepository {
         studentId?: string;
         studentCode?: string;
         status?: string;
+        sessionStatus?: string | any;
         page?: number;
         limit?: number;
     }): Promise<{ data: StudentExam[]; total: number }>;

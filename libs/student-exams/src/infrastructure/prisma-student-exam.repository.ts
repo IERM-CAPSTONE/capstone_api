@@ -178,6 +178,7 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
         studentId?: string;
         studentCode?: string;
         status?: string;
+        sessionStatus?: string | { not: string } | { in: string[] };
         page?: number;
         limit?: number;
     }): Promise<{ data: StudentExam[]; total: number }> {
@@ -189,6 +190,11 @@ export class PrismaStudentExamRepository implements IStudentExamRepository {
         if (criteria?.examSessionId) where.examSessionId = criteria.examSessionId;
         if (criteria?.studentId) where.studentId = criteria.studentId;
         if (criteria?.status) where.status = criteria.status;
+        if (criteria?.sessionStatus) {
+            where.examSession = {
+                status: criteria.sessionStatus
+            };
+        }
         if (criteria?.studentCode) {
             where.student = {
                 code: {

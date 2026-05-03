@@ -17,6 +17,20 @@ export class ExportExamSessionsDto {
     @IsString()
     examType?: string;
 
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    subjectCode?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    status?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    examRoomId?: string;
 
     @ApiProperty({ required: false })
     @IsOptional()

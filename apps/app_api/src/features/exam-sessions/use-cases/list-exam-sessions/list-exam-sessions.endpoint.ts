@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../../common/guards';
 import { PaginatedExamSessionResponse } from '../../shared/exam-session.response';
@@ -15,7 +15,7 @@ export class ListExamSessionsEndpoint {
     @Get()
     @ApiOperation({ summary: 'List exam sessions with pagination' })
     @ApiResponse({ status: 200, type: PaginatedExamSessionResponse })
-    async handle(@Query() dto: ListExamSessionsDto): Promise<PaginatedExamSessionResponse> {
-        return await this.handler.execute(dto);
+    async handle(@Query() dto: ListExamSessionsDto, @Req() req: any): Promise<PaginatedExamSessionResponse> {
+        return await this.handler.execute(dto, req.user);
     }
 }

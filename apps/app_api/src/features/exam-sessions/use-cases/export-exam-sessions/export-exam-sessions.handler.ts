@@ -19,6 +19,15 @@ export class ExportExamSessionsHandler {
         if (dto.semesterId) where.semesterId = dto.semesterId;
         if (dto.campus) where.campus = dto.campus;
         if (dto.examType) where.examType = dto.examType;
+        if (dto.subjectCode) {
+            where.subjectCode = {
+                contains: dto.subjectCode,
+                mode: 'insensitive'
+            };
+        }
+        if (dto.status) where.status = dto.status;
+        if (dto.examRoomId) where.examRoomId = dto.examRoomId;
+
         if (dto.fromDate || dto.toDate) {
             where.examOpenTime = {};
             if (dto.fromDate) where.examOpenTime.gte = new Date(dto.fromDate);

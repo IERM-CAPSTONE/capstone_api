@@ -32,3 +32,6 @@ lerna-debug.log*
 firebase-credentials.json
 
 
+.gitnexus
+.claude/
+.codegraph/

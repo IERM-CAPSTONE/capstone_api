@@ -3,6 +3,7 @@ import { ExamSessionsCoreModule } from '@app/exam-sessions';
 import { ExamSeatsModule } from '@app/exam-seats';
 
 import { CreateExamSessionHandler, CreateExamSessionEndpoint } from './use-cases/create-exam-session';
+import { DownloadAutoGenerateTemplatesHandler, DownloadAutoGenerateTemplatesEndpoint } from './use-cases/download-auto-generate-templates';
 import { UpdateExamSessionHandler, UpdateExamSessionEndpoint } from './use-cases/update-exam-session';
 import { DeleteExamSessionHandler, DeleteExamSessionEndpoint } from './use-cases/delete-exam-session';
 import { GetExamSessionHandler, GetExamSessionEndpoint } from './use-cases/get-exam-session';
@@ -25,6 +26,7 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
     controllers: [
         // ExportExamSessionsEndpoint MUST come before GetExamSessionEndpoint
         // because NestJS matches /:id greedily and would treat "export" as an id
+        DownloadAutoGenerateTemplatesEndpoint,
         ExportExamSessionsEndpoint,
         MonitorSummaryEndpoint,
         MonitorActivitiesEndpoint,
@@ -42,6 +44,7 @@ import { NotificationGateway } from '../../common/gateways/notification.gateway'
         PublishExamSessionsEndpoint,
     ],
     providers: [
+        DownloadAutoGenerateTemplatesHandler,
         CreateExamSessionHandler,
         UpdateExamSessionHandler,
         DeleteExamSessionHandler,
