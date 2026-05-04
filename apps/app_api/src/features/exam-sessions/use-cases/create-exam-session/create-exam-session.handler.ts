@@ -44,7 +44,21 @@ export class CreateExamSessionHandler {
             if (dto.examRoomId && conflict.examRoomId === dto.examRoomId) {
                 throw new Error(`Room is already occupied by another session during this time.`);
             }
-            throw new Error(`One or more staff members are already assigned to another session during this time.`);
+            const hasDisallowedStaffConflict = overlaps.some((item) => {
+                if (dto.proctorId && item.proctorId === dto.proctorId) {
+                    return true;
+                }
+
+                if (dto.hallInvigilatorId && item.hallInvigilatorId === dto.hallInvigilatorId) {
+                    return !this.isSameTimeSlot(item.examTime.openTime, item.examTime.closeTime, startTime, endTime);
+                }
+
+                return false;
+            });
+
+            if (hasDisallowedStaffConflict) {
+                throw new Error(`One or more staff members are already assigned to another session during this time.`);
+            }
         }
 
         // 3. Create aggregate
@@ -85,5 +99,19 @@ export class CreateExamSessionHandler {
         }
 
         return toExamSessionResponse(saved);
+    }
+
+    private isSameTimeSlot(
+        leftOpen: Date | null,
+        leftClose: Date | null,
+        rightOpen: Date | null,
+        rightClose: Date | null,
+    ): boolean {
+        if (!leftOpen || !leftClose || !rightOpen || !rightClose) {
+            return false;
+        }
+
+        return leftOpen.getTime() === rightOpen.getTime()
+            && leftClose.getTime() === rightClose.getTime();
     }
 }

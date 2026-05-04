@@ -265,13 +265,19 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
         }
 
         if (criteria?.preferredDateStart || criteria?.preferredDateEnd) {
-            where.preferredDate = {};
+            const createdAt: Record<string, Date> = {};
+
             if (criteria.preferredDateStart) {
-                where.preferredDate.gte = criteria.preferredDateStart;
+                createdAt.gte = criteria.preferredDateStart;
             }
+
             if (criteria.preferredDateEnd) {
-                where.preferredDate.lte = criteria.preferredDateEnd;
+                const endExclusive = new Date(criteria.preferredDateEnd);
+                endExclusive.setDate(endExclusive.getDate() + 1);
+                createdAt.lt = endExclusive;
             }
+
+            where.createdAt = createdAt;
         }
 
         const skipVal = isNaN(skip) || skip < 0 ? 0 : Math.floor(skip);
