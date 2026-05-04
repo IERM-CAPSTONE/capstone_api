@@ -1,11 +1,14 @@
 /**
  * ProctorApplication Entity - Domain Model
- * Represents a proctor's application for invigilation shifts
+ * Represents a swap request between two proctors.
  */
 export class ProctorApplication {
     private constructor(
         public readonly id: string,
         public readonly teacherId: string,
+        public readonly targetTeacherId: string | null,
+        public readonly examSessionId: string | null,
+        public readonly targetExamSessionId: string | null,
         public readonly preferredShift: string,
         public readonly preferredType: string,
         public readonly preferredDate: Date | null,
@@ -15,11 +18,22 @@ export class ProctorApplication {
         public readonly updatedAt: Date,
         public readonly teacherName: string | null = null,
         public readonly teacherCode: string | null = null,
+        public readonly targetTeacherName: string | null = null,
+        public readonly targetTeacherCode: string | null = null,
+        public readonly roomNumber: string | null = null,
+        public readonly examOpenTime: Date | null = null,
+        public readonly examCloseTime: Date | null = null,
+        public readonly targetRoomNumber: string | null = null,
+        public readonly targetExamOpenTime: Date | null = null,
+        public readonly targetExamCloseTime: Date | null = null,
     ) { }
 
     static create(props: {
         id: string;
         teacherId: string;
+        targetTeacherId?: string | null;
+        examSessionId?: string | null;
+        targetExamSessionId?: string | null;
         preferredShift: string;
         preferredType: string;
         preferredDate?: Date | null;
@@ -29,6 +43,9 @@ export class ProctorApplication {
         return new ProctorApplication(
             props.id,
             props.teacherId,
+            props.targetTeacherId ?? null,
+            props.examSessionId ?? null,
+            props.targetExamSessionId ?? null,
             props.preferredShift,
             props.preferredType,
             props.preferredDate ?? null,
@@ -42,6 +59,9 @@ export class ProctorApplication {
     static reconstitute(props: {
         id: string;
         teacherId: string;
+        targetTeacherId: string | null;
+        examSessionId: string | null;
+        targetExamSessionId: string | null;
         preferredShift: string;
         preferredType: string;
         preferredDate: Date | null;
@@ -51,10 +71,21 @@ export class ProctorApplication {
         updatedAt: Date;
         teacherName?: string | null;
         teacherCode?: string | null;
+        targetTeacherName?: string | null;
+        targetTeacherCode?: string | null;
+        roomNumber?: string | null;
+        examOpenTime?: Date | null;
+        examCloseTime?: Date | null;
+        targetRoomNumber?: string | null;
+        targetExamOpenTime?: Date | null;
+        targetExamCloseTime?: Date | null;
     }): ProctorApplication {
         return new ProctorApplication(
             props.id,
             props.teacherId,
+            props.targetTeacherId,
+            props.examSessionId,
+            props.targetExamSessionId,
             props.preferredShift,
             props.preferredType,
             props.preferredDate,
@@ -64,16 +95,23 @@ export class ProctorApplication {
             props.updatedAt,
             props.teacherName,
             props.teacherCode,
+            props.targetTeacherName,
+            props.targetTeacherCode,
+            props.roomNumber,
+            props.examOpenTime,
+            props.examCloseTime,
+            props.targetRoomNumber,
+            props.targetExamOpenTime,
+            props.targetExamCloseTime,
         );
     }
 
-    // Business methods
     canBeEdited(): boolean {
         return this.status === 'PENDING';
     }
 
     canBeCanceled(): boolean {
-        return this.status === 'PENDING' || this.status === 'APPROVED';
+        return this.status === 'PENDING';
     }
 
     cancel(): ProctorApplication {
@@ -84,6 +122,9 @@ export class ProctorApplication {
         return ProctorApplication.reconstitute({
             id: this.id,
             teacherId: this.teacherId,
+            targetTeacherId: this.targetTeacherId,
+            examSessionId: this.examSessionId,
+            targetExamSessionId: this.targetExamSessionId,
             preferredShift: this.preferredShift,
             preferredType: this.preferredType,
             preferredDate: this.preferredDate,
@@ -93,6 +134,14 @@ export class ProctorApplication {
             updatedAt: new Date(),
             teacherName: this.teacherName,
             teacherCode: this.teacherCode,
+            targetTeacherName: this.targetTeacherName,
+            targetTeacherCode: this.targetTeacherCode,
+            roomNumber: this.roomNumber,
+            examOpenTime: this.examOpenTime,
+            examCloseTime: this.examCloseTime,
+            targetRoomNumber: this.targetRoomNumber,
+            targetExamOpenTime: this.targetExamOpenTime,
+            targetExamCloseTime: this.targetExamCloseTime,
         });
     }
 
@@ -105,6 +154,9 @@ export class ProctorApplication {
         return ProctorApplication.reconstitute({
             id: this.id,
             teacherId: this.teacherId,
+            targetTeacherId: this.targetTeacherId,
+            examSessionId: this.examSessionId,
+            targetExamSessionId: this.targetExamSessionId,
             preferredShift: this.preferredShift,
             preferredType: this.preferredType,
             preferredDate: this.preferredDate,
@@ -114,10 +166,21 @@ export class ProctorApplication {
             updatedAt: new Date(),
             teacherName: this.teacherName,
             teacherCode: this.teacherCode,
+            targetTeacherName: this.targetTeacherName,
+            targetTeacherCode: this.targetTeacherCode,
+            roomNumber: this.roomNumber,
+            examOpenTime: this.examOpenTime,
+            examCloseTime: this.examCloseTime,
+            targetRoomNumber: this.targetRoomNumber,
+            targetExamOpenTime: this.targetExamOpenTime,
+            targetExamCloseTime: this.targetExamCloseTime,
         });
     }
 
     update(props: {
+        targetTeacherId?: string | null;
+        examSessionId?: string | null;
+        targetExamSessionId?: string | null;
         preferredShift?: string;
         preferredType?: string;
         preferredDate?: Date | null;
@@ -130,6 +193,9 @@ export class ProctorApplication {
         return ProctorApplication.reconstitute({
             id: this.id,
             teacherId: this.teacherId,
+            targetTeacherId: props.targetTeacherId !== undefined ? props.targetTeacherId : this.targetTeacherId,
+            examSessionId: props.examSessionId !== undefined ? props.examSessionId : this.examSessionId,
+            targetExamSessionId: props.targetExamSessionId !== undefined ? props.targetExamSessionId : this.targetExamSessionId,
             preferredShift: props.preferredShift ?? this.preferredShift,
             preferredType: props.preferredType ?? this.preferredType,
             preferredDate: props.preferredDate !== undefined ? props.preferredDate : this.preferredDate,
@@ -139,6 +205,14 @@ export class ProctorApplication {
             updatedAt: new Date(),
             teacherName: this.teacherName,
             teacherCode: this.teacherCode,
+            targetTeacherName: this.targetTeacherName,
+            targetTeacherCode: this.targetTeacherCode,
+            roomNumber: this.roomNumber,
+            examOpenTime: this.examOpenTime,
+            examCloseTime: this.examCloseTime,
+            targetRoomNumber: this.targetRoomNumber,
+            targetExamOpenTime: this.targetExamOpenTime,
+            targetExamCloseTime: this.targetExamCloseTime,
         });
     }
 }
