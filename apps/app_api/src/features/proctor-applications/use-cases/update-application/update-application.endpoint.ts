@@ -3,9 +3,6 @@ import {
     Put,
     Param,
     Body,
-    NotFoundException,
-    BadRequestException,
-    ForbiddenException,
     UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
@@ -24,8 +21,8 @@ export class UpdateProctorApplicationEndpoint {
     constructor(private readonly handler: UpdateProctorApplicationHandler) { }
 
     @Put(':id')
-    @Roles(RoleType.PROCTOR)
-    @ApiOperation({ summary: 'Update own proctor application (Proctor only, PENDING status only)' })
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
+    @ApiOperation({ summary: 'Update own swap request (Proctor only, PENDING status only)' })
     @ApiParam({ name: 'id', description: 'Application UUID' })
     @ApiBody({ type: UpdateProctorApplicationDto })
     @ApiResponse({ status: 200, description: 'Application updated successfully', type: ProctorApplicationResponse })
@@ -37,19 +34,6 @@ export class UpdateProctorApplicationEndpoint {
         @Body() dto: UpdateProctorApplicationDto,
         @GetUser('userId') userId: string,
     ): Promise<ProctorApplicationResponse> {
-        try {
-            return await this.handler.execute(id, dto, userId);
-        } catch (error) {
-            if (error instanceof Error) {
-                if (error.message.includes('not found')) {
-                    throw new NotFoundException(error.message);
-                }
-                if (error.message.includes('Unauthorized')) {
-                    throw new ForbiddenException(error.message);
-                }
-                throw new BadRequestException(error.message);
-            }
-            throw error;
-        }
+        return await this.handler.execute(id, dto, userId);
     }
 }

@@ -2,7 +2,6 @@ import {
     Controller,
     Post,
     Body,
-    BadRequestException,
     UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
@@ -21,8 +20,8 @@ export class CreateProctorApplicationEndpoint {
     constructor(private readonly handler: CreateProctorApplicationHandler) { }
 
     @Post()
-    @Roles(RoleType.PROCTOR)
-    @ApiOperation({ summary: 'Create a new proctor application (Proctor only)' })
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
+    @ApiOperation({ summary: 'Create a new proctor swap request (Proctor only)' })
     @ApiBody({ type: CreateProctorApplicationDto })
     @ApiResponse({ status: 201, description: 'Application created successfully', type: ProctorApplicationResponse })
     @ApiResponse({ status: 400, description: 'Bad request' })
@@ -30,13 +29,6 @@ export class CreateProctorApplicationEndpoint {
         @Body() dto: CreateProctorApplicationDto,
         @GetUser('userId') userId: string,
     ): Promise<ProctorApplicationResponse> {
-        try {
-            return await this.handler.execute(dto, userId);
-        } catch (error) {
-            if (error instanceof Error) {
-                throw new BadRequestException(error.message);
-            }
-            throw error;
-        }
+        return await this.handler.execute(dto, userId);
     }
 }

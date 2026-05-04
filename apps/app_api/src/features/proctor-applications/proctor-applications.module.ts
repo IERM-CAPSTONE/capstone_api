@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ProctorApplicationsCoreModule } from '@app/proctor-applications';
 import { ExamSessionsCoreModule } from '@app/exam-sessions';
+import { NotificationGateway } from '../../common/gateways/notification.gateway';
 
 // Use Cases
 import { CreateProctorApplicationHandler, CreateProctorApplicationEndpoint } from './use-cases/create-application';
@@ -30,6 +31,7 @@ import { GetAvailableDatesHandler, GetAvailableDatesEndpoint } from './use-cases
         ListAllProctorApplicationsHandler,
         UpdateProctorApplicationStatusHandler,
         GetAvailableDatesHandler,
+        NotificationGateway,
     ],
 })
 export class ProctorApplicationsModule { }

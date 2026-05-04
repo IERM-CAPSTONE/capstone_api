@@ -10,6 +10,9 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
     async save(application: ProctorApplication): Promise<ProctorApplication> {
         const data = {
             teacherId: application.teacherId,
+            targetTeacherId: application.targetTeacherId,
+            examSessionId: application.examSessionId,
+            targetExamSessionId: application.targetExamSessionId,
             preferredShift: application.preferredShift as any,
             preferredType: application.preferredType as any,
             preferredDate: application.preferredDate,
@@ -29,8 +32,38 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
             include: {
                 teacher: {
                     select: {
+                        id: true,
                         fullName: true,
                         code: true,
+                    },
+                },
+                targetTeacher: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        code: true,
+                    },
+                },
+                examSession: {
+                    select: {
+                        examOpenTime: true,
+                        examCloseTime: true,
+                        examRoom: {
+                            select: {
+                                roomNumber: true,
+                            },
+                        },
+                    },
+                },
+                targetExamSession: {
+                    select: {
+                        examOpenTime: true,
+                        examCloseTime: true,
+                        examRoom: {
+                            select: {
+                                roomNumber: true,
+                            },
+                        },
                     },
                 },
             },
@@ -39,6 +72,9 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
         return ProctorApplication.reconstitute({
             id: saved.id,
             teacherId: saved.teacherId,
+            targetTeacherId: saved.targetTeacherId,
+            examSessionId: saved.examSessionId,
+            targetExamSessionId: saved.targetExamSessionId,
             preferredShift: saved.preferredShift,
             preferredType: saved.preferredType,
             preferredDate: saved.preferredDate,
@@ -48,6 +84,14 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
             updatedAt: saved.updatedAt,
             teacherName: saved.teacher?.fullName,
             teacherCode: saved.teacher?.code,
+            targetTeacherName: saved.targetTeacher?.fullName ?? null,
+            targetTeacherCode: saved.targetTeacher?.code ?? null,
+            roomNumber: saved.examSession?.examRoom?.roomNumber ?? null,
+            examOpenTime: saved.examSession?.examOpenTime ?? null,
+            examCloseTime: saved.examSession?.examCloseTime ?? null,
+            targetRoomNumber: saved.targetExamSession?.examRoom?.roomNumber ?? null,
+            targetExamOpenTime: saved.targetExamSession?.examOpenTime ?? null,
+            targetExamCloseTime: saved.targetExamSession?.examCloseTime ?? null,
         });
     }
 
@@ -57,8 +101,38 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
             include: {
                 teacher: {
                     select: {
+                        id: true,
                         fullName: true,
                         code: true,
+                    },
+                },
+                targetTeacher: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        code: true,
+                    },
+                },
+                examSession: {
+                    select: {
+                        examOpenTime: true,
+                        examCloseTime: true,
+                        examRoom: {
+                            select: {
+                                roomNumber: true,
+                            },
+                        },
+                    },
+                },
+                targetExamSession: {
+                    select: {
+                        examOpenTime: true,
+                        examCloseTime: true,
+                        examRoom: {
+                            select: {
+                                roomNumber: true,
+                            },
+                        },
                     },
                 },
             },
@@ -69,6 +143,9 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
         return ProctorApplication.reconstitute({
             id: found.id,
             teacherId: found.teacherId,
+            targetTeacherId: found.targetTeacherId,
+            examSessionId: found.examSessionId,
+            targetExamSessionId: found.targetExamSessionId,
             preferredShift: found.preferredShift,
             preferredType: found.preferredType,
             preferredDate: found.preferredDate,
@@ -78,17 +155,60 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
             updatedAt: found.updatedAt,
             teacherName: found.teacher?.fullName,
             teacherCode: found.teacher?.code,
+            targetTeacherName: found.targetTeacher?.fullName ?? null,
+            targetTeacherCode: found.targetTeacher?.code ?? null,
+            roomNumber: found.examSession?.examRoom?.roomNumber ?? null,
+            examOpenTime: found.examSession?.examOpenTime ?? null,
+            examCloseTime: found.examSession?.examCloseTime ?? null,
+            targetRoomNumber: found.targetExamSession?.examRoom?.roomNumber ?? null,
+            targetExamOpenTime: found.targetExamSession?.examOpenTime ?? null,
+            targetExamCloseTime: found.targetExamSession?.examCloseTime ?? null,
         });
     }
 
     async findByTeacherId(teacherId: string): Promise<ProctorApplication[]> {
         const results = await this.prisma.proctorApplication.findMany({
-            where: { teacherId },
+            where: {
+                OR: [
+                    { teacherId },
+                    { targetTeacherId: teacherId },
+                ],
+            },
             include: {
                 teacher: {
                     select: {
+                        id: true,
                         fullName: true,
                         code: true,
+                    },
+                },
+                targetTeacher: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        code: true,
+                    },
+                },
+                examSession: {
+                    select: {
+                        examOpenTime: true,
+                        examCloseTime: true,
+                        examRoom: {
+                            select: {
+                                roomNumber: true,
+                            },
+                        },
+                    },
+                },
+                targetExamSession: {
+                    select: {
+                        examOpenTime: true,
+                        examCloseTime: true,
+                        examRoom: {
+                            select: {
+                                roomNumber: true,
+                            },
+                        },
                     },
                 },
             },
@@ -98,6 +218,9 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
         return results.map(item => ProctorApplication.reconstitute({
             id: item.id,
             teacherId: item.teacherId,
+            targetTeacherId: item.targetTeacherId,
+            examSessionId: item.examSessionId,
+            targetExamSessionId: item.targetExamSessionId,
             preferredShift: item.preferredShift,
             preferredType: item.preferredType,
             preferredDate: item.preferredDate,
@@ -107,6 +230,14 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
             updatedAt: item.updatedAt,
             teacherName: item.teacher?.fullName,
             teacherCode: item.teacher?.code,
+            targetTeacherName: item.targetTeacher?.fullName ?? null,
+            targetTeacherCode: item.targetTeacher?.code ?? null,
+            roomNumber: item.examSession?.examRoom?.roomNumber ?? null,
+            examOpenTime: item.examSession?.examOpenTime ?? null,
+            examCloseTime: item.examSession?.examCloseTime ?? null,
+            targetRoomNumber: item.targetExamSession?.examRoom?.roomNumber ?? null,
+            targetExamOpenTime: item.targetExamSession?.examOpenTime ?? null,
+            targetExamCloseTime: item.targetExamSession?.examCloseTime ?? null,
         }));
     }
 
@@ -152,8 +283,38 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
                 include: {
                     teacher: {
                         select: {
+                            id: true,
                             fullName: true,
                             code: true,
+                        },
+                    },
+                    targetTeacher: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            code: true,
+                        },
+                    },
+                    examSession: {
+                        select: {
+                            examOpenTime: true,
+                            examCloseTime: true,
+                            examRoom: {
+                                select: {
+                                    roomNumber: true,
+                                },
+                            },
+                        },
+                    },
+                    targetExamSession: {
+                        select: {
+                            examOpenTime: true,
+                            examCloseTime: true,
+                            examRoom: {
+                                select: {
+                                    roomNumber: true,
+                                },
+                            },
                         },
                     },
                 },
@@ -167,6 +328,9 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
         const data = results.map(item => ProctorApplication.reconstitute({
             id: item.id,
             teacherId: item.teacherId,
+            targetTeacherId: item.targetTeacherId,
+            examSessionId: item.examSessionId,
+            targetExamSessionId: item.targetExamSessionId,
             preferredShift: item.preferredShift,
             preferredType: item.preferredType,
             preferredDate: item.preferredDate,
@@ -176,6 +340,14 @@ export class PrismaProctorApplicationRepository implements IProctorApplicationRe
             updatedAt: item.updatedAt,
             teacherName: item.teacher?.fullName,
             teacherCode: item.teacher?.code,
+            targetTeacherName: item.targetTeacher?.fullName ?? null,
+            targetTeacherCode: item.targetTeacher?.code ?? null,
+            roomNumber: item.examSession?.examRoom?.roomNumber ?? null,
+            examOpenTime: item.examSession?.examOpenTime ?? null,
+            examCloseTime: item.examSession?.examCloseTime ?? null,
+            targetRoomNumber: item.targetExamSession?.examRoom?.roomNumber ?? null,
+            targetExamOpenTime: item.targetExamSession?.examOpenTime ?? null,
+            targetExamCloseTime: item.targetExamSession?.examCloseTime ?? null,
         }));
 
         return { data, total };

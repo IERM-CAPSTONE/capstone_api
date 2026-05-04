@@ -28,6 +28,8 @@ model ExamSession {
   hallInvigilator   User?               @relation("hallInvigilator", fields: [hallInvigilatorId], references: [id])
   tickets           IssueTicket[]
   assignments       ProctorAssignment[]
+  proctorApplications ProctorApplication[] @relation("sourceExamSessionApplications")
+  targetApplications  ProctorApplication[] @relation("targetExamSessionApplications")
 
   @@index([examRoomId])
   @@index([proctorId])

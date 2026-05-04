@@ -30,6 +30,10 @@ export class ExamSession {
         public readonly maxColumns: number | null = null,
         public readonly totalSeats: number | null = null,
         public readonly studentCount: number = 0,
+        public readonly roomPendingApplicantNames: string[] = [],
+        public readonly roomApprovedApplicantNames: string[] = [],
+        public readonly hallPendingApplicantNames: string[] = [],
+        public readonly hallApprovedApplicantNames: string[] = [],
     ) { }
 
     static create(props: {
@@ -74,8 +78,11 @@ export class ExamSession {
             null,
             null,
             null,
-            null,
             0,
+            [],
+            [],
+            [],
+            [],
         );
     }
 
@@ -107,6 +114,10 @@ export class ExamSession {
         maxColumns?: number | null;
         totalSeats?: number | null;
         studentCount?: number;
+        roomPendingApplicantNames?: string[];
+        roomApprovedApplicantNames?: string[];
+        hallPendingApplicantNames?: string[];
+        hallApprovedApplicantNames?: string[];
     }): ExamSession {
         return new ExamSession(
             props.id,
@@ -135,6 +146,10 @@ export class ExamSession {
             props.maxColumns ?? null,
             props.totalSeats ?? null,
             props.studentCount ?? 0,
+            props.roomPendingApplicantNames ?? [],
+            props.roomApprovedApplicantNames ?? [],
+            props.hallPendingApplicantNames ?? [],
+            props.hallApprovedApplicantNames ?? [],
         );
     }
 
@@ -167,6 +182,18 @@ export class ExamSession {
             maxColumns: found.examRoom?.max_columns,
             totalSeats: found.examRoom?.total_seats,
             studentCount: found._count?.studentExams ?? 0,
+            roomPendingApplicantNames: (found.proctorApplications || [])
+                .filter((item: any) => item.preferredType === 'ROOM' && item.status === 'PENDING')
+                .map((item: any) => item.teacher?.fullName || item.teacher?.username || item.teacherId),
+            roomApprovedApplicantNames: (found.proctorApplications || [])
+                .filter((item: any) => item.preferredType === 'ROOM' && item.status === 'APPROVED')
+                .map((item: any) => item.teacher?.fullName || item.teacher?.username || item.teacherId),
+            hallPendingApplicantNames: (found.proctorApplications || [])
+                .filter((item: any) => item.preferredType === 'HALL' && item.status === 'PENDING')
+                .map((item: any) => item.teacher?.fullName || item.teacher?.username || item.teacherId),
+            hallApprovedApplicantNames: (found.proctorApplications || [])
+                .filter((item: any) => item.preferredType === 'HALL' && item.status === 'APPROVED')
+                .map((item: any) => item.teacher?.fullName || item.teacher?.username || item.teacherId),
         });
     }
 
@@ -217,6 +244,10 @@ export class ExamSession {
             this.maxColumns,
             this.totalSeats,
             this.studentCount,
+            this.roomPendingApplicantNames,
+            this.roomApprovedApplicantNames,
+            this.hallPendingApplicantNames,
+            this.hallApprovedApplicantNames,
         );
     }
 }
