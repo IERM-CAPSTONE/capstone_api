@@ -1,10 +1,10 @@
-import { Controller, Post, UploadedFile, UseInterceptors, UseGuards } from '@nestjs/common';
+import { Controller, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Express } from 'express';
 import { RoleType } from '@app/users';
 import { Roles } from '../../../../common/decorators';
-import { RolesGuard, JwtAuthGuard } from '../../../../common/guards';
+import { JwtAuthGuard, RolesGuard } from '../../../../common/guards';
 import { ImportStudentHandler } from './import-student.handler';
 
 @ApiTags('Users')
@@ -14,9 +14,9 @@ import { ImportStudentHandler } from './import-student.handler';
 export class ImportStudentEndpoint {
     constructor(private readonly handler: ImportStudentHandler) { }
 
-    @Post('import-students')
+    @Post('import-accounts')
     @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
-    @ApiOperation({ summary: 'Import sinh viên từ file Excel' })
+    @ApiOperation({ summary: 'Import accounts from Excel or CSV file' })
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         schema: {
@@ -30,7 +30,27 @@ export class ImportStudentEndpoint {
         },
     })
     @UseInterceptors(FileInterceptor('file'))
-    async importStudents(@UploadedFile() file: Express.Multer.File) {
+    async importAccounts(@UploadedFile() file: Express.Multer.File) {
+        return this.handler.handle(file);
+    }
+
+    @Post('import-students')
+    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
+    @ApiOperation({ summary: 'Legacy alias for importing accounts' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                file: {
+                    type: 'string',
+                    format: 'binary',
+                },
+            },
+        },
+    })
+    @UseInterceptors(FileInterceptor('file'))
+    async importStudentsAlias(@UploadedFile() file: Express.Multer.File) {
         return this.handler.handle(file);
     }
 }

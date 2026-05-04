@@ -62,6 +62,9 @@ export interface UserImportFinishedData {
     fileName: string;
     successCount: number;
     errorCount: number;
+    createdCount?: number;
+    updatedCount?: number;
+    skippedCount?: number;
     failedItems?: any[];
     batchId?: string;
     timestamp: Date;
