@@ -82,6 +82,18 @@ export class ExamSessionResponse {
 
     @ApiProperty({ example: 40 })
     studentCount: number;
+
+    @ApiProperty({ type: [String] })
+    roomPendingApplicantNames: string[];
+
+    @ApiProperty({ type: [String] })
+    roomApprovedApplicantNames: string[];
+
+    @ApiProperty({ type: [String] })
+    hallPendingApplicantNames: string[];
+
+    @ApiProperty({ type: [String] })
+    hallApprovedApplicantNames: string[];
 }
 
 export function toExamSessionResponse(session: ExamSession): ExamSessionResponse {
@@ -113,6 +125,10 @@ export function toExamSessionResponse(session: ExamSession): ExamSessionResponse
         maxColumns: session.maxColumns,
         totalSeats: session.totalSeats,
         studentCount: session.studentCount,
+        roomPendingApplicantNames: session.roomPendingApplicantNames,
+        roomApprovedApplicantNames: session.roomApprovedApplicantNames,
+        hallPendingApplicantNames: session.hallPendingApplicantNames,
+        hallApprovedApplicantNames: session.hallApprovedApplicantNames,
     };
 }
 

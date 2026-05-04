@@ -527,6 +527,9 @@ export class ExamImportProcessor {
                         throw new Error("Proctor Email is missing");
                     }
 
+                    const assignmentType = this.resolveImportedAssignmentType(p.proctorType);
+                    const roleForNewUser = assignmentType === 'HALL' ? 'HALL_INVIGILATOR' : 'PROCTOR';
+
                     // 1. Find or Create Proctor (User) by username (proctorEmail)
                     let proctor = await this.prisma.user.findUnique({
                         where: { username: p.proctorEmail.toLowerCase() }
@@ -542,7 +545,7 @@ export class ExamImportProcessor {
                                 username: p.proctorEmail.toLowerCase(),
                                 email: p.proctorEmail.toLowerCase(),
                                 fullName: p.proctorEmail, // Use email as default name
-                                role: 'PROCTOR',
+                                role: roleForNewUser as any,
                                 isActive: true,
                             }
                         });
@@ -595,34 +598,34 @@ export class ExamImportProcessor {
                     }
 
                     // 3. Create or Update ProctorAssignment (Audit/History)
-                    await this.prisma.proctorAssignment.upsert({
-                        where: {
-                            proctorId_examSessionId: {
+                    if (assignmentType === 'ROOM') {
+                        await this.prisma.proctorAssignment.upsert({
+                            where: {
+                                proctorId_examSessionId: {
+                                    proctorId: proctor.id,
+                                    examSessionId: session.id
+                                }
+                            },
+                            update: {
+                                status: 'ASSIGNED',
+                                assignedById: data.creatorId || proctor.id,
+                            },
+                            create: {
+                                id: uuidv4(),
                                 proctorId: proctor.id,
-                                examSessionId: session.id
+                                examSessionId: session.id,
+                                status: 'ASSIGNED',
+                                assignedById: data.creatorId || proctor.id,
                             }
-                        },
-                        update: {
-                            status: 'ASSIGNED',
-                            assignedById: data.creatorId || proctor.id,
-                        },
-                        create: {
-                            id: uuidv4(),
-                            proctorId: proctor.id,
-                            examSessionId: session.id,
-                            status: 'ASSIGNED',
-                            assignedById: data.creatorId || proctor.id,
-                        }
-                    });
+                        });
+                    }
 
                     // 4. Update ExamSession Record directly (Primary Proctor)
-                    // If multiple proctors are imported for same session, the last one wins in this simple logic
-                    // or we could check p.proctorType
                     await this.prisma.examSession.update({
                         where: { id: session.id },
-                        data: {
-                            proctorId: proctor.id
-                        }
+                        data: assignmentType === 'HALL'
+                            ? { hallInvigilatorId: proctor.id }
+                            : { proctorId: proctor.id }
                     });
 
                     successCount++;
@@ -1056,6 +1059,12 @@ export class ExamImportProcessor {
             return normalized as Campus;
         }
         return Campus.DN;
+    }
+
+    private resolveImportedAssignmentType(rawType?: string | null): 'ROOM' | 'HALL' {
+        const normalized = String(rawType || '').trim().toUpperCase();
+        if (normalized.includes('HALL')) return 'HALL';
+        return 'ROOM';
     }
 
     private emitFinished(

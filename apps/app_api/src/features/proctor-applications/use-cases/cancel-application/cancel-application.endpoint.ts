@@ -23,10 +23,10 @@ export class CancelProctorApplicationEndpoint {
 
     @Patch(':id/cancel')
     @Roles(RoleType.PROCTOR)
-    @ApiOperation({ summary: 'Cancel own proctor application (Proctor only, PENDING/APPROVED status only)' })
+    @ApiOperation({ summary: 'Cancel own pending swap request (Requester only)' })
     @ApiParam({ name: 'id', description: 'Application UUID' })
     @ApiResponse({ status: 200, description: 'Application canceled successfully', type: ProctorApplicationResponse })
-    @ApiResponse({ status: 400, description: 'Bad request / Cannot cancel this application' })
+    @ApiResponse({ status: 400, description: 'Bad request / Cannot cancel this swap request' })
     @ApiResponse({ status: 403, description: 'Forbidden - Not your application' })
     @ApiResponse({ status: 404, description: 'Application not found' })
     async handle(
