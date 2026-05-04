@@ -76,6 +76,23 @@ export class PrismaUserRepository implements IUserRepository {
         return result ? this.toDomain(result) : null;
     }
 
+    async findByCodes(codes: string[]): Promise<User[]> {
+        if (codes.length === 0) {
+            return [];
+        }
+
+        const results = await this.prisma.user.findMany({
+            where: {
+                code: {
+                    in: codes,
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        return results.map((r) => this.toDomain(r));
+    }
+
     async findMany(query: { role?: RoleType; isActive?: boolean; search?: string }): Promise<User[]> {
         const where = this.buildWhere(query);
         const results = await this.prisma.user.findMany({
