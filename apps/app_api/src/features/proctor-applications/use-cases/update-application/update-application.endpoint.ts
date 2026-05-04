@@ -21,7 +21,7 @@ export class UpdateProctorApplicationEndpoint {
     constructor(private readonly handler: UpdateProctorApplicationHandler) { }
 
     @Put(':id')
-    @Roles(RoleType.PROCTOR)
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
     @ApiOperation({ summary: 'Update own swap request (Proctor only, PENDING status only)' })
     @ApiParam({ name: 'id', description: 'Application UUID' })
     @ApiBody({ type: UpdateProctorApplicationDto })

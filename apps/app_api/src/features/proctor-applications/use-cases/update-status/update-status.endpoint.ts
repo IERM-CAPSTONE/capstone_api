@@ -21,7 +21,7 @@ export class UpdateProctorApplicationStatusEndpoint {
     constructor(private readonly handler: UpdateProctorApplicationStatusHandler) { }
 
     @Patch(':id/status')
-    @Roles(RoleType.PROCTOR)
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
     @ApiOperation({ summary: 'Respond to a proctor swap request - Accept/Decline (Target proctor only)' })
     @ApiParam({ name: 'id', description: 'Application UUID' })
     @ApiBody({ type: UpdateProctorApplicationStatusDto })

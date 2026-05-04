@@ -17,9 +17,9 @@ export class UpdateProctorApplicationDto {
     @IsEnum(['MORNING', 'AFTERNOON'])
     preferredShift?: string;
 
-    @ApiProperty({ example: 'ROOM', enum: ['ROOM'], description: 'Swap type', required: false })
+    @ApiProperty({ example: 'ROOM', enum: ['ROOM', 'HALL'], description: 'Swap type', required: false })
     @IsOptional()
-    @IsEnum(['ROOM'])
+    @IsEnum(['ROOM', 'HALL'])
     preferredType?: string;
 
     @ApiProperty({ example: '2026-02-15T00:00:00.000Z', description: 'Swap date', required: false, nullable: true })

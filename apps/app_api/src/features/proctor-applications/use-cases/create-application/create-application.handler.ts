@@ -16,10 +16,12 @@ export class CreateProctorApplicationHandler {
     ) { }
 
     async execute(dto: CreateProctorApplicationDto, teacherId: string): Promise<ProctorApplicationResponse> {
+        const preferredType = await this.resolvePreferredType(teacherId);
         const swapContext = await this.validateSwapRequest({
             requesterId: teacherId,
             sourceExamSessionId: dto.examSessionId,
             targetExamSessionId: dto.targetExamSessionId,
+            preferredType,
         });
 
         const preferredDate = swapContext.source.examOpenTime;
@@ -30,11 +32,11 @@ export class CreateProctorApplicationHandler {
         const application = ProctorApplication.create({
             id: uuidv4(),
             teacherId,
-            targetTeacherId: swapContext.target.proctorId,
+            targetTeacherId: swapContext.targetAssigneeId,
             examSessionId: swapContext.source.id,
             targetExamSessionId: swapContext.target.id,
-            preferredShift: dto.preferredType === 'ROOM' ? preferredShift : dto.preferredShift,
-            preferredType: 'ROOM',
+            preferredShift,
+            preferredType,
             preferredDate,
             notes: dto.notes ?? null,
             status: 'PENDING',
@@ -64,10 +66,24 @@ export class CreateProctorApplicationHandler {
             && left.getDate() === right.getDate();
     }
 
+    private async resolvePreferredType(userId: string): Promise<'ROOM' | 'HALL'> {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true },
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        return user.role === 'HALL_INVIGILATOR' ? 'HALL' : 'ROOM';
+    }
+
     private async validateSwapRequest(params: {
         requesterId: string;
         sourceExamSessionId: string;
         targetExamSessionId: string;
+        preferredType: 'ROOM' | 'HALL';
         excludeId?: string;
     }) {
         if (params.sourceExamSessionId === params.targetExamSessionId) {
@@ -80,6 +96,7 @@ export class CreateProctorApplicationHandler {
                 select: {
                     id: true,
                     proctorId: true,
+                    hallInvigilatorId: true,
                     examOpenTime: true,
                     examCloseTime: true,
                     status: true,
@@ -90,6 +107,7 @@ export class CreateProctorApplicationHandler {
                 select: {
                     id: true,
                     proctorId: true,
+                    hallInvigilatorId: true,
                     examOpenTime: true,
                     examCloseTime: true,
                     status: true,
@@ -105,15 +123,19 @@ export class CreateProctorApplicationHandler {
             throw new BadRequestException('Swap requests can only be created for published exam sessions');
         }
 
-        if (!source.proctorId || source.proctorId !== params.requesterId) {
+        const sourceAssigneeId = params.preferredType === 'HALL' ? source.hallInvigilatorId : source.proctorId;
+        const targetAssigneeId = params.preferredType === 'HALL' ? target.hallInvigilatorId : target.proctorId;
+        const assignmentLabel = params.preferredType === 'HALL' ? 'hall invigilator' : 'proctor';
+
+        if (!sourceAssigneeId || sourceAssigneeId !== params.requesterId) {
             throw new BadRequestException('You can only create a swap request from your own assigned session');
         }
 
-        if (!target.proctorId) {
-            throw new BadRequestException('The target session does not have a proctor to swap with');
+        if (!targetAssigneeId) {
+            throw new BadRequestException(`The target session does not have an assigned ${assignmentLabel} to swap with`);
         }
 
-        if (target.proctorId === params.requesterId) {
+        if (targetAssigneeId === params.requesterId) {
             throw new BadRequestException('You cannot create a swap request with another session already assigned to you');
         }
 
@@ -121,30 +143,59 @@ export class CreateProctorApplicationHandler {
             throw new BadRequestException('Swap requests are only allowed between sessions on the same exam day');
         }
 
+        const [sourceClusterSessionIds, targetClusterSessionIds] = params.preferredType === 'HALL'
+            ? await Promise.all([
+                this.getHallClusterSessionIds(sourceAssigneeId, source.examOpenTime, source.examCloseTime),
+                this.getHallClusterSessionIds(targetAssigneeId, target.examOpenTime, target.examCloseTime),
+            ])
+            : [[source.id], [target.id]];
+
         const existingPending = await this.prisma.proctorApplication.findFirst({
             where: {
                 id: params.excludeId ? { not: params.excludeId } : undefined,
                 status: 'PENDING' as any,
+                preferredType: params.preferredType as any,
                 OR: [
                     {
                         teacherId: params.requesterId,
-                        examSessionId: source.id,
-                        targetExamSessionId: target.id,
+                        examSessionId: { in: sourceClusterSessionIds },
+                        targetExamSessionId: { in: targetClusterSessionIds },
                     },
                     {
-                        teacherId: target.proctorId,
+                        teacherId: targetAssigneeId,
                         targetTeacherId: params.requesterId,
-                        examSessionId: target.id,
-                        targetExamSessionId: source.id,
+                        examSessionId: { in: targetClusterSessionIds },
+                        targetExamSessionId: { in: sourceClusterSessionIds },
                     },
                 ],
             },
         });
 
         if (existingPending) {
-            throw new ConflictException('A pending swap request already exists between these two proctors for this exam day');
+            throw new ConflictException('A pending swap request already exists between these two assignees for this exam day');
         }
 
-        return { source, target };
+        return { source, target, targetAssigneeId };
+    }
+
+    private async getHallClusterSessionIds(
+        hallInvigilatorId: string,
+        examOpenTime: Date | null,
+        examCloseTime: Date | null,
+    ): Promise<string[]> {
+        if (!examOpenTime || !examCloseTime) {
+            return [];
+        }
+
+        const sessions = await this.prisma.examSession.findMany({
+            where: {
+                hallInvigilatorId,
+                examOpenTime,
+                examCloseTime,
+            },
+            select: { id: true },
+        });
+
+        return sessions.map((session) => session.id);
     }
 }

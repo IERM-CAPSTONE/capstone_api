@@ -22,7 +22,7 @@ export class CancelProctorApplicationEndpoint {
     constructor(private readonly handler: CancelProctorApplicationHandler) { }
 
     @Patch(':id/cancel')
-    @Roles(RoleType.PROCTOR)
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
     @ApiOperation({ summary: 'Cancel own pending swap request (Requester only)' })
     @ApiParam({ name: 'id', description: 'Application UUID' })
     @ApiResponse({ status: 200, description: 'Application canceled successfully', type: ProctorApplicationResponse })

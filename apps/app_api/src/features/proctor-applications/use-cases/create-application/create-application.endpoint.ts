@@ -20,7 +20,7 @@ export class CreateProctorApplicationEndpoint {
     constructor(private readonly handler: CreateProctorApplicationHandler) { }
 
     @Post()
-    @Roles(RoleType.PROCTOR)
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
     @ApiOperation({ summary: 'Create a new proctor swap request (Proctor only)' })
     @ApiBody({ type: CreateProctorApplicationDto })
     @ApiResponse({ status: 201, description: 'Application created successfully', type: ProctorApplicationResponse })

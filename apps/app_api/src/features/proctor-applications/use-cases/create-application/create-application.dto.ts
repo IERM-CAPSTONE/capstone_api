@@ -17,8 +17,8 @@ export class CreateProctorApplicationDto {
     @IsNotEmpty()
     preferredShift: string;
 
-    @ApiProperty({ example: 'ROOM', enum: ['ROOM'], description: 'Swap type' })
-    @IsEnum(['ROOM'])
+    @ApiProperty({ example: 'ROOM', enum: ['ROOM', 'HALL'], description: 'Swap type' })
+    @IsEnum(['ROOM', 'HALL'])
     @IsNotEmpty()
     preferredType: string;
 
