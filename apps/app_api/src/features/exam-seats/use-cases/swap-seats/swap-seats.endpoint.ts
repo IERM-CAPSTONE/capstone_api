@@ -25,8 +25,32 @@ export class SwapSeatsEndpoint {
         private readonly prisma: PrismaService,
     ) { }
 
+    private async resolveSeatId(sourceSeatRef: string) {
+        const directSeat = await this.prisma.examSeat.findUnique({
+            where: { id: sourceSeatRef },
+            select: { id: true, examSessionId: true },
+        });
+
+        if (directSeat) {
+            return directSeat;
+        }
+
+        const syntheticMatch = /^seat_(\d+)_(\d+)$/i.exec(sourceSeatRef.trim());
+        if (!syntheticMatch) {
+            return null;
+        }
+
+        const row = Number(syntheticMatch[1]) + 1;
+        const col = Number(syntheticMatch[2]) + 1;
+
+        return this.prisma.examSeat.findFirst({
+            where: { row, col },
+            select: { id: true, examSessionId: true },
+        });
+    }
+
     @Patch(':id/swap')
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.PROCTOR)
+    @Roles(RoleType.PROCTOR)
     @ApiOperation({ 
         summary: 'Swap students between two seats',
         description: 'Swap a student from one seat to another. Only works after layout is finalized and neither seat is locked.'
@@ -35,17 +59,23 @@ export class SwapSeatsEndpoint {
         @Param('id') sourceSeatId: string,
         @Body() dto: SwapSeatsDto,
     ) {
-        // Get exam session from source seat
-        const sourceSeat = await this.prisma.examSeat.findUnique({
-            where: { id: sourceSeatId },
-            select: { examSessionId: true }
-        });
+        // Get exam session from source seat; also accept legacy synthetic seat refs.
+        const sourceSeat = await this.resolveSeatId(sourceSeatId);
+        const targetSeat = await this.resolveSeatId(dto.targetSeatId);
 
         if (!sourceSeat) {
             throw new BadRequestException('Source seat not found');
         }
 
-        return this.handler.handle(sourceSeatId, dto.targetSeatId, sourceSeat.examSessionId);
+        if (!targetSeat) {
+            throw new BadRequestException('Target seat not found');
+        }
+
+        if (sourceSeat.examSessionId !== targetSeat.examSessionId) {
+            throw new BadRequestException('Seats must belong to the same exam session');
+        }
+
+        return this.handler.handle(sourceSeat.id, targetSeat.id, sourceSeat.examSessionId);
     }
 }
 

@@ -33,10 +33,43 @@ export class UpdateExamSessionHandler {
             if (updated.examRoomId && conflict.examRoomId === updated.examRoomId) {
                 throw new Error(`Room is already occupied by another session during this time.`);
             }
-            throw new Error(`One or more staff members are already assigned to another session during this time.`);
+            const hasDisallowedStaffConflict = overlaps.some((item) => {
+                if (updated.proctorId && item.proctorId === updated.proctorId) {
+                    return true;
+                }
+
+                if (updated.hallInvigilatorId && item.hallInvigilatorId === updated.hallInvigilatorId) {
+                    return !this.isSameTimeSlot(
+                        item.examTime.openTime,
+                        item.examTime.closeTime,
+                        updated.examTime.openTime,
+                        updated.examTime.closeTime,
+                    );
+                }
+
+                return false;
+            });
+
+            if (hasDisallowedStaffConflict) {
+                throw new Error(`One or more staff members are already assigned to another session during this time.`);
+            }
         }
 
         const saved = await this.repository.save(updated);
         return toExamSessionResponse(saved);
+    }
+
+    private isSameTimeSlot(
+        leftOpen: Date | null,
+        leftClose: Date | null,
+        rightOpen: Date | null,
+        rightClose: Date | null,
+    ): boolean {
+        if (!leftOpen || !leftClose || !rightOpen || !rightClose) {
+            return false;
+        }
+
+        return leftOpen.getTime() === rightOpen.getTime()
+            && leftClose.getTime() === rightClose.getTime();
     }
 }

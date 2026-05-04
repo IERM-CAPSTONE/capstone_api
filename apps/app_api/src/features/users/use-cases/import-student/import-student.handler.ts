@@ -1,7 +1,7 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import type { Express } from 'express';
-import { RABBITMQ_CLIENTS, MESSAGE_PATTERNS, UserImportJobData } from '@app/queue';
+import { MESSAGE_PATTERNS, RABBITMQ_CLIENTS, UserImportJobData } from '@app/queue';
 
 @Injectable()
 export class ImportStudentHandler {
@@ -13,7 +13,7 @@ export class ImportStudentHandler {
     ) { }
 
     async handle(file: Express.Multer.File): Promise<{ message: string }> {
-        this.logger.log(`📤 Sending import-student job for file: ${file.originalname}`);
+        this.logger.log(`Sending import-account job for file: ${file.originalname}`);
 
         const jobData: UserImportJobData = {
             fileName: file.originalname,
@@ -21,12 +21,10 @@ export class ImportStudentHandler {
             mimeType: file.mimetype,
         };
 
-        // Emit message to RabbitMQ (Fire and forget, or use send for Request-Response)
-        // Since processing can take time, emit/fire-and-forget is usually better for background jobs
         this.userServiceClient.emit(MESSAGE_PATTERNS.USER.IMPORT_STUDENTS, jobData);
 
         return {
-            message: 'file is processing'
+            message: 'Account import is being processed',
         };
     }
 }

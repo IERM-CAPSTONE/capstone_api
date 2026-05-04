@@ -22,9 +22,12 @@ export class ImportFinishedProcessor {
         // Push to WebSocket
         this.notificationGateway.sendToAll('IMPORT_COMPLETED', {
             action: 'users',
-            message: `Import file ${data.fileName} completed!`,
+            message: `Import file ${data.fileName} completed. Created ${data.createdCount ?? 0}, updated ${data.updatedCount ?? 0}, skipped ${data.skippedCount ?? 0}, errors ${data.errorCount}.`,
             successCount: data.successCount,
             errorCount: data.errorCount,
+            createdCount: data.createdCount,
+            updatedCount: data.updatedCount,
+            skippedCount: data.skippedCount,
             batchId: data.batchId,
             failedItems: data.failedItems,
             timestamp: data.timestamp,
