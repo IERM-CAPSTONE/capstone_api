@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
 import { ExamSession } from '../domain/entities';
 import { IExamSessionRepository, SubjectMonitorSummary, SessionRoomDetail } from '../domain/repositories';
 
 @Injectable()
 export class PrismaExamSessionRepository implements IExamSessionRepository {
+    private readonly logger = new Logger(PrismaExamSessionRepository.name);
+
     constructor(private readonly prisma: PrismaService) { }
 
     async getMonitorSummary(query: {
@@ -134,25 +136,24 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
             updatedAt: session.updatedAt,
         };
 
-        const createRelationData: any = {};
-        if (session.examRoomId) createRelationData.examRoom = { connect: { id: session.examRoomId } };
-        if (session.proctorId) createRelationData.proctor = { connect: { id: session.proctorId } };
-        if (session.hallInvigilatorId) createRelationData.hallInvigilator = { connect: { id: session.hallInvigilatorId } };
-        if (session.semesterId) createRelationData.semester = { connect: { id: session.semesterId } };
+        const relationData: any = {};
+        if (session.examRoomId) relationData.examRoom = { connect: { id: session.examRoomId } };
+        if (session.proctorId) relationData.proctor = { connect: { id: session.proctorId } };
+        if (session.hallInvigilatorId) relationData.hallInvigilator = { connect: { id: session.hallInvigilatorId } };
+        if (session.semesterId) relationData.semester = { connect: { id: session.semesterId } };
 
-        const updateRelationData = {
-            examRoom: session.examRoomId ? { connect: { id: session.examRoomId } } : { disconnect: true },
-            proctor: session.proctorId ? { connect: { id: session.proctorId } } : { disconnect: true },
-            hallInvigilator: session.hallInvigilatorId ? { connect: { id: session.hallInvigilatorId } } : { disconnect: true },
-            semester: session.semesterId ? { connect: { id: session.semesterId } } : { disconnect: true },
-        };
+        const updateRelationData: any = {};
+        updateRelationData.examRoom = session.examRoomId ? { connect: { id: session.examRoomId } } : { disconnect: true };
+        updateRelationData.proctor = session.proctorId ? { connect: { id: session.proctorId } } : { disconnect: true };
+        updateRelationData.hallInvigilator = session.hallInvigilatorId ? { connect: { id: session.hallInvigilatorId } } : { disconnect: true };
+        updateRelationData.semester = session.semesterId ? { connect: { id: session.semesterId } } : { disconnect: true };
 
         const saved = await this.prisma.examSession.upsert({
             where: { id: session.id },
             create: {
                 id: session.id,
                 ...data,
-                ...createRelationData,
+                ...relationData,
                 createdAt: session.createdAt,
                 examParts: {
                     connect: session.examPart.map(code => ({ code }))
@@ -192,30 +193,56 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
     }
 
     async findById(id: string): Promise<ExamSession | null> {
-        const found = await this.prisma.examSession.findUnique({
-            where: { id },
-            include: {
-                examRoom: true,
-                proctor: true,
-                hallInvigilator: true,
-                semester: true,
-                examParts: true,
-                proctorApplications: {
-                    include: {
-                        teacher: {
-                            select: {
-                                id: true,
-                                fullName: true,
-                                username: true,
-                            },
+        const includeFull = {
+            examRoom: true,
+            proctor: true,
+            hallInvigilator: true,
+            semester: true,
+            examParts: true,
+            proctorApplications: {
+                include: {
+                    teacher: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            username: true,
                         },
                     },
                 },
-                _count: {
-                    select: { studentExams: true }
-                }
+            },
+            _count: {
+                select: { studentExams: true }
             }
-        });
+        } as const;
+
+        const includeSafe = {
+            examRoom: true,
+            proctor: true,
+            hallInvigilator: true,
+            semester: true,
+            examParts: true,
+            _count: {
+                select: { studentExams: true }
+            }
+        } as const;
+
+        let found: any;
+        try {
+            found = await this.prisma.examSession.findUnique({
+                where: { id },
+                include: includeFull,
+            });
+        } catch (error: any) {
+            const errorMessage = String(error?.message || '');
+            const shouldFallback = error?.code === 'P2007' || errorMessage.includes('invalid input syntax for type integer');
+            if (!shouldFallback) throw error;
+
+            this.logger.warn(`findById fallback for session ${id}: ${errorMessage}`);
+            found = await this.prisma.examSession.findUnique({
+                where: { id },
+                include: includeSafe,
+            });
+        }
         if (!found) return null;
 
         return ExamSession.mapFromPrisma(found);
@@ -245,33 +272,62 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         const skipVal = isNaN(query?.skip) || query?.skip < 0 ? 0 : Math.floor(query.skip);
         const takeVal = isNaN(query?.take) || query?.take <= 0 ? undefined : Math.floor(query.take);
 
-        const found = await this.prisma.examSession.findMany({
-            where,
-            skip: skipVal,
-            take: takeVal,
-            orderBy: { createdAt: 'desc' },
-            include: {
-                examRoom: true,
-                proctor: true,
-                hallInvigilator: true,
-                semester: true,
-                examParts: true,
-                proctorApplications: {
-                    include: {
-                        teacher: {
-                            select: {
-                                id: true,
-                                fullName: true,
-                                username: true,
-                            },
+        const includeFull = {
+            examRoom: true,
+            proctor: true,
+            hallInvigilator: true,
+            semester: true,
+            examParts: true,
+            proctorApplications: {
+                include: {
+                    teacher: {
+                        select: {
+                            id: true,
+                            fullName: true,
+                            username: true,
                         },
                     },
                 },
-                _count: {
-                    select: { studentExams: true }
-                }
+            },
+            _count: {
+                select: { studentExams: true }
             }
-        });
+        } as const;
+
+        const includeSafe = {
+            examRoom: true,
+            proctor: true,
+            hallInvigilator: true,
+            semester: true,
+            examParts: true,
+            _count: {
+                select: { studentExams: true }
+            }
+        } as const;
+
+        let found: any[];
+        try {
+            found = await this.prisma.examSession.findMany({
+                where,
+                skip: skipVal,
+                take: takeVal,
+                orderBy: { createdAt: 'desc' },
+                include: includeFull,
+            });
+        } catch (error: any) {
+            const errorMessage = String(error?.message || '');
+            const shouldFallback = error?.code === 'P2007' || errorMessage.includes('invalid input syntax for type integer');
+            if (!shouldFallback) throw error;
+
+            this.logger.warn(`findMany fallback activated: ${errorMessage}`);
+            found = await this.prisma.examSession.findMany({
+                where,
+                skip: skipVal,
+                take: takeVal,
+                orderBy: { createdAt: 'desc' },
+                include: includeSafe,
+            });
+        }
 
         return found.map(item => ExamSession.mapFromPrisma(item));
     }
@@ -280,73 +336,85 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
         const where: any = {};
         const andConditions: any[] = [];
 
-        if (query?.subjectCode) {
+        // Sanitize string fields - ensure they don't get passed as objects
+        if (query?.subjectCode && typeof query.subjectCode === 'string') {
             where.subjectCode = query.subjectCode;
         }
 
-        if (query?.examCode) {
+        if (query?.examCode && typeof query.examCode === 'string') {
             where.OR = [
                 { examCode: { contains: query.examCode, mode: 'insensitive' } },
                 { subjectCode: { contains: query.examCode, mode: 'insensitive' } }
             ];
         }
 
+        // Handle status - can be a string or an object like { not: 'Draft' }
         if (query?.status) {
-            const now = new Date();
-            if (query.status === 'Upcoming') {
-                andConditions.push({ examOpenTime: { gt: now } });
-            } else if (query.status === 'Ongoing') {
-                andConditions.push({ examOpenTime: { lte: now } });
-                andConditions.push({ examCloseTime: { gte: now } });
-            } else if (query.status === 'Completed') {
-                andConditions.push({ examCloseTime: { lt: now } });
-            } else {
+            if (typeof query.status === 'string') {
+                const now = new Date();
+                if (query.status === 'Upcoming') {
+                    andConditions.push({ examOpenTime: { gt: now } });
+                } else if (query.status === 'Ongoing') {
+                    andConditions.push({ examOpenTime: { lte: now } });
+                    andConditions.push({ examCloseTime: { gte: now } });
+                } else if (query.status === 'Completed') {
+                    andConditions.push({ examCloseTime: { lt: now } });
+                } else {
+                    where.status = query.status;
+                }
+            } else if (typeof query.status === 'object' && query.status !== null) {
+                // Handle Prisma filter objects like { not: 'Draft' }
                 where.status = query.status;
             }
         }
+
+        
 
         // Date range filtering
         if (query?.fromDate || query?.toDate || query?.date) {
             const dateConditions: any = {};
 
-            if (query.date) {
+            if (query.date && typeof query.date === 'string') {
                 const date = new Date(query.date);
                 dateConditions.gte = new Date(date.setHours(0, 0, 0, 0));
                 dateConditions.lte = new Date(date.setHours(23, 59, 59, 999));
             } else {
-                if (query.fromDate) {
+                if (query.fromDate && typeof query.fromDate === 'string') {
                     const from = new Date(query.fromDate);
                     dateConditions.gte = new Date(from.setHours(0, 0, 0, 0));
                 }
-                if (query.toDate) {
+                if (query.toDate && typeof query.toDate === 'string') {
                     const to = new Date(query.toDate);
                     dateConditions.lte = new Date(to.setHours(23, 59, 59, 999));
                 }
             }
 
-            andConditions.push({ examOpenTime: dateConditions });
+            if (Object.keys(dateConditions).length > 0) {
+                andConditions.push({ examOpenTime: dateConditions });
+            }
         }
 
         // Time filtering (simplified for now as it's hard to filter time-only in Prisma)
-        if (query?.startTime && query.fromDate) {
+        if (query?.startTime && query.fromDate && typeof query.startTime === 'string' && typeof query.fromDate === 'string') {
             const [h, m] = query.startTime.split(':').map(Number);
             const start = new Date(query.fromDate);
             start.setHours(h, m, 0, 0);
             andConditions.push({ examOpenTime: { gte: start } });
         }
-        if (query?.endTime && (query.toDate || query.fromDate)) {
+        if (query?.endTime && (query.toDate || query.fromDate) && typeof query.endTime === 'string') {
             const [h, m] = query.endTime.split(':').map(Number);
-            const end = new Date(query.toDate || query.fromDate);
+            const end = new Date((query.toDate || query.fromDate) as string);
             end.setHours(h, m, 59, 999);
             andConditions.push({ examCloseTime: { lte: end } });
         }
 
-        if (query?.examRoomId) where.examRoomId = query.examRoomId;
-        if (query?.proctorId) where.proctorId = query.proctorId;
-        if (query?.hallInvigilatorId) where.hallInvigilatorId = query.hallInvigilatorId;
-        if (query?.semesterId) where.semesterId = query.semesterId;
-        if (query?.campus) where.campus = query.campus;
-        if (query?.examType) where.examType = query.examType;
+        // ID fields - ensure they're strings, not objects
+        if (query?.examRoomId && typeof query.examRoomId === 'string') where.examRoomId = query.examRoomId;
+        if (query?.proctorId && typeof query.proctorId === 'string') where.proctorId = query.proctorId;
+        if (query?.hallInvigilatorId && typeof query.hallInvigilatorId === 'string') where.hallInvigilatorId = query.hallInvigilatorId;
+        if (query?.semesterId && typeof query.semesterId === 'string') where.semesterId = query.semesterId;
+        if (query?.campus && typeof query.campus === 'string') where.campus = query.campus;
+        if (query?.examType && typeof query.examType === 'string') where.examType = query.examType;
 
         if (query?.studentId) {
             where.studentExams = {

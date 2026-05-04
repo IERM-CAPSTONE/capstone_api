@@ -15,8 +15,8 @@ export class RegisterDeviceApplicationEndpoint {
     constructor(private readonly handler: RegisterDeviceApplicationHandler) { }
 
     @Post('register')
-    @Roles(RoleType.PROCTOR)
-    @ApiOperation({ summary: 'Register device and create application (Proctor only)' })
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
+    @ApiOperation({ summary: 'Register device and create application (Proctor and Hall Invigilator)' })
     @ApiBody({ type: RegisterDeviceApplicationDto })
     @ApiResponse({ status: 201, description: 'Application created successfully', type: DeviceApplicationResponse })
     @ApiResponse({ status: 400, description: 'Bad request' })

@@ -6,7 +6,7 @@ import { Response } from 'express';
 export class DownloadAutoGenerateTemplatesHandler {
     private readonly logger = new Logger(DownloadAutoGenerateTemplatesHandler.name);
 
-    async execute(type: 'proctor' | 'registration' | 'course', res: Response) {
+    async execute(type: 'proctor' | 'registration' | 'course' | 'student', res: Response) {
         this.logger.log(`Generating auto-generate template for type: ${type}`);
 
         const workbook = new ExcelJS.Workbook();
@@ -45,6 +45,18 @@ export class DownloadAutoGenerateTemplatesHandler {
                 examType: 'FE',
                 online: '',
             });
+
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            const buffer = await workbook.csv.writeBuffer();
+            return res.send(buffer);
+        } else if (type === 'student') {
+            filename = 'StudentList_Template.csv';
+            worksheet.columns = [
+                { header: 'StudentCode', key: 'studentCode', width: 20 }
+            ];
+            worksheet.addRow({ studentCode: 'SE001' });
+            worksheet.addRow({ studentCode: 'SE002' });
 
             res.setHeader('Content-Type', 'text/csv');
             res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

@@ -55,11 +55,22 @@ export class CreateExamSessionDto {
 
     @ApiProperty({ required: false, nullable: true })
     @IsOptional()
+    @IsUUID()
+    semesterId?: string | null;
+
+    @ApiProperty({ required: false, nullable: true })
+    @IsOptional()
     @IsString()
-    semester?: string | null;
+    campus?: string | null;
 
     @ApiProperty({ required: false, nullable: true })
     @IsOptional()
     @IsString()
     note?: string | null;
+
+    @ApiProperty({ required: false, nullable: true, type: [String] })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    studentIds?: string[];
 }
