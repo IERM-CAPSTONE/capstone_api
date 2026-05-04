@@ -78,6 +78,8 @@ export class ExamSession {
             null,
             null,
             null,
+            null,
+            null,
             0,
             [],
             [],

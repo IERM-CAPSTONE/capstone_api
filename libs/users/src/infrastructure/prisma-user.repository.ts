@@ -17,6 +17,20 @@ import {
 export class PrismaUserRepository implements IUserRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private static readonly USER_SELECT_SQL = Prisma.sql`
+        "id",
+        "email",
+        "fullName",
+        "username",
+        "code",
+        "avatarUrl",
+        "isActive",
+        "role",
+        "campus",
+        "createdAt",
+        "updatedAt"
+    `;
+
     async save(user: User): Promise<User> {
         const data = {
             email: user.email?.value,
@@ -74,17 +88,39 @@ export class PrismaUserRepository implements IUserRepository {
     async findPaginated(options: FindPaginatedOptions): Promise<PaginatedResult<User>> {
         const { page, limit } = options;
         const skip = (page - 1) * limit;
-        const where = this.buildWhere(options);
+        const whereSql = this.buildWhereSql(options);
 
-        const [results, total] = await Promise.all([
-            this.prisma.user.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { createdAt: 'asc' },
-            }),
-            this.prisma.user.count({ where }),
+        const [results, totalRows] = await this.prisma.$transaction([
+            this.prisma.$queryRaw<Array<{
+                id: string;
+                email: string | null;
+                fullName: string | null;
+                username: string | null;
+                code: string | null;
+                avatarUrl: string | null;
+                isActive: boolean;
+                role: PrismaRole | null;
+                campus: string | null;
+                createdAt: Date;
+                updatedAt: Date;
+            }>>(Prisma.sql`
+                SELECT ${PrismaUserRepository.USER_SELECT_SQL}
+                FROM "User"
+                ${whereSql}
+                ORDER BY
+                    CASE WHEN "role" = 'STUDENT'::"Role" THEN 1 ELSE 0 END ASC,
+                    "createdAt" DESC
+                OFFSET ${skip}
+                LIMIT ${limit}
+            `),
+            this.prisma.$queryRaw<Array<{ count: number }>>(Prisma.sql`
+                SELECT COUNT(*)::int AS "count"
+                FROM "User"
+                ${whereSql}
+            `),
         ]);
+
+        const total = totalRows[0]?.count ?? 0;
 
         return {
             data: results.map((r) => this.toDomain(r)),
@@ -120,6 +156,34 @@ export class PrismaUserRepository implements IUserRepository {
             ];
         }
         return where;
+    }
+
+    private buildWhereSql(options: { role?: RoleType; isActive?: boolean; search?: string }): Prisma.Sql {
+        const conditions: Prisma.Sql[] = [];
+
+        if (options.role) {
+            conditions.push(Prisma.sql`"role" = ${options.role as PrismaRole}::"Role"`);
+        }
+
+        if (options.isActive !== undefined) {
+            conditions.push(Prisma.sql`"isActive" = ${options.isActive}`);
+        }
+
+        if (options.search) {
+            const pattern = `%${options.search}%`;
+            conditions.push(Prisma.sql`(
+                "email" ILIKE ${pattern}
+                OR "fullName" ILIKE ${pattern}
+                OR "code" ILIKE ${pattern}
+                OR "username" ILIKE ${pattern}
+            )`);
+        }
+
+        if (conditions.length === 0) {
+            return Prisma.empty;
+        }
+
+        return Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
     }
 
     private toDomain(model: {
