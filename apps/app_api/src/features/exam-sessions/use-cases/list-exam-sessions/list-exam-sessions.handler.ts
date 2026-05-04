@@ -14,9 +14,25 @@ export class ListExamSessionsHandler {
         const page = Number(dto.page) || 1;
         const limit = Number(dto.limit) || 10;
         const skip = (page - 1) * limit;
-
         const isStaff = user?.role === 'ADMIN' || user?.role === 'EXAM_OFFICER';
-        const finalQuery = { ...dto };
+            // IMPORTANT: Only include actual filter fields, exclude pagination fields
+            const finalQuery = {
+                subjectCode: dto.subjectCode,
+                examCode: dto.examCode,
+                date: dto.date,
+                time: dto.time,
+                status: dto.status,
+                fromDate: dto.fromDate,
+                toDate: dto.toDate,
+                startTime: dto.startTime,
+                endTime: dto.endTime,
+                examRoomId: dto.examRoomId,
+                proctorId: dto.proctorId,
+                hallInvigilatorId: dto.hallInvigilatorId,
+                campus: dto.campus,
+                examType: dto.examType,
+                studentId: dto.studentId,
+            };
 
         // If not staff, automatically filter out Draft sessions if no status is specified
         // or ensure they can't request Draft status explicitly
