@@ -13,7 +13,7 @@ export class DeleteDeviceApplicationEndpoint {
     constructor(private readonly handler: DeleteDeviceApplicationHandler) { }
 
     @Delete(':id')
-    @Roles(RoleType.PROCTOR)
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR, RoleType.EXAM_OFFICER)
     @ApiOperation({ summary: 'Delete own device application (Proctor only)' })
     @ApiParam({ name: 'id', description: 'Application UUID' })
     @ApiResponse({ status: 200, description: 'Application deleted successfully' })

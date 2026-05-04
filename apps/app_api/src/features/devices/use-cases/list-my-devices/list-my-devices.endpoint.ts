@@ -14,7 +14,7 @@ export class ListMyDevicesEndpoint {
     constructor(private readonly handler: ListMyDevicesHandler) { }
 
     @Get('me')
-    @Roles(RoleType.PROCTOR)
+    @Roles(RoleType.PROCTOR, RoleType.EXAM_OFFICER, RoleType.HALL_INVIGILATOR)
     @ApiOperation({ summary: 'Get own devices (Proctor only)' })
     @ApiResponse({ status: 200, description: 'Devices retrieved', type: [DeviceResponse] })
     async handle(@GetUser('userId') userId: string): Promise<DeviceResponse[]> {

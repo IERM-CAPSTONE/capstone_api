@@ -14,7 +14,7 @@ export class GetDeviceApplicationEndpoint {
     constructor(private readonly handler: GetDeviceApplicationHandler) { }
 
     @Get(':id')
-    @Roles(RoleType.PROCTOR, RoleType.ADMIN, RoleType.EXAM_OFFICER)
+    @Roles(RoleType.PROCTOR, RoleType.ADMIN, RoleType.EXAM_OFFICER, RoleType.HALL_INVIGILATOR)
     @ApiOperation({ summary: 'Get device application by id' })
     @ApiParam({ name: 'id', description: 'Application UUID' })
     @ApiResponse({ status: 200, description: 'Application retrieved', type: DeviceApplicationResponse })

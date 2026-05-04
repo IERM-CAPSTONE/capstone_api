@@ -13,7 +13,7 @@ export class DeleteDeviceEndpoint {
     constructor(private readonly handler: DeleteDeviceHandler) { }
 
     @Delete(':id')
-    @Roles(RoleType.PROCTOR)
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR, RoleType.EXAM_OFFICER)
     @ApiOperation({ summary: 'Delete own device (Proctor only)' })
     @ApiParam({ name: 'id', description: 'Device UUID' })
     @ApiResponse({ status: 200, description: 'Device deleted successfully' })
