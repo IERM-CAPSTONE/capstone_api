@@ -14,8 +14,8 @@ export class ListMyProctorApplicationsEndpoint {
     constructor(private readonly handler: ListMyProctorApplicationsHandler) { }
 
     @Get('my-applications')
-    @Roles(RoleType.PROCTOR)
-    @ApiOperation({ summary: 'Get own proctor applications (Proctor only)' })
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
+    @ApiOperation({ summary: 'Get swap requests created by or addressed to the current proctor' })
     @ApiResponse({ status: 200, description: 'Applications retrieved', type: [ProctorApplicationResponse] })
     async handle(@GetUser('userId') userId: string): Promise<ProctorApplicationResponse[]> {
         return this.handler.execute(userId);

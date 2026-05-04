@@ -3,13 +3,11 @@ import {
     Patch,
     Param,
     Body,
-    NotFoundException,
-    BadRequestException,
     UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { RoleType } from '@app/users';
-import { Roles } from '../../../../common/decorators';
+import { GetUser, Roles } from '../../../../common/decorators';
 import { RolesGuard, JwtAuthGuard } from '../../../../common/guards';
 import { ProctorApplicationResponse } from '../../shared/proctor-application.response';
 import { UpdateProctorApplicationStatusDto } from './update-status.dto';
@@ -23,8 +21,8 @@ export class UpdateProctorApplicationStatusEndpoint {
     constructor(private readonly handler: UpdateProctorApplicationStatusHandler) { }
 
     @Patch(':id/status')
-    @Roles(RoleType.ADMIN, RoleType.EXAM_OFFICER)
-    @ApiOperation({ summary: 'Update application status - Approve/Reject (Admin/ExamOfficer only)' })
+    @Roles(RoleType.PROCTOR, RoleType.HALL_INVIGILATOR)
+    @ApiOperation({ summary: 'Respond to a proctor swap request - Accept/Decline (Target proctor only)' })
     @ApiParam({ name: 'id', description: 'Application UUID' })
     @ApiBody({ type: UpdateProctorApplicationStatusDto })
     @ApiResponse({ status: 200, description: 'Status updated successfully', type: ProctorApplicationResponse })
@@ -33,17 +31,8 @@ export class UpdateProctorApplicationStatusEndpoint {
     async handle(
         @Param('id') id: string,
         @Body() dto: UpdateProctorApplicationStatusDto,
+        @GetUser('userId') userId: string,
     ): Promise<ProctorApplicationResponse> {
-        try {
-            return await this.handler.execute(id, dto);
-        } catch (error) {
-            if (error instanceof Error) {
-                if (error.message.includes('not found')) {
-                    throw new NotFoundException(error.message);
-                }
-                throw new BadRequestException(error.message);
-            }
-            throw error;
-        }
+        return await this.handler.execute(id, dto, userId);
     }
 }

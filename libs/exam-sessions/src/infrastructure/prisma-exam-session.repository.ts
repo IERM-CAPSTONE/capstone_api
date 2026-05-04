@@ -170,6 +170,17 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 hallInvigilator: true,
                 semester: true,
                 examParts: true,
+                proctorApplications: {
+                    include: {
+                        teacher: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                username: true,
+                            },
+                        },
+                    },
+                },
                 _count: {
                     select: { studentExams: true }
                 }
@@ -188,6 +199,17 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 hallInvigilator: true,
                 semester: true,
                 examParts: true,
+                proctorApplications: {
+                    include: {
+                        teacher: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                username: true,
+                            },
+                        },
+                    },
+                },
                 _count: {
                     select: { studentExams: true }
                 }
@@ -233,6 +255,17 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 hallInvigilator: true,
                 semester: true,
                 examParts: true,
+                proctorApplications: {
+                    include: {
+                        teacher: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                username: true,
+                            },
+                        },
+                    },
+                },
                 _count: {
                     select: { studentExams: true }
                 }
@@ -363,6 +396,17 @@ export class PrismaExamSessionRepository implements IExamSessionRepository {
                 hallInvigilator: true,
                 semester: true,
                 examParts: true,
+                proctorApplications: {
+                    include: {
+                        teacher: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                username: true,
+                            },
+                        },
+                    },
+                },
                 _count: {
                     select: { studentExams: true }
                 }

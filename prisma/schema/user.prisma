@@ -17,6 +17,7 @@ model User {
   reportedTickets         IssueTicket[]        @relation("reporter")
   assignedTickets         IssueTicket[]        @relation("assignee")
   proctorApplications     ProctorApplication[] @relation("teacherApplications")
+  targetedSwapApplications ProctorApplication[] @relation("targetTeacherApplications")
   proctorAssignments      ProctorAssignment[]  @relation("proctorAssignments")
   notificationsSent       Notification[]       @relation("notificationFrom")
   notificationsReceived   Notification[]       @relation("notificationTo")
