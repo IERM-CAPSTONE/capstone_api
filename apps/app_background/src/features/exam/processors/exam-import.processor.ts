@@ -50,14 +50,16 @@ export class ExamImportProcessor {
             // More robust reading for CSV files
             if (data.fileName && data.fileName.toLowerCase().endsWith('.csv')) {
                 const content = buffer.toString('utf-8');
-                workbook = xlsx.read(content, { type: 'string' });
+                const sampleLine = content.split(/\r?\n/).find((line) => line.trim().length > 0) ?? '';
+                const delimiter = sampleLine.includes(';') && !sampleLine.includes(',') ? ';' : ',';
+                workbook = xlsx.read(content, { type: 'string', FS: delimiter });
             } else {
                 workbook = xlsx.read(buffer, { type: 'buffer' });
             }
 
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            const items: any[] = xlsx.utils.sheet_to_json(worksheet);
+            const items: any[] = xlsx.utils.sheet_to_json(worksheet, { defval: '' });
 
             this.logger.log(`Found ${items.length} rows for rooms import in file ${data.fileName}.`);
 
@@ -70,6 +72,9 @@ export class ExamImportProcessor {
                     const itemRoomNum = item.RoomNumber || item.Room || item.room;
                     const itemCapacity = item.Capacity || item.capacity;
                     const itemCampus = item.Campus || item.campus;
+                    const itemMaxRows = item.max_rows ?? item.maxRows ?? item.MAXROWS ?? item.rows ?? item.Rows;
+                    const itemMaxColumns = item.max_columns ?? item.maxColumns ?? item.MAXCOLUMNS ?? item.columns ?? item.Columns;
+                    const itemTotalSeats = item.totalSeats ?? item.total_seats ?? item.TOTALSEATS ?? item.total ?? item.TotalSeats;
 
                     if (itemRoomNum === undefined || itemRoomNum === null || itemRoomNum === '') {
                         this.logger.warn(`Skipping row missing identification: ${JSON.stringify(item)}`);
@@ -94,24 +99,31 @@ export class ExamImportProcessor {
                         this.logger.debug(`Room ${roomNumStr} at campus ${campusStr || 'default'} already exists, updating...`);
                         const updated = existing.update({
                             capacity: itemCapacity ? Number(itemCapacity) : undefined,
+                            maxRows: itemMaxRows ? Number(itemMaxRows) : undefined,
+                            maxColumns: itemMaxColumns ? Number(itemMaxColumns) : undefined,
+                            totalSeats: itemTotalSeats ? Number(itemTotalSeats) : undefined,
                             campus: campusEnum
                         });
                         await this.examRoomRepository.save(updated);
                     } else {
+                        const maxRows = itemMaxRows ? Number(itemMaxRows) : 6;
+                        const maxColumns = itemMaxColumns ? Number(itemMaxColumns) : 3;
+                        const totalSeats = itemTotalSeats ? Number(itemTotalSeats) : (maxRows * maxColumns);
+
                         const room = ExamRoom.create({
                             id: uuidv4(),
                             roomNumber: roomNumStr,
-                            capacity: itemCapacity ? Number(itemCapacity) : 18,
-                            max_rows: 6,
-                            max_columns: 3,
-                            total_seats: 18,
+                            capacity: itemCapacity ? Number(itemCapacity) : totalSeats,
+                            max_rows: maxRows,
+                            max_columns: maxColumns,
+                            total_seats: totalSeats,
                             campus: campusEnum
                         });
                         await this.examRoomRepository.save(room);
                     }
                     successCount++;
                 } catch (err) {
-                    this.logger.error(`Error processing room ${item.RoomNumber || item.Room}: ${err.message}`);
+                    this.logger.error(`Error processing room ${item.RoomNumber || item.Room || item.room}: ${err.message}`);
                     errorCount++;
                 }
             }

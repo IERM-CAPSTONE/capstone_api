@@ -25,13 +25,17 @@ export class CreateExamRoomHandler {
             throw new Error(`Room number '${dto.roomNumber}' already exists in campus '${dto.campus || 'default'}'`);
         }
 
-        // Create aggregate using factory
+        const maxRows = dto.maxRows ?? 0;
+        const maxColumns = dto.maxColumns ?? 0;
+        const totalSeats = dto.totalSeats ?? (maxRows > 0 && maxColumns > 0 ? maxRows * maxColumns : undefined);
+
         const examRoom = ExamRoom.create({
             id: uuidv4(),
             roomNumber: dto.roomNumber,
             capacity: dto.capacity,
             maxRows: dto.maxRows,
             maxColumns: dto.maxColumns,
+            totalSeats,
             campus: dto.campus,
         });
 

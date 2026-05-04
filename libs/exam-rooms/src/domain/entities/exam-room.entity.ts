@@ -38,15 +38,18 @@ export class ExamRoom {
     }): ExamRoom {
         const roomNumber = RoomNumber.create(props.roomNumber);
         const capacity = props.capacity ? Capacity.create(props.capacity) : null;
+        const maxRows = props.maxRows ?? props.max_rows ?? 6;
+        const maxColumns = props.maxColumns ?? props.max_columns ?? 3;
+        const totalSeats = props.totalSeats ?? props.total_seats ?? (maxRows * maxColumns);
 
         return new ExamRoom(
             props.id,
             roomNumber,
             capacity,
             props.status ?? 'Available',
-            props.maxRows ?? 6,
-            props.maxColumns ?? 3,
-            props.totalSeats ?? 18,
+            maxRows,
+            maxColumns,
+            totalSeats,
             new Date(),
             new Date(),
             null,
@@ -129,9 +132,9 @@ export class ExamRoom {
             : this.capacity;
 
         const status = props.status !== undefined ? props.status : this.status;
-        const maxRows = props.maxRows !== undefined ? props.maxRows : this.maxRows;
-        const maxColumns = props.maxColumns !== undefined ? props.maxColumns : this.maxColumns;
-        const totalSeats = props.totalSeats !== undefined ? props.totalSeats : this.totalSeats;
+        const maxRows = props.maxRows ?? props.max_rows ?? this.maxRows;
+        const maxColumns = props.maxColumns ?? props.max_columns ?? this.maxColumns;
+        const totalSeats = props.totalSeats ?? props.total_seats ?? (maxRows * maxColumns);
         const campus = props.campus !== undefined ? props.campus : this.campus;
 
         return new ExamRoom(
