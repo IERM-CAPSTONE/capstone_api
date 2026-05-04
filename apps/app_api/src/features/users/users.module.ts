@@ -18,6 +18,7 @@ import { DeleteUserHandler, DeleteUserEndpoint } from './use-cases/delete-user';
 import { ChangeRoleHandler, ChangeRoleEndpoint } from './use-cases/change-role';
 import { GetUserHandler, GetUserEndpoint } from './use-cases/get-user';
 import { ListUsersHandler, ListUsersEndpoint } from './use-cases/list-users';
+import { SearchUsersByCodesHandler, SearchUsersByCodesEndpoint } from './use-cases/search-users-by-codes';
 
 // Use Cases - Authentication
 import { FirebaseLoginHandler, FirebaseLoginEndpoint } from './use-cases/firebase-login';
@@ -46,6 +47,7 @@ import { PushTokensEndpoint, PushTokensHandler } from './use-cases/push-tokens';
         DeleteUserEndpoint,
         ChangeRoleEndpoint,
         ListUsersEndpoint,
+        SearchUsersByCodesEndpoint,
         GetUserEndpoint,
         // Authentication
         FirebaseLoginEndpoint,
@@ -73,6 +75,7 @@ import { PushTokensEndpoint, PushTokensHandler } from './use-cases/push-tokens';
         ChangeRoleHandler,
         GetUserHandler,
         ListUsersHandler,
+        SearchUsersByCodesHandler,
         // Handlers - Authentication
         FirebaseLoginHandler,
         GoogleLoginHandler,

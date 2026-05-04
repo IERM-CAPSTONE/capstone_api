@@ -4,6 +4,9 @@ import {
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '@app/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { NotificationGateway } from '../../common/gateways/notification.gateway';
@@ -48,6 +51,8 @@ export class TicketWorkflowService {
         private readonly prisma: PrismaService,
         private readonly notificationGateway: NotificationGateway,
         private readonly fcmService: FcmService,
+        private readonly httpService: HttpService,
+        private readonly configService: ConfigService,
     ) { }
 
     async getTicketOrThrow(ticketId: string): Promise<TicketLike> {
@@ -587,6 +592,32 @@ export class TicketWorkflowService {
                 resolutionCode: input.resolutionCode ?? null,
             },
         });
+
+        // Feedback Loop: Send confirmed data back to AI Service for TAXONOMY update
+        if (input.decision === 'APPROVED') {
+            try {
+                const aiServiceUrl = this.configService.get<string>('TICKET_AI_URL');
+                if (aiServiceUrl) {
+                    const feedbackData = {
+                        ocr_text: ticket.ocrText || '',
+                        issue_name: input.finalIssueName,
+                        issue_type: input.finalIssueType,
+                        // vi_label: input.finalIssueName, // Optional: Can be derived from a map if needed
+                        vi_label: input.finalIssueName, // Backend is using issue codes
+                        description: input.reviewNote || '',
+                        resolution_standard_text: input.resolutionStandardText || '',
+                        review_note: input.reviewNote || '',
+                    };
+
+                    // We don't await this to avoid slowing down the response, or use try-catch
+                    firstValueFrom(this.httpService.post(`${aiServiceUrl}/verify`, feedbackData))
+                        .then(() => console.log(`[FeedbackLoop] Sent feedback for ticket ${ticketId}`))
+                        .catch((err) => console.error(`[FeedbackLoop] Failed to send feedback for ticket ${ticketId}:`, err.message));
+                }
+            } catch (error) {
+                console.error('[FeedbackLoop] Unexpected error during feedback:', error);
+            }
+        }
 
         return this.getTicketOrThrow(ticketId);
     }
