@@ -62,6 +62,7 @@ export class ExamImportProcessor {
             const items: any[] = xlsx.utils.sheet_to_json(worksheet, { defval: '' });
 
             this.logger.log(`Found ${items.length} rows for rooms import in file ${data.fileName}.`);
+            this.logger.log(`[IMPORT_ROOMS] campusId=${data.campusId ?? 'N/A'} fileName=${data.fileName} sheetName=${sheetName} keysSample=${items[0] ? Object.keys(items[0]).join(', ') : 'N/A'}`);
 
             let successCount = 0;
             let errorCount = 0;
@@ -72,9 +73,11 @@ export class ExamImportProcessor {
                     const itemRoomNum = item.RoomNumber || item.Room || item.room;
                     const itemCapacity = item.Capacity || item.capacity;
                     const itemCampus = item.Campus || item.campus;
-                    const itemMaxRows = item.max_rows ?? item.maxRows ?? item.MAXROWS ?? item.rows ?? item.Rows;
-                    const itemMaxColumns = item.max_columns ?? item.maxColumns ?? item.MAXCOLUMNS ?? item.columns ?? item.Columns;
-                    const itemTotalSeats = item.totalSeats ?? item.total_seats ?? item.TOTALSEATS ?? item.total ?? item.TotalSeats;
+                    const itemMaxRows = item.max_rows ?? item.maxRows ?? item.MAXROWS ?? item.rows ?? item.Rows ?? item.row ?? item.Row ?? item.MAX_ROWS;
+                    const itemMaxColumns = item.max_columns ?? item.maxColumns ?? item.MAXCOLUMNS ?? item.columns ?? item.Columns ?? item.column ?? item.Column ?? item.MAX_COLUMNS;
+                    const itemTotalSeats = item.totalSeats ?? item.total_seats ?? item.TOTALSEATS ?? item.total ?? item.TotalSeats ?? item.TOTAL_SEATS;
+
+                    this.logger.debug(`[IMPORT_ROOMS] rawRow=${JSON.stringify(item)} parsed={room:${itemRoomNum ?? 'N/A'}, capacity:${itemCapacity ?? 'N/A'}, maxRows:${itemMaxRows ?? 'N/A'}, maxColumns:${itemMaxColumns ?? 'N/A'}, totalSeats:${itemTotalSeats ?? 'N/A'}, campus:${itemCampus ?? 'N/A'}}`);
 
                     if (itemRoomNum === undefined || itemRoomNum === null || itemRoomNum === '') {
                         this.logger.warn(`Skipping row missing identification: ${JSON.stringify(item)}`);
@@ -96,7 +99,7 @@ export class ExamImportProcessor {
                     });
 
                     if (existing) {
-                        this.logger.debug(`Room ${roomNumStr} at campus ${campusStr || 'default'} already exists, updating...`);
+                        this.logger.debug(`[IMPORT_ROOMS] updating existing room=${roomNumStr} campus=${campusStr || 'default'} with maxRows=${itemMaxRows ?? 'N/A'} maxColumns=${itemMaxColumns ?? 'N/A'} totalSeats=${itemTotalSeats ?? 'N/A'}`);
                         const updated = existing.update({
                             capacity: itemCapacity ? Number(itemCapacity) : undefined,
                             maxRows: itemMaxRows ? Number(itemMaxRows) : undefined,
@@ -104,11 +107,14 @@ export class ExamImportProcessor {
                             totalSeats: itemTotalSeats ? Number(itemTotalSeats) : undefined,
                             campus: campusEnum
                         });
+                        this.logger.debug(`[IMPORT_ROOMS] updated entity room=${roomNumStr} maxRows=${updated.maxRows} maxColumns=${updated.maxColumns} totalSeats=${updated.totalSeats}`);
                         await this.examRoomRepository.save(updated);
                     } else {
                         const maxRows = itemMaxRows ? Number(itemMaxRows) : 6;
                         const maxColumns = itemMaxColumns ? Number(itemMaxColumns) : 3;
                         const totalSeats = itemTotalSeats ? Number(itemTotalSeats) : (maxRows * maxColumns);
+
+                        this.logger.debug(`[IMPORT_ROOMS] creating room=${roomNumStr} campus=${campusStr || 'default'} maxRows=${maxRows} maxColumns=${maxColumns} totalSeats=${totalSeats} capacity=${itemCapacity ? Number(itemCapacity) : totalSeats}`);
 
                         const room = ExamRoom.create({
                             id: uuidv4(),
@@ -119,6 +125,7 @@ export class ExamImportProcessor {
                             total_seats: totalSeats,
                             campus: campusEnum
                         });
+                        this.logger.debug(`[IMPORT_ROOMS] created entity room=${roomNumStr} maxRows=${room.maxRows} maxColumns=${room.maxColumns} totalSeats=${room.totalSeats}`);
                         await this.examRoomRepository.save(room);
                     }
                     successCount++;
