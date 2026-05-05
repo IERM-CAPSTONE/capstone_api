@@ -132,9 +132,9 @@ export class ExamRoom {
             : this.capacity;
 
         const status = props.status !== undefined ? props.status : this.status;
-        const maxRows = props.maxRows ?? props.max_rows ?? this.maxRows;
-        const maxColumns = props.maxColumns ?? props.max_columns ?? this.maxColumns;
-        const totalSeats = props.totalSeats ?? props.total_seats ?? (maxRows * maxColumns);
+        const maxRows = props.maxRows ? Number(props.maxRows) : (props.max_rows ? Number(props.max_rows) : this.maxRows);
+const maxColumns = props.maxColumns ? Number(props.maxColumns) : (props.max_columns ? Number(props.max_columns) : this.maxColumns);
+const totalSeats = props.totalSeats ? Number(props.totalSeats) : (maxRows * maxColumns);
         const campus = props.campus !== undefined ? props.campus : this.campus;
 
         return new ExamRoom(
