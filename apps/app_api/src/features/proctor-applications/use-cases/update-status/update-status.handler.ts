@@ -4,6 +4,7 @@ import { PrismaService } from '@app/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { ProctorApplicationResponse, toProctorApplicationResponse } from '../../shared/proctor-application.response';
 import { UpdateProctorApplicationStatusDto } from './update-status.dto';
+import { NotificationGateway } from '../../../../common/gateways/notification.gateway';
 
 @Injectable()
 export class UpdateProctorApplicationStatusHandler {
@@ -11,6 +12,7 @@ export class UpdateProctorApplicationStatusHandler {
         @Inject(PROCTOR_APPLICATION_REPOSITORY)
         private readonly repository: IProctorApplicationRepository,
         private readonly prisma: PrismaService,
+        private readonly notificationGateway: NotificationGateway,
     ) { }
 
     async execute(id: string, dto: UpdateProctorApplicationStatusDto, actorUserId: string): Promise<ProctorApplicationResponse> {
@@ -31,18 +33,26 @@ export class UpdateProctorApplicationStatusHandler {
             await this.applySwap(application, actorUserId);
         }
 
-        const updatedApplication = application.updateStatus(dto.status);
+        const responseNote = dto.responseNote?.trim() || null;
+        if (dto.status === 'REJECTED' && !responseNote) {
+            throw new BadRequestException('A rejection reason is required');
+        }
+
+        const applicationWithResponseNote =
+            dto.status === 'REJECTED'
+                ? application.update({ notes: responseNote })
+                : application;
+
+        const updatedApplication = applicationWithResponseNote.updateStatus(dto.status);
         const saved = await this.repository.save(updatedApplication);
+        const payload = toProctorApplicationResponse(saved);
 
-        return toProctorApplicationResponse(saved);
-    }
+        this.notificationGateway.sendToUser(saved.teacherId, 'proctor:application:updated', payload);
+        if (saved.targetTeacherId && saved.targetTeacherId !== saved.teacherId) {
+            this.notificationGateway.sendToUser(saved.targetTeacherId, 'proctor:application:updated', payload);
+        }
 
-    private isSameExamDay(left: Date | null, right: Date | null): boolean {
-        if (!left || !right) return false;
-
-        return left.getFullYear() === right.getFullYear()
-            && left.getMonth() === right.getMonth()
-            && left.getDate() === right.getDate();
+        return payload;
     }
 
     private async applySwap(application: any, actorUserId: string): Promise<void> {
@@ -90,10 +100,6 @@ export class UpdateProctorApplicationStatusHandler {
             throw new ConflictException('You are no longer assigned to the target session');
         }
 
-        if (!this.isSameExamDay(sourceSession.examOpenTime, targetSession.examOpenTime)) {
-            throw new ConflictException('These sessions are no longer on the same exam day');
-        }
-
         const [sourceClusterSessions, targetClusterSessions] = isHallSwap
             ? await Promise.all([
                 this.getHallClusterSessions(application.teacherId, sourceSession.examOpenTime, sourceSession.examCloseTime),
@@ -104,6 +110,39 @@ export class UpdateProctorApplicationStatusHandler {
         if (isHallSwap && (sourceClusterSessions.length === 0 || targetClusterSessions.length === 0)) {
             throw new ConflictException('One of the hall invigilator clusters is no longer available for swapping');
         }
+
+        await Promise.all([
+            isHallSwap
+                ? this.ensureHallInvigilatorAvailability(
+                    application.teacherId,
+                    application.teacherName ? `giám thị hành lang ${application.teacherName}` : 'người gửi yêu cầu',
+                    targetSession.examOpenTime,
+                    targetSession.examCloseTime,
+                    [...sourceClusterSessions.map((session) => session.id), ...targetClusterSessions.map((session) => session.id)],
+                )
+                : this.ensureProctorAvailability(
+                    application.teacherId,
+                    application.teacherName ? `giám thị ${application.teacherName}` : 'người gửi yêu cầu',
+                    targetSession.examOpenTime,
+                    targetSession.examCloseTime,
+                    [sourceSession.id, targetSession.id],
+                ),
+            isHallSwap
+                ? this.ensureHallInvigilatorAvailability(
+                    actorUserId,
+                    application.targetTeacherName ? `giám thị hành lang ${application.targetTeacherName}` : 'bạn',
+                    sourceSession.examOpenTime,
+                    sourceSession.examCloseTime,
+                    [...sourceClusterSessions.map((session) => session.id), ...targetClusterSessions.map((session) => session.id)],
+                )
+                : this.ensureProctorAvailability(
+                    actorUserId,
+                    application.targetTeacherName ? `giám thị ${application.targetTeacherName}` : 'bạn',
+                    sourceSession.examOpenTime,
+                    sourceSession.examCloseTime,
+                    [sourceSession.id, targetSession.id],
+                ),
+        ]);
 
         await this.prisma.$transaction(async (tx) => {
             if (isHallSwap) {
@@ -189,5 +228,98 @@ export class UpdateProctorApplicationStatusHandler {
             },
             select: { id: true },
         });
+    }
+
+    private async ensureProctorAvailability(
+        proctorId: string,
+        assigneeLabel: string,
+        examOpenTime: Date | null,
+        examCloseTime: Date | null,
+        excludedSessionIds: string[],
+    ): Promise<void> {
+        if (!examOpenTime || !examCloseTime) {
+            throw new ConflictException('The selected session is missing its exam time');
+        }
+
+        const conflict = await this.prisma.examSession.findFirst({
+            where: {
+                id: { notIn: excludedSessionIds },
+                proctorId,
+                examOpenTime: { lt: examCloseTime },
+                examCloseTime: { gt: examOpenTime },
+            },
+            select: {
+                examOpenTime: true,
+                examCloseTime: true,
+                examRoom: {
+                    select: {
+                        roomNumber: true,
+                    },
+                },
+            },
+        });
+
+        if (conflict) {
+            throw new ConflictException(this.buildOverlapConflictMessage(assigneeLabel, conflict.examRoom?.roomNumber ?? null, conflict.examOpenTime, conflict.examCloseTime));
+        }
+    }
+
+    private async ensureHallInvigilatorAvailability(
+        hallInvigilatorId: string,
+        assigneeLabel: string,
+        examOpenTime: Date | null,
+        examCloseTime: Date | null,
+        excludedSessionIds: string[],
+    ): Promise<void> {
+        if (!examOpenTime || !examCloseTime) {
+            throw new ConflictException('The selected session is missing its exam time');
+        }
+
+        const conflict = await this.prisma.examSession.findFirst({
+            where: {
+                id: { notIn: excludedSessionIds },
+                hallInvigilatorId,
+                examOpenTime: { lt: examCloseTime },
+                examCloseTime: { gt: examOpenTime },
+            },
+            select: {
+                examOpenTime: true,
+                examCloseTime: true,
+                examRoom: {
+                    select: {
+                        roomNumber: true,
+                    },
+                },
+            },
+        });
+
+        if (conflict) {
+            throw new ConflictException(this.buildOverlapConflictMessage(assigneeLabel, conflict.examRoom?.roomNumber ?? null, conflict.examOpenTime, conflict.examCloseTime));
+        }
+    }
+
+    private buildOverlapConflictMessage(
+        assigneeLabel: string,
+        roomNumber: string | null,
+        examOpenTime: Date | null,
+        examCloseTime: Date | null,
+    ): string {
+        const roomLabel = roomNumber ? `phòng ${roomNumber}` : 'một ca thi khác';
+        const timeLabel = this.formatSessionTimeRange(examOpenTime, examCloseTime);
+
+        return `${assigneeLabel} sẽ bị trùng với ca ${roomLabel}${timeLabel ? ` (${timeLabel})` : ''} sau khi đổi lịch.`;
+    }
+
+    private formatSessionTimeRange(examOpenTime: Date | null, examCloseTime: Date | null): string {
+        if (!examOpenTime) {
+            return '';
+        }
+
+        const formatDate = (value: Date) =>
+            `${String(value.getDate()).padStart(2, '0')}/${String(value.getMonth() + 1).padStart(2, '0')}/${value.getFullYear()}`;
+        const formatTime = (value: Date) =>
+            `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+
+        return `${formatDate(examOpenTime)} ${formatTime(examOpenTime)} - ${examCloseTime ? formatTime(examCloseTime) : '--:--'}`;
     }
 }
